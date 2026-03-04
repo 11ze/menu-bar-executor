@@ -80,4 +80,17 @@ final class ConfigLoader {
             print("[ConfigLoader] 目录已存在")
         }
     }
+
+    func saveConfig(_ commands: [Command]) throws {
+        print("[ConfigLoader] 开始保存配置")
+        ensureConfigDirectoryExists()
+
+        let config = CommandsConfig(commands: commands)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        let data = try encoder.encode(config)
+
+        try data.write(to: configFilePath)
+        print("[ConfigLoader] 配置已保存到: \(configFilePath.path)")
+    }
 }
