@@ -36,6 +36,5 @@ struct StatusBarView: View {
                 .font(.system(size: 14))
         }
         .menuStyle(.borderlessButton)
-        .fixedMenu()
     }
 }
