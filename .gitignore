@@ -1,0 +1,33 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xcuserdatad
+xcuserdata/
+*.xccheckout
+*.xcscmblueprint
+*.xcworkspace
+
+# XcodeGen
+# project.yml 保留用于项目构建，请根据需要注释
+# menu-bar-exector.xcodeproj
+
+# Swift Package Manager
+.swiftpm/
+Packages/
+Package.resolved
+
+# macOS
+.DS_Store
+*.swp
+*~
+
+# 发布产物
+Release/
+*.app
+*.dmg
+*.zip
+
+# 日志
+Logs/
+*.log
