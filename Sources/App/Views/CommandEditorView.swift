@@ -38,7 +38,11 @@ struct CommandEditorView: View {
             }
 
             Section("显示设置") {
-                TextField("图标名称（SF Symbol）", text: $iconName)
+                HStack {
+                    TextField("图标名称（SF Symbol）", text: $iconName)
+                    Image(systemName: iconName.isEmpty ? "terminal.fill" : iconName)
+                        .foregroundColor(.secondary)
+                }
                 Toggle("显示通知", isOn: $notification)
             }
 
