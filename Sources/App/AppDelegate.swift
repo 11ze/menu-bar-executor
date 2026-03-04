@@ -72,6 +72,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         reloadItem.keyEquivalentModifierMask = [.command]
         menu.addItem(reloadItem)
 
+        let settingsItem = NSMenuItem(
+            title: "命令设置...",
+            action: #selector(openSettings),
+            keyEquivalent: ","
+        )
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+
         menu.addItem(NSMenuItem.separator())
 
         let quitItem = NSMenuItem(
@@ -110,5 +118,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func quitApp() {
         NSApplication.shared.terminate(nil)
+    }
+
+    @objc private func openSettings() {
+        SettingsWindowController.shared.showWindow()
     }
 }
