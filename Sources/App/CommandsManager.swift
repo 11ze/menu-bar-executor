@@ -12,12 +12,15 @@ final class CommandsManager: ObservableObject {
     private let notificationManager = NotificationManager.shared
 
     private init() {
+        print("[CommandsManager] 初始化")
         loadCommands()
     }
 
     func loadCommands() {
+        print("[CommandsManager] 开始加载配置")
         configLoader.ensureConfigDirectoryExists()
         commands = configLoader.loadConfig()
+        print("[CommandsManager] 加载了 \(commands.count) 个命令")
     }
 
     func reload() {

@@ -18,6 +18,7 @@ targets:
       - Sources
     resources:
       - Resources
+      - Resources/commands.json
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cai.menu-bar-exector
