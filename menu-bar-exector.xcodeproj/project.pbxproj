@@ -8,21 +8,27 @@
 
 /* Begin PBXBuildFile section */
 		1E7E641B97BB2539E49472F4 /* CommandsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D46BB0AB535BEF09C005AB2 /* CommandsManager.swift */; };
+		2BC17C2141E4C6B4566ECDA0 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10A790C812506D60E727B25D /* SettingsWindowController.swift */; };
+		A6CAAC6ACEFBBCF4A5D650CF /* CommandEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5968A3390291B7E08CC20FF /* CommandEditorView.swift */; };
 		ACC4EF8B60FF55B58C817617 /* menu_bar_exectorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F16F15C206C0ABA01439E7A5 /* menu_bar_exectorApp.swift */; };
 		B98E58280DB12065861C5A24 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 416C63BFCB36C4538CCE81DA /* AppDelegate.swift */; };
 		D5BE6607595B234A92E408C0 /* Command.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B1155004A4C5664C449A8C5 /* Command.swift */; };
 		E4E45420699EC818F03D6D79 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F31EFF2B8F876255EE878047 /* NotificationManager.swift */; };
 		E8321A577E589047E5543819 /* StatusBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21C9B00E43880E45C200A8C5 /* StatusBarView.swift */; };
 		EC2542127DE2BD97DA242A72 /* ConfigLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2E49D781341E35E891841EC /* ConfigLoader.swift */; };
+		F04511A8F3979030E5ED06DF /* CommandsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1590161106185F5B42D0DF85 /* CommandsListView.swift */; };
 		FF846B290D510456110E8376 /* CommandExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA63FF08EAB68CF30815F07D /* CommandExecutor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		03DF24DE356071645C63AB91 /* menu-bar-exector.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "menu-bar-exector.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		10A790C812506D60E727B25D /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
+		1590161106185F5B42D0DF85 /* CommandsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandsListView.swift; sourceTree = "<group>"; };
 		1B1155004A4C5664C449A8C5 /* Command.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Command.swift; sourceTree = "<group>"; };
 		21C9B00E43880E45C200A8C5 /* StatusBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarView.swift; sourceTree = "<group>"; };
 		416C63BFCB36C4538CCE81DA /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		7D46BB0AB535BEF09C005AB2 /* CommandsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandsManager.swift; sourceTree = "<group>"; };
+		B5968A3390291B7E08CC20FF /* CommandEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandEditorView.swift; sourceTree = "<group>"; };
 		CA63FF08EAB68CF30815F07D /* CommandExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandExecutor.swift; sourceTree = "<group>"; };
 		D2E49D781341E35E891841EC /* ConfigLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigLoader.swift; sourceTree = "<group>"; };
 		F16F15C206C0ABA01439E7A5 /* menu_bar_exectorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = menu_bar_exectorApp.swift; sourceTree = "<group>"; };
@@ -46,6 +52,15 @@
 			path = Sources;
 			sourceTree = "<group>";
 		};
+		78258A5D70C3FC0F19221845 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				B5968A3390291B7E08CC20FF /* CommandEditorView.swift */,
+				1590161106185F5B42D0DF85 /* CommandsListView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
 		7E86086BC15DA8EB6CE24267 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -64,7 +79,9 @@
 				D2E49D781341E35E891841EC /* ConfigLoader.swift */,
 				F16F15C206C0ABA01439E7A5 /* menu_bar_exectorApp.swift */,
 				F31EFF2B8F876255EE878047 /* NotificationManager.swift */,
+				10A790C812506D60E727B25D /* SettingsWindowController.swift */,
 				21C9B00E43880E45C200A8C5 /* StatusBarView.swift */,
+				78258A5D70C3FC0F19221845 /* Views */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -129,10 +146,13 @@
 			files = (
 				B98E58280DB12065861C5A24 /* AppDelegate.swift in Sources */,
 				D5BE6607595B234A92E408C0 /* Command.swift in Sources */,
+				A6CAAC6ACEFBBCF4A5D650CF /* CommandEditorView.swift in Sources */,
 				FF846B290D510456110E8376 /* CommandExecutor.swift in Sources */,
+				F04511A8F3979030E5ED06DF /* CommandsListView.swift in Sources */,
 				1E7E641B97BB2539E49472F4 /* CommandsManager.swift in Sources */,
 				EC2542127DE2BD97DA242A72 /* ConfigLoader.swift in Sources */,
 				E4E45420699EC818F03D6D79 /* NotificationManager.swift in Sources */,
+				2BC17C2141E4C6B4566ECDA0 /* SettingsWindowController.swift in Sources */,
 				E8321A577E589047E5543819 /* StatusBarView.swift in Sources */,
 				ACC4EF8B60FF55B58C817617 /* menu_bar_exectorApp.swift in Sources */,
 			);
