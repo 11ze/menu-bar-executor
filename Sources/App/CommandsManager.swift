@@ -42,4 +42,39 @@ final class CommandsManager: ObservableObject {
             }
         }
     }
+
+    func addCommand(_ command: Command) {
+        commands.append(command)
+        do {
+            try configLoader.saveConfig(commands)
+            print("[CommandsManager] 命令已添加: \(command.name)")
+        } catch {
+            print("[CommandsManager] 保存失败: \(error)")
+        }
+    }
+
+    func updateCommand(_ command: Command) {
+        if let index = commands.firstIndex(where: { $0.id == command.id }) {
+            commands[index] = command
+            do {
+                try configLoader.saveConfig(commands)
+                print("[CommandsManager] 命令已更新: \(command.name)")
+            } catch {
+                print("[CommandsManager] 保存失败: \(error)")
+            }
+        }
+    }
+
+    func deleteCommand(id: String) {
+        if let index = commands.firstIndex(where: { $0.id == id }) {
+            let command = commands[index]
+            commands.remove(at: index)
+            do {
+                try configLoader.saveConfig(commands)
+                print("[CommandsManager] 命令已删除: \(command.name)")
+            } catch {
+                print("[CommandsManager] 保存失败: \(error)")
+            }
+        }
+    }
 }
