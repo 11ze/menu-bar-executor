@@ -46,3 +46,7 @@ Sources/App/
 - 构建产物位于 `./build/Build/Products/Debug/`
 - 打开应用：`open ./build/Build/Products/Debug/menu-bar-exector.app`
 - 检查配置：`cat ~/.config/menu-bar-exector/commands.json`
+
+## 其他
+
+每次修改后都重新构建项目并打开

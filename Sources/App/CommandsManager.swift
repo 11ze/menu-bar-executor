@@ -54,7 +54,7 @@ final class CommandsManager: ObservableObject {
     }
 
     func updateCommand(_ command: Command) {
-        if let index = commands.firstIndex(where: { $0.id == command.id }) {
+        if let index = commands.firstIndex(where: { $0.name == command.name }) {
             commands[index] = command
             do {
                 try configLoader.saveConfig(commands)
@@ -66,7 +66,8 @@ final class CommandsManager: ObservableObject {
     }
 
     func deleteCommand(id: String) {
-        if let index = commands.firstIndex(where: { $0.id == id }) {
+        // id 就是 name
+        if let index = commands.firstIndex(where: { $0.name == id }) {
             let command = commands[index]
             commands.remove(at: index)
             do {

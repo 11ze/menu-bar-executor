@@ -68,9 +68,7 @@ struct CommandEditorView: View {
     }
 
     private func saveCommand() {
-        let id = command?.id ?? UUID().uuidString
         let newCommand = Command(
-            id: id,
             name: name,
             command: commandText,
             workingDirectory: workingDirectory.isEmpty ? nil : workingDirectory,
