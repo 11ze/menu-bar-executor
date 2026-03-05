@@ -4,7 +4,7 @@ final class ConfigLoader {
     static let shared = ConfigLoader()
 
     private let configFileName = "commands.json"
-    private let configDirName = "menu-bar-exector"
+    private let configDirName = "menu-bar-executor"
 
     private init() {}
 

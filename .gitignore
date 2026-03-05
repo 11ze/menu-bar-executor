@@ -10,7 +10,7 @@ xcuserdata/
 
 # XcodeGen
 # project.yml 保留用于项目构建，请根据需要注释
-# menu-bar-exector.xcodeproj
+# menu-bar-executor.xcodeproj
 
 # Swift Package Manager
 .swiftpm/

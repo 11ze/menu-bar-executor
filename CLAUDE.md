@@ -1,4 +1,4 @@
-# menu-bar-exector
+# menu-bar-executor
 
 ## 项目概述
 
@@ -33,7 +33,7 @@ Sources/App/
 
 - 使用 `@MainActor` + `static let shared` 实现单例
 - 使用 `NSStatusItem` + SwiftUI Menu 实现菜单栏
-- 配置文件路径：`~/.config/menu-bar-exector/commands.json`
+- 配置文件路径：`~/.config/menu-bar-executor/commands.json`
 - App 设置 `LSUIElement = true` 隐藏 Dock 图标
 - 使用 Combine 监听命令列表变化自动刷新菜单
 - 从菜单栏「命令设置」入口可打开图形界面管理命令
@@ -42,10 +42,10 @@ Sources/App/
 
 - 运行 `xcodegen generate` 生成项目
 - 需要完整 Xcode（CommandLineTools 不支持 `xcodebuild`）
-- 构建命令：`xcodebuild -project menu-bar-exector.xcodeproj -scheme menu-bar-exector -configuration Debug -derivedDataPath ./build build`
+- 构建命令：`xcodebuild -project menu-bar-executor.xcodeproj -scheme menu-bar-executor -configuration Debug -derivedDataPath ./build build`
 - 构建产物位于 `./build/Build/Products/Debug/`
-- 打开应用：`open ./build/Build/Products/Debug/menu-bar-exector.app`
-- 检查配置：`cat ~/.config/menu-bar-exector/commands.json`
+- 打开应用：`open ./build/Build/Products/Debug/menu-bar-executor.app`
+- 检查配置：`cat ~/.config/menu-bar-executor/commands.json`
 
 ## 其他
 

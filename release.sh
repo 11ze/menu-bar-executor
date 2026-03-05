@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# menu-bar-exector Release 打包脚本
+# menu-bar-executor Release 打包脚本
 # 用法: ./release.sh [version]
 
 set -e
 
 VERSION=${1:-"1.0.0"}
-PROJECT_NAME="menu-bar-exector"
-SCHEME="menu-bar-exector"
+PROJECT_NAME="menu-bar-executor"
+SCHEME="menu-bar-executor"
 CONFIG="Release"
 
 echo "📦 开始构建 ${PROJECT_NAME} v${VERSION} ..."

@@ -21,7 +21,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		03DF24DE356071645C63AB91 /* menu-bar-exector.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "menu-bar-exector.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		03DF24DE356071645C63AB91 /* menu-bar-executor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "menu-bar-executor.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		10A790C812506D60E727B25D /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		1590161106185F5B42D0DF85 /* CommandsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandsListView.swift; sourceTree = "<group>"; };
 		1B1155004A4C5664C449A8C5 /* Command.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Command.swift; sourceTree = "<group>"; };
@@ -64,7 +64,7 @@
 		7E86086BC15DA8EB6CE24267 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				03DF24DE356071645C63AB91 /* menu-bar-exector.app */,
+				03DF24DE356071645C63AB91 /* menu-bar-executor.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -89,9 +89,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		B6E77563D28C662C203EC004 /* menu-bar-exector */ = {
+		B6E77563D28C662C203EC004 /* menu-bar-executor */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = E224032FFD653CC77537FD83 /* Build configuration list for PBXNativeTarget "menu-bar-exector" */;
+			buildConfigurationList = E224032FFD653CC77537FD83 /* Build configuration list for PBXNativeTarget "menu-bar-executor" */;
 			buildPhases = (
 				BE5B8B87A9731E1A248B59D3 /* Sources */,
 			);
@@ -99,11 +99,11 @@
 			);
 			dependencies = (
 			);
-			name = "menu-bar-exector";
+			name = "menu-bar-executor";
 			packageProductDependencies = (
 			);
-			productName = "menu-bar-exector";
-			productReference = 03DF24DE356071645C63AB91 /* menu-bar-exector.app */;
+			productName = "menu-bar-executor";
+			productReference = 03DF24DE356071645C63AB91 /* menu-bar-executor.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -120,7 +120,7 @@
 					};
 				};
 			};
-			buildConfigurationList = FFC2E11E48BE307F4C9B38DF /* Build configuration list for PBXProject "menu-bar-exector" */;
+			buildConfigurationList = FFC2E11E48BE307F4C9B38DF /* Build configuration list for PBXProject "menu-bar-executor" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -134,7 +134,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				B6E77563D28C662C203EC004 /* menu-bar-exector */,
+				B6E77563D28C662C203EC004 /* menu-bar-executor */,
 			);
 		};
 /* End PBXProject section */
@@ -230,7 +230,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.cai.menu-bar-exector";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.cai.menu-bar-executor";
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -248,7 +248,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.cai.menu-bar-exector";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.cai.menu-bar-executor";
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -319,7 +319,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		E224032FFD653CC77537FD83 /* Build configuration list for PBXNativeTarget "menu-bar-exector" */ = {
+		E224032FFD653CC77537FD83 /* Build configuration list for PBXNativeTarget "menu-bar-executor" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				9BDC2B724CCB146E158805F0 /* Debug */,
@@ -328,7 +328,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		FFC2E11E48BE307F4C9B38DF /* Build configuration list for PBXProject "menu-bar-exector" */ = {
+		FFC2E11E48BE307F4C9B38DF /* Build configuration list for PBXProject "menu-bar-executor" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C0DF819B27AD01A8652D61E0 /* Debug */,

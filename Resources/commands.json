@@ -3,7 +3,7 @@
     {
       "id": "example",
       "name": "示例命令",
-      "command": "echo 'Hello from menu-bar-exector'",
+      "command": "echo 'Hello from menu-bar-executor'",
       "icon": "terminal.fill",
       "notification": true
     }

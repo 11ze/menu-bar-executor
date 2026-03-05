@@ -18,7 +18,7 @@ final class NotificationManager {
 
     func showSuccess(commandName: String, output: String?) {
         let content = UNMutableNotificationContent()
-        content.title = "menu-bar-exector"
+        content.title = "Menu Bar Executor"
 
         // 显示命令名称和执行结果（如果有输出）
         if let output = output, !output.isEmpty {
@@ -42,7 +42,7 @@ final class NotificationManager {
 
     func showFailure(commandName: String, error: String, output: String?) {
         let content = UNMutableNotificationContent()
-        content.title = "menu-bar-exector"
+        content.title = "Menu Bar Executor"
 
         // 显示命令名称、错误信息和执行结果（如果有）
         var body = "command: \(commandName)\noutput: \(error)"
