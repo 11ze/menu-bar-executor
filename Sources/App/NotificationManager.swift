@@ -18,15 +18,15 @@ final class NotificationManager {
 
     func showSuccess(commandName: String, output: String?) {
         let content = UNMutableNotificationContent()
-        content.title = "命令执行成功"
+        content.title = "menu-bar-exector"
 
         // 显示命令名称和执行结果（如果有输出）
         if let output = output, !output.isEmpty {
             // 限制输出长度，避免通知内容过长
             let truncatedOutput = output.count > 100 ? String(output.prefix(100)) + "..." : output
-            content.body = "\(commandName)\n\(truncatedOutput)"
+            content.body = "command: \(commandName)\noutput: \(truncatedOutput)"
         } else {
-            content.body = commandName
+            content.body = "command: \(commandName)"
         }
 
         content.sound = .default
@@ -42,13 +42,13 @@ final class NotificationManager {
 
     func showFailure(commandName: String, error: String, output: String?) {
         let content = UNMutableNotificationContent()
-        content.title = "命令执行失败"
+        content.title = "menu-bar-exector"
 
         // 显示命令名称、错误信息和执行结果（如果有）
-        var body = "\(commandName): \(error)"
+        var body = "command: \(commandName)\noutput: \(error)"
         if let output = output, !output.isEmpty {
             let truncatedOutput = output.count > 100 ? String(output.prefix(100)) + "..." : output
-            body += "\n\(truncatedOutput)"
+            body += "\noutput: \(truncatedOutput)"
         }
 
         content.body = body
