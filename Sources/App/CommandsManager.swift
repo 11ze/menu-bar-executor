@@ -34,10 +34,10 @@ final class CommandsManager: ObservableObject {
 
             if command.notification {
                 if success {
-                    self.notificationManager.showSuccess(commandName: command.name)
+                    self.notificationManager.showSuccess(commandName: command.name, output: output)
                 } else {
                     let errorMsg = output ?? "未知错误"
-                    self.notificationManager.showFailure(commandName: command.name, error: errorMsg)
+                    self.notificationManager.showFailure(commandName: command.name, error: errorMsg, output: output)
                 }
             }
         }

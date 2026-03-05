@@ -16,10 +16,19 @@ final class NotificationManager {
         }
     }
 
-    func showSuccess(commandName: String) {
+    func showSuccess(commandName: String, output: String?) {
         let content = UNMutableNotificationContent()
         content.title = "命令执行成功"
-        content.body = commandName
+
+        // 显示命令名称和执行结果（如果有输出）
+        if let output = output, !output.isEmpty {
+            // 限制输出长度，避免通知内容过长
+            let truncatedOutput = output.count > 100 ? String(output.prefix(100)) + "..." : output
+            content.body = "\(commandName)\n\(truncatedOutput)"
+        } else {
+            content.body = commandName
+        }
+
         content.sound = .default
 
         let request = UNNotificationRequest(
@@ -31,10 +40,18 @@ final class NotificationManager {
         UNUserNotificationCenter.current().add(request)
     }
 
-    func showFailure(commandName: String, error: String) {
+    func showFailure(commandName: String, error: String, output: String?) {
         let content = UNMutableNotificationContent()
         content.title = "命令执行失败"
-        content.body = "\(commandName): \(error)"
+
+        // 显示命令名称、错误信息和执行结果（如果有）
+        var body = "\(commandName): \(error)"
+        if let output = output, !output.isEmpty {
+            let truncatedOutput = output.count > 100 ? String(output.prefix(100)) + "..." : output
+            body += "\n\(truncatedOutput)"
+        }
+
+        content.body = body
         content.sound = .default
 
         let request = UNNotificationRequest(
