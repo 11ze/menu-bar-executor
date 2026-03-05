@@ -65,8 +65,8 @@ final class NotificationManager {
 
     func showReloadSuccess() {
         let content = UNMutableNotificationContent()
-        content.title = "配置已重载"
-        content.body = "命令列表已更新"
+        content.title = "Menu Bar Executor"
+        content.body = "配置已重载: 命令列表已更新"
         content.sound = .default
 
         let request = UNNotificationRequest(
