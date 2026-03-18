@@ -14,9 +14,9 @@ final class CommandExecutor {
         process.standardOutput = pipe
         process.standardError = pipe
 
-        // 使用系统默认 shell
+        // 使用 login shell（自动 source ~/.zshrc 等配置文件）
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-c", command.command]
+        process.arguments = ["-l", "-c", command.command]
 
         // 设置工作目录
         if let workingDir = command.workingDirectory {

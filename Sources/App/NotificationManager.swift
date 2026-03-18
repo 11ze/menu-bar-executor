@@ -1,10 +1,12 @@
 import Foundation
 import UserNotifications
 
-final class NotificationManager {
+final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     static let shared = NotificationManager()
 
-    private init() {
+    private override init() {
+        super.init()
+        UNUserNotificationCenter.current().delegate = self
         requestAuthorization()
     }
 
@@ -14,6 +16,14 @@ final class NotificationManager {
                 print("Notification authorization error: \(error)")
             }
         }
+    }
+
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
     }
 
     func showSuccess(commandName: String, output: String?) {
