@@ -50,7 +50,7 @@ struct HistoryView: View {
                                 Text(record.commandName)
                                     .font(.body)
                                 Spacer()
-                                Text(dateFormatter.string(from: record.executedAt))
+                                Text(Self.dateFormatter.string(from: record.executedAt))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }

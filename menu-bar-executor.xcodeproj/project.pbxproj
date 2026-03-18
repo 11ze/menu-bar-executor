@@ -11,6 +11,7 @@
 		217D8B66CA81552C52E574C0 /* HistoryWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F546DA52F75C953D3F36B768 /* HistoryWindowController.swift */; };
 		2C0930F2BD606CBA0BA2C6B1 /* ExecutionRecordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14B1163230FFB666809580CC /* ExecutionRecordTests.swift */; };
 		2EB86CC5EEBD619BBBE6CA90 /* CommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B0A1B3CD55B63263017DFD5 /* CommandTests.swift */; };
+		46D5C6BCC97A1BC447CE34F4 /* AppPaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CFABB67A94EF726CFDFCF7F /* AppPaths.swift */; };
 		608F07571328B15B0F347122 /* CommandEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE107B13A523C46A2B7B779 /* CommandEditorView.swift */; };
 		6333152BF6C561B4C7C088BC /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ACB75E92D607A4CB1C6BD53 /* HistoryView.swift */; };
 		7D0B47C8D5646FCD6E2ECE35 /* AppError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 574EACA6D883D60B0B87F178 /* AppError.swift */; };
@@ -18,6 +19,7 @@
 		A645571E78903815A1F3A3F3 /* ConfigLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99973B3BA21E360711036472 /* ConfigLoader.swift */; };
 		AB9A6F51B3E93E144FDDA136 /* CommandsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D7D61090F4A463C8D90AE55 /* CommandsListView.swift */; };
 		ACAED94D21DA8EED4C39E953 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8BCC47786F8B40FFC7101D4 /* AppDelegate.swift */; };
+		D31A6DEAB40AD4C0F3630E50 /* StringExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED99260826BDCB59EAABC110 /* StringExtensions.swift */; };
 		D504524AF9A457070B83462A /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67649DC5E0CED941426BB035 /* SettingsWindowController.swift */; };
 		D8AD50CA697B5255ACC8BB68 /* CommandExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC6C4FAB6EA65A46AA471A0 /* CommandExecutor.swift */; };
 		E53FC7CAE943D388B12C00CE /* MenuBarExecutorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 376A98A5A89A0ADF45CB6F30 /* MenuBarExecutorApp.swift */; };
@@ -45,12 +47,14 @@
 		574EACA6D883D60B0B87F178 /* AppError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppError.swift; sourceTree = "<group>"; };
 		579CA3C4859B81019CE4A31A /* menu-bar-executor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "menu-bar-executor.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		67649DC5E0CED941426BB035 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
+		6CFABB67A94EF726CFDFCF7F /* AppPaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPaths.swift; sourceTree = "<group>"; };
 		7D7D61090F4A463C8D90AE55 /* CommandsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandsListView.swift; sourceTree = "<group>"; };
 		99973B3BA21E360711036472 /* ConfigLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigLoader.swift; sourceTree = "<group>"; };
 		C2AD11CD9100101B40D6639E /* ExecutionHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecutionHistory.swift; sourceTree = "<group>"; };
 		CBB51205F4901BA6B86D689A /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		CBC6C4FAB6EA65A46AA471A0 /* CommandExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandExecutor.swift; sourceTree = "<group>"; };
 		DD2C2235CB8A5EC42862D834 /* Command.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Command.swift; sourceTree = "<group>"; };
+		ED99260826BDCB59EAABC110 /* StringExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringExtensions.swift; sourceTree = "<group>"; };
 		F51934FAA32CDB59079B2471 /* menu-bar-executorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "menu-bar-executorTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F546DA52F75C953D3F36B768 /* HistoryWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryWindowController.swift; sourceTree = "<group>"; };
 		F8BCC47786F8B40FFC7101D4 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -90,6 +94,7 @@
 			children = (
 				F8BCC47786F8B40FFC7101D4 /* AppDelegate.swift */,
 				574EACA6D883D60B0B87F178 /* AppError.swift */,
+				6CFABB67A94EF726CFDFCF7F /* AppPaths.swift */,
 				DD2C2235CB8A5EC42862D834 /* Command.swift */,
 				CBC6C4FAB6EA65A46AA471A0 /* CommandExecutor.swift */,
 				1F375BA81AAC5D1C6B2CC03D /* CommandsManager.swift */,
@@ -99,6 +104,7 @@
 				376A98A5A89A0ADF45CB6F30 /* MenuBarExecutorApp.swift */,
 				CBB51205F4901BA6B86D689A /* NotificationManager.swift */,
 				67649DC5E0CED941426BB035 /* SettingsWindowController.swift */,
+				ED99260826BDCB59EAABC110 /* StringExtensions.swift */,
 				830DE97E0AA91043B385D6DC /* Views */,
 			);
 			path = App;
@@ -212,6 +218,7 @@
 			files = (
 				ACAED94D21DA8EED4C39E953 /* AppDelegate.swift in Sources */,
 				7D0B47C8D5646FCD6E2ECE35 /* AppError.swift in Sources */,
+				46D5C6BCC97A1BC447CE34F4 /* AppPaths.swift in Sources */,
 				FDBF6B0F93191BDD8091933C /* Command.swift in Sources */,
 				608F07571328B15B0F347122 /* CommandEditorView.swift in Sources */,
 				D8AD50CA697B5255ACC8BB68 /* CommandExecutor.swift in Sources */,
@@ -224,6 +231,7 @@
 				E53FC7CAE943D388B12C00CE /* MenuBarExecutorApp.swift in Sources */,
 				900E9229E77F5B36AEF51F60 /* NotificationManager.swift in Sources */,
 				D504524AF9A457070B83462A /* SettingsWindowController.swift in Sources */,
+				D31A6DEAB40AD4C0F3630E50 /* StringExtensions.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
