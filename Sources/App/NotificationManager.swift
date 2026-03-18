@@ -28,13 +28,11 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
     func showSuccess(commandName: String, output: String?) {
         let content = UNMutableNotificationContent()
-        content.title = "Menu Bar Executor"
+        content.title = "✅ 执行成功"
+        content.subtitle = commandName
 
-        // 显示命令名称和执行结果（如果有输出）
         if let output = output?.truncated(to: 100), !output.isEmpty {
-            content.body = "command: \(commandName)\noutput: \(output)"
-        } else {
-            content.body = "command: \(commandName)"
+            content.body = "输出：\n\(output)"
         }
 
         content.sound = .default
@@ -50,12 +48,12 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
     func showFailure(commandName: String, error: String, output: String?) {
         let content = UNMutableNotificationContent()
-        content.title = "Menu Bar Executor"
+        content.title = "❌ 执行失败"
+        content.subtitle = commandName
 
-        // 显示命令名称、错误信息和执行结果（如果有）
-        var body = "command: \(commandName)\nerror: \(error)"
+        var body = "错误：\n\(error)"
         if let output = output?.truncated(to: 100), !output.isEmpty {
-            body += "\noutput: \(output)"
+            body += "\n\n输出：\n\(output)"
         }
 
         content.body = body

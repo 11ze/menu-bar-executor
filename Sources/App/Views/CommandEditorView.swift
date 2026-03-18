@@ -23,6 +23,22 @@ struct CommandEditorView: View {
         return Array(groups).sorted()
     }
 
+    // 检查快捷键冲突
+    private var shortcutConflict: Bool {
+        guard !shortcut.isEmpty else { return false }
+        return manager.commands.contains { cmd in
+            cmd.id != command?.id && cmd.shortcut?.lowercased() == shortcut.lowercased()
+        }
+    }
+
+    // 获取已使用的快捷键列表
+    private var usedShortcuts: [(shortcut: String, commandName: String)] {
+        manager.commands.compactMap { cmd in
+            guard let s = cmd.shortcut, !s.isEmpty, cmd.id != command?.id else { return nil }
+            return (s, cmd.name)
+        }.sorted { $0.shortcut < $1.shortcut }
+    }
+
     init(command: Command?, onSave: @escaping (Command) -> Void) {
         self.command = command
         self.onSave = onSave
@@ -97,8 +113,35 @@ struct CommandEditorView: View {
             }
 
             Section("快捷键") {
-                TextField("快捷键（如：r, 1, F1）", text: $shortcut)
-                    .help("输入单个字符或功能键名称")
+                HStack {
+                    TextField("快捷键（如：r, 1, F1）", text: $shortcut)
+                        .help("输入单个字符或功能键名称")
+
+                    if shortcutConflict {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.red)
+                            .help("快捷键已被其他命令使用")
+                    }
+                }
+
+                if shortcutConflict {
+                    Text("⚠️ 快捷键冲突：此快捷键已被使用")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
+
+                if !usedShortcuts.isEmpty {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("已使用的快捷键：")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        ForEach(usedShortcuts, id: \.commandName) { item in
+                            Text("  ⌘\(item.shortcut.uppercased()) - \(item.commandName)")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
             }
 
             Section {
@@ -131,7 +174,7 @@ struct CommandEditorView: View {
             icon: iconName.isEmpty ? nil : iconName,
             notification: notification,
             group: group.isEmpty ? nil : group,
-            shortcut: shortcut.isEmpty ? nil : shortcut
+            shortcut: shortcut.isEmpty ? nil : shortcut.lowercased()
         )
         onSave(newCommand)
         dismiss()
