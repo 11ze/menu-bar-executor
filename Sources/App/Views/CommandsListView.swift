@@ -8,21 +8,18 @@ struct CommandsListView: View {
     @State private var showingDeleteConfirmation = false
     @State private var searchText = ""
 
-    // 按搜索文本过滤命令
     private var filteredCommands: [Command] {
         if searchText.isEmpty {
             return manager.commands
         }
         return manager.commands.filter { command in
             command.name.localizedCaseInsensitiveContains(searchText) ||
-            command.command.localizedCaseInsensitiveContains(searchText) ||
-            (command.group?.localizedCaseInsensitiveContains(searchText) ?? false)
+            command.command.localizedCaseInsensitiveContains(searchText)
         }
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            // 工具栏
             HStack {
                 Text("命令管理")
                     .font(.headline)
@@ -39,7 +36,6 @@ struct CommandsListView: View {
 
             Divider()
 
-            // 搜索框
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
@@ -58,34 +54,16 @@ struct CommandsListView: View {
 
             Divider()
 
-            // 命令列表
             List {
-                ForEach(filteredCommands) { command in
+                ForEach(searchText.isEmpty ? manager.commands : filteredCommands) { command in
                     HStack {
-                        Image(systemName: command.icon ?? "terminal.fill")
-                            .frame(width: 24)
+                        Image(systemName: "line.3.horizontal")
+                            .foregroundColor(searchText.isEmpty ? .secondary : Color.gray.opacity(0.5))
+                            .frame(width: 20)
 
                         VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text(command.name)
-                                    .font(.body)
-                                if let group = command.group {
-                                    Text(group)
-                                        .font(.caption2)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(Color.accentColor.opacity(0.2))
-                                        .cornerRadius(4)
-                                }
-                                if let shortcut = command.shortcut {
-                                    Text("⌘\(shortcut.uppercased())")
-                                        .font(.caption2)
-                                        .padding(.horizontal, 4)
-                                        .padding(.vertical, 2)
-                                        .background(Color.secondary.opacity(0.2))
-                                        .cornerRadius(4)
-                                }
-                            }
+                            Text(command.name)
+                                .font(.body)
                             Text(command.command)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
@@ -112,9 +90,12 @@ struct CommandsListView: View {
                     }
                     .padding(.vertical, 4)
                 }
+                .onMove(perform: searchText.isEmpty ? { source, destination in
+                    manager.reorderCommands(from: source, to: destination)
+                } : nil)
             }
         }
-        .frame(minWidth: 650, minHeight: 450)
+        .frame(minWidth: 500, minHeight: 400)
         .sheet(isPresented: $showingEditor) {
             CommandEditorView(command: editingCommand) { command in
                 if editingCommand != nil {

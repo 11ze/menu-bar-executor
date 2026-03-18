@@ -8,7 +8,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // 创建状态栏项
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
         if let button = statusItem?.button {
@@ -16,16 +15,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 image.isTemplate = true
                 button.image = image
             } else {
-                // 如果图标加载失败，使用文本标题
                 button.title = "菜单"
             }
             button.toolTip = "菜单栏命令执行器"
         }
 
-        // 构建菜单
         buildMenu()
 
-        // 监听命令列表变化
         Task { @MainActor in
             CommandsManager.shared.$commands
                 .receive(on: DispatchQueue.main)
@@ -42,29 +38,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         let manager = CommandsManager.shared
 
-        // 按分组组织命令
-        let groupedCommands = Dictionary(grouping: manager.commands) { $0.group }
-        let sortedGroups = groupedCommands.keys.sorted { ($0 ?? "") < ($1 ?? "") }
-
-        for group in sortedGroups {
-            guard let commands = groupedCommands[group] else { continue }
-
-            if let group = group, !group.isEmpty {
-                // 有分组：创建子菜单
-                let submenu = NSMenu()
-                for command in commands {
-                    submenu.addItem(createMenuItem(for: command))
-                }
-
-                let submenuItem = NSMenuItem(title: group, action: nil, keyEquivalent: "")
-                submenuItem.submenu = submenu
-                menu.addItem(submenuItem)
-            } else {
-                // 无分组：直接添加到顶层
-                for command in commands {
-                    menu.addItem(createMenuItem(for: command))
-                }
-            }
+        for command in manager.commands {
+            menu.addItem(createMenuItem(for: command))
         }
 
         menu.addItem(NSMenuItem.separator())
@@ -115,13 +90,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let item = NSMenuItem(
             title: command.name,
             action: #selector(executeCommand(_:)),
-            keyEquivalent: command.shortcut ?? ""
+            keyEquivalent: ""
         )
         item.representedObject = command
         item.target = self
-        if let iconName = command.icon {
-            item.image = NSImage(systemSymbolName: iconName, accessibilityDescription: nil)
-        }
         return item
     }
 

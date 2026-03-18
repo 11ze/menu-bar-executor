@@ -31,7 +31,6 @@ final class CommandsManager: ObservableObject {
         executor.execute(command: command) { [weak self] success, output in
             guard let self = self else { return }
 
-            // 记录执行历史
             let record = ExecutionRecord(command: command, success: success, output: output)
             self.history.addRecord(record)
 
@@ -53,7 +52,7 @@ final class CommandsManager: ObservableObject {
         do {
             try configLoader.saveConfig(commands)
         } catch {
-            commands = originalCommands  // 回滚
+            commands = originalCommands
             lastError = .configSaveFailed(error)
         }
     }
@@ -67,7 +66,7 @@ final class CommandsManager: ObservableObject {
         do {
             try configLoader.saveConfig(commands)
         } catch {
-            commands = originalCommands  // 回滚
+            commands = originalCommands
             lastError = .configSaveFailed(error)
         }
     }
@@ -81,7 +80,19 @@ final class CommandsManager: ObservableObject {
         do {
             try configLoader.saveConfig(commands)
         } catch {
-            commands = originalCommands  // 回滚
+            commands = originalCommands
+            lastError = .configSaveFailed(error)
+        }
+    }
+
+    func reorderCommands(from source: IndexSet, to destination: Int) {
+        let originalCommands = commands
+        commands.move(fromOffsets: source, toOffset: destination)
+
+        do {
+            try configLoader.saveConfig(commands)
+        } catch {
+            commands = originalCommands
             lastError = .configSaveFailed(error)
         }
     }

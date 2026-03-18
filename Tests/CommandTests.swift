@@ -26,7 +26,6 @@ final class CommandTests: XCTestCase {
     }
 
     func testCommandDecodingWithoutId() throws {
-        // 测试旧配置文件兼容性（无 id 字段时自动生成）
         let json = """
         {
             "name": "Legacy Command",
@@ -38,24 +37,18 @@ final class CommandTests: XCTestCase {
         let command = try JSONDecoder().decode(Command.self, from: json)
         XCTAssertEqual(command.name, "Legacy Command")
         XCTAssertEqual(command.command, "ls -la")
-        XCTAssertNotNil(command.id)  // ID 应该自动生成
+        XCTAssertNotNil(command.id)
     }
 
-    func testCommandWithOptionalFields() throws {
+    func testCommandWithWorkingDirectory() throws {
         let command = Command(
-            name: "Full Command",
+            name: "Test",
             command: "pwd",
             workingDirectory: "~",
-            icon: "folder.fill",
-            notification: true,
-            group: "File Operations",
-            shortcut: "f"
+            notification: true
         )
 
         XCTAssertEqual(command.workingDirectory, "~")
-        XCTAssertEqual(command.icon, "folder.fill")
-        XCTAssertEqual(command.group, "File Operations")
-        XCTAssertEqual(command.shortcut, "f")
     }
 
     func testCommandsConfigEncoding() throws {
