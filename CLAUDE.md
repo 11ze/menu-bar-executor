@@ -91,7 +91,7 @@ xcodegen generate
 xcodebuild -project menu-bar-executor.xcodeproj -scheme MenuBarExecutor -configuration Debug -derivedDataPath ./build build
 
 # 运行
-pkill -f menu-bar-executor; open ./build/Build/Products/Debug/MenuBarExecutor.app
+pkill -f MenuBarExecutor; open ./build/Build/Products/Debug/MenuBarExecutor.app
 
 # 测试
 xcodebuild test -project menu-bar-executor.xcodeproj -scheme MenuBarExecutorTests -destination 'platform=macOS'
@@ -104,5 +104,5 @@ cat ~/.config/menu-bar-executor/commands.json
 
 每次修改后重新构建并重启应用：
 ```bash
-pkill -f menu-bar-executor && xcodebuild -project menu-bar-executor.xcodeproj -scheme MenuBarExecutor build && open ./build/Build/Products/Debug/MenuBarExecutor.app
+pkill -f MenuBarExecutor && xcodebuild -project menu-bar-executor.xcodeproj -scheme MenuBarExecutor build && open ./build/Build/Products/Debug/MenuBarExecutor.app
 ```

@@ -7,7 +7,8 @@ set -e
 
 VERSION=${1:-"1.0.0"}
 PROJECT_NAME="menu-bar-executor"
-SCHEME="menu-bar-executor"
+SCHEME="MenuBarExecutor"
+APP_NAME="MenuBarExecutor"
 CONFIG="Release"
 
 echo "📦 开始构建 ${PROJECT_NAME} v${VERSION} ..."
@@ -22,7 +23,7 @@ xcodebuild -project ${PROJECT_NAME}.xcodeproj \
 
 # 获取构建产物路径（使用指定的 derivedDataPath）
 BUILD_DIR="${PROJECT_NAME}.xcodeproj/../build/Build/Products/${CONFIG}"
-APP_PATH="${BUILD_DIR}/${PROJECT_NAME}.app"
+APP_PATH="${BUILD_DIR}/${APP_NAME}.app"
 
 if [ ! -d "${APP_PATH}" ]; then
     echo "❌ 构建失败：找不到 ${APP_PATH}"
@@ -41,7 +42,7 @@ cp -R "${APP_PATH}" "./${RELEASE_DIR}/"
 # 打包成 zip
 echo "🗜️ 打包中..."
 cd ${RELEASE_DIR}
-zip -r ${PROJECT_NAME}-${VERSION}.zip ${PROJECT_NAME}.app
+zip -r ${PROJECT_NAME}-${VERSION}.zip ${APP_NAME}.app
 cd ..
 
 echo "✅ 完成！"
