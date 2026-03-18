@@ -94,6 +94,14 @@ struct CommandsListView: View {
                     manager.reorderCommands(from: source, to: destination)
                 } : nil)
             }
+
+            if manager.commands.count > 1 && searchText.isEmpty {
+                Text("拖拽可排序")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
+            }
         }
         .frame(minWidth: 500, minHeight: 400)
         .sheet(isPresented: $showingEditor) {

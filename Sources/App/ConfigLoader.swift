@@ -27,7 +27,12 @@ final class ConfigLoader {
             do {
                 let data = try Data(contentsOf: configFilePath)
                 let config = try JSONDecoder().decode(CommandsConfig.self, from: data)
-                return config.commands
+                let commands = config.commands
+
+                // 保存配置以补全缺失的 id 并标准化格式
+                try? saveConfig(commands)
+
+                return commands
             } catch {
                 // 加载失败，回退到默认配置
             }
