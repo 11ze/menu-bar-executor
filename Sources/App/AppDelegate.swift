@@ -37,28 +37,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func buildMenu() {
-        print("[AppDelegate] buildMenu 开始")
-        guard let button = statusItem?.button else {
-            print("[AppDelegate] button 为 nil")
-            return
-        }
+        guard let button = statusItem?.button else { return }
 
         let menu = NSMenu()
         let manager = CommandsManager.shared
 
-        print("[AppDelegate] commands 数量: \(manager.commands.count)")
-        for command in manager.commands {
-            let item = NSMenuItem(
-                title: command.name,
-                action: #selector(executeCommand(_:)),
-                keyEquivalent: ""
-            )
-            item.representedObject = command
-            item.target = self
-            if let iconName = command.icon {
-                item.image = NSImage(systemSymbolName: iconName, accessibilityDescription: nil)
+        // 按分组组织命令
+        let groupedCommands = Dictionary(grouping: manager.commands) { $0.group }
+        let sortedGroups = groupedCommands.keys.sorted { ($0 ?? "") < ($1 ?? "") }
+
+        for group in sortedGroups {
+            guard let commands = groupedCommands[group] else { continue }
+
+            if let group = group, !group.isEmpty {
+                // 有分组：创建子菜单
+                let submenu = NSMenu()
+                for command in commands {
+                    submenu.addItem(createMenuItem(for: command))
+                }
+
+                let submenuItem = NSMenuItem(title: group, action: nil, keyEquivalent: "")
+                submenuItem.submenu = submenu
+                menu.addItem(submenuItem)
+            } else {
+                // 无分组：直接添加到顶层
+                for command in commands {
+                    menu.addItem(createMenuItem(for: command))
+                }
             }
-            menu.addItem(item)
         }
 
         menu.addItem(NSMenuItem.separator())
@@ -80,6 +86,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         settingsItem.target = self
         menu.addItem(settingsItem)
 
+        let historyItem = NSMenuItem(
+            title: "执行历史...",
+            action: #selector(openHistory),
+            keyEquivalent: "h"
+        )
+        historyItem.target = self
+        historyItem.keyEquivalentModifierMask = [.command]
+        menu.addItem(historyItem)
+
         menu.addItem(NSMenuItem.separator())
 
         let quitItem = NSMenuItem(
@@ -94,7 +109,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         button.action = #selector(statusBarButtonClicked(_:))
         button.target = self
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
-        print("[AppDelegate] 菜单已设置，菜单项数量: \(menu.items.count)")
+    }
+
+    private func createMenuItem(for command: Command) -> NSMenuItem {
+        let item = NSMenuItem(
+            title: command.name,
+            action: #selector(executeCommand(_:)),
+            keyEquivalent: command.shortcut ?? ""
+        )
+        item.representedObject = command
+        item.target = self
+        if let iconName = command.icon {
+            item.image = NSImage(systemSymbolName: iconName, accessibilityDescription: nil)
+        }
+        return item
     }
 
     @objc private func statusBarButtonClicked(_ sender: NSStatusBarButton) {
@@ -122,5 +150,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettings() {
         SettingsWindowController.shared.showWindow()
+    }
+
+    @objc private func openHistory() {
+        HistoryWindowController.shared.showWindow()
     }
 }

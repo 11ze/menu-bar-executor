@@ -22,67 +22,48 @@ final class ConfigLoader {
     }
 
     func loadConfig() -> [Command] {
-        print("[ConfigLoader] configFilePath: \(configFilePath.path)")
-        print("[ConfigLoader] defaultConfigPath: \(defaultConfigPath?.path ?? "nil")")
-
         // 尝试加载用户配置
         if FileManager.default.fileExists(atPath: configFilePath.path) {
-            print("[ConfigLoader] 找到用户配置文件")
             do {
                 let data = try Data(contentsOf: configFilePath)
                 let config = try JSONDecoder().decode(CommandsConfig.self, from: data)
                 return config.commands
             } catch {
-                print("Failed to load user config: \(error)")
+                // 加载失败，回退到默认配置
             }
-        } else {
-            print("[ConfigLoader] 用户配置文件不存在")
         }
 
         // 加载默认配置
         if let defaultPath = defaultConfigPath {
-            print("[ConfigLoader] 找到默认配置文件: \(defaultPath.path)")
             do {
                 let data = try Data(contentsOf: defaultPath)
                 let config = try JSONDecoder().decode(CommandsConfig.self, from: data)
                 return config.commands
             } catch {
-                print("Failed to load default config: \(error)")
+                // 默认配置也加载失败
             }
-        } else {
-            print("[ConfigLoader] 默认配置文件不存在")
         }
 
         return []
     }
 
     func ensureConfigDirectoryExists() {
-        print("[ConfigLoader] ensureConfigDirectoryExists: \(configDirectory.path)")
         let fileManager = FileManager.default
         if !fileManager.fileExists(atPath: configDirectory.path) {
-            print("[ConfigLoader] 目录不存在，需要创建")
             do {
                 try fileManager.createDirectory(at: configDirectory, withIntermediateDirectories: true)
-                print("[ConfigLoader] 目录已创建")
                 // 复制默认配置（如果存在）
                 if let defaultPath = defaultConfigPath {
-                    print("[ConfigLoader] 复制默认配置到: \(configFilePath.path)")
                     let defaultData = try Data(contentsOf: defaultPath)
                     try defaultData.write(to: configFilePath)
-                    print("[ConfigLoader] 复制完成")
-                } else {
-                    print("[ConfigLoader] 没有默认配置可复制")
                 }
             } catch {
-                print("Failed to create config directory: \(error)")
+                // 目录创建或配置复制失败
             }
-        } else {
-            print("[ConfigLoader] 目录已存在")
         }
     }
 
     func saveConfig(_ commands: [Command]) throws {
-        print("[ConfigLoader] 开始保存配置")
         ensureConfigDirectoryExists()
 
         let config = CommandsConfig(commands: commands)
@@ -90,7 +71,16 @@ final class ConfigLoader {
         encoder.outputFormatting = .prettyPrinted
         let data = try encoder.encode(config)
 
-        try data.write(to: configFilePath)
-        print("[ConfigLoader] 配置已保存到: \(configFilePath.path)")
+        // 原子写入：先写入临时文件，再替换
+        let tempPath = configFilePath.appendingPathExtension("tmp")
+        try data.write(to: tempPath, options: .atomic)
+
+        // 原子替换
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: configFilePath.path) {
+            try fileManager.replaceItem(at: configFilePath, withItemAt: tempPath, backupItemName: nil, resultingItemURL: nil)
+        } else {
+            try fileManager.moveItem(at: tempPath, to: configFilePath)
+        }
     }
 }

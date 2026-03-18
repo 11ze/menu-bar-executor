@@ -21,10 +21,8 @@ final class NotificationManager {
         content.title = "Menu Bar Executor"
 
         // 显示命令名称和执行结果（如果有输出）
-        if let output = output, !output.isEmpty {
-            // 限制输出长度，避免通知内容过长
-            let truncatedOutput = output.count > 100 ? String(output.prefix(100)) + "..." : output
-            content.body = "command: \(commandName)\noutput: \(truncatedOutput)"
+        if let output = output?.truncated(to: 100), !output.isEmpty {
+            content.body = "command: \(commandName)\noutput: \(output)"
         } else {
             content.body = "command: \(commandName)"
         }
@@ -45,10 +43,9 @@ final class NotificationManager {
         content.title = "Menu Bar Executor"
 
         // 显示命令名称、错误信息和执行结果（如果有）
-        var body = "command: \(commandName)\noutput: \(error)"
-        if let output = output, !output.isEmpty {
-            let truncatedOutput = output.count > 100 ? String(output.prefix(100)) + "..." : output
-            body += "\noutput: \(truncatedOutput)"
+        var body = "command: \(commandName)\nerror: \(error)"
+        if let output = output?.truncated(to: 100), !output.isEmpty {
+            body += "\noutput: \(output)"
         }
 
         content.body = body

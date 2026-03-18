@@ -1,7 +1,6 @@
 {
   "commands": [
     {
-      "id": "example",
       "name": "示例命令",
       "command": "echo 'Hello from menu-bar-executor'",
       "icon": "terminal.fill",
