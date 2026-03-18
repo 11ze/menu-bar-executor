@@ -17,8 +17,8 @@ targets:
     sources:
       - Sources
       - Sources/App/Views
+      - Resources/Assets.xcassets
     resources:
-      - Resources
       - Resources/commands.json
     settings:
       base:
