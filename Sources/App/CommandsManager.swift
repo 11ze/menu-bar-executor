@@ -100,4 +100,24 @@ final class CommandsManager: ObservableObject {
     func clearError() {
         lastError = nil
     }
+
+    func importCommands(from url: URL) {
+        let originalCommands = commands
+        do {
+            let importedCommands = try configLoader.importConfig(from: url)
+            try configLoader.saveConfig(importedCommands)
+            commands = importedCommands
+        } catch {
+            commands = originalCommands
+            lastError = .configSaveFailed(error)
+        }
+    }
+
+    func exportConfig(to url: URL) {
+        do {
+            try configLoader.exportConfig(to: url)
+        } catch {
+            lastError = .configExportFailed(error)
+        }
+    }
 }

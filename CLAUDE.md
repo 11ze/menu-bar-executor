@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-macOS 菜单栏命令执行器，在菜单栏显示自定义命令，点击后执行并显示通知。支持图形界面命令管理、命令分组、快捷键绑定、命令搜索和执行历史功能。
+macOS 菜单栏命令执行器，在菜单栏显示自定义命令，点击后执行并显示通知。支持图形界面命令设置、命令分组、快捷键绑定、命令搜索和执行历史功能。
 
 ## 技术栈
 
@@ -20,7 +20,7 @@ Sources/App/
 ├── AppDelegate.swift             # App 代理，菜单栏管理
 ├── Command.swift                 # 命令模型（UUID 主键）
 ├── CommandExecutor.swift         # Shell 命令执行器（30 秒超时）
-├── CommandsManager.swift         # 命令管理器（CRUD + 回滚）
+├── CommandsManager.swift         # 命令设置器（CRUD + 回滚）
 ├── ConfigLoader.swift            # 配置文件加载器（原子写入）
 ├── NotificationManager.swift     # 通知管理器
 ├── ExecutionHistory.swift        # 执行历史管理（最近 100 条）

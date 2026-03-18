@@ -3,19 +3,10 @@ import Foundation
 final class ConfigLoader {
     static let shared = ConfigLoader()
 
-    private let configFileName = "commands.json"
-    private let configDirName = "menu-bar-executor"
-
     private init() {}
 
-    var configDirectory: URL {
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser
-        return homeDir.appendingPathComponent(".config").appendingPathComponent(configDirName)
-    }
-
-    var configFilePath: URL {
-        configDirectory.appendingPathComponent(configFileName)
-    }
+    var configDirectory: URL { AppPaths.configDirectory }
+    var configFilePath: URL { AppPaths.commandsFile }
 
     var defaultConfigPath: URL? {
         Bundle.main.url(forResource: "commands", withExtension: "json")
@@ -76,16 +67,39 @@ final class ConfigLoader {
         encoder.outputFormatting = .prettyPrinted
         let data = try encoder.encode(config)
 
+        // 检查是否是软链接
+        let fileManager = FileManager.default
+        let targetPath: URL
+        do {
+            let resolvedPath = try fileManager.destinationOfSymbolicLink(atPath: configFilePath.path)
+            targetPath = URL(fileURLWithPath: resolvedPath)
+        } catch {
+            // 不是软链接，使用原路径
+            targetPath = configFilePath
+        }
+
         // 原子写入：先写入临时文件，再替换
-        let tempPath = configFilePath.appendingPathExtension("tmp")
+        let tempPath = targetPath.appendingPathExtension("tmp")
         try data.write(to: tempPath, options: .atomic)
 
-        // 原子替换
-        let fileManager = FileManager.default
-        if fileManager.fileExists(atPath: configFilePath.path) {
-            try fileManager.replaceItem(at: configFilePath, withItemAt: tempPath, backupItemName: nil, resultingItemURL: nil)
+        // 原子替换目标文件
+        if fileManager.fileExists(atPath: targetPath.path) {
+            try fileManager.replaceItem(at: targetPath, withItemAt: tempPath, backupItemName: nil, resultingItemURL: nil)
         } else {
-            try fileManager.moveItem(at: tempPath, to: configFilePath)
+            try fileManager.moveItem(at: tempPath, to: targetPath)
         }
+    }
+
+    /// 导出配置到指定位置
+    func exportConfig(to url: URL) throws {
+        let data = try Data(contentsOf: configFilePath)
+        try data.write(to: url)
+    }
+
+    /// 从指定位置导入配置
+    func importConfig(from url: URL) throws -> [Command] {
+        let data = try Data(contentsOf: url)
+        let config = try JSONDecoder().decode(CommandsConfig.self, from: data)
+        return config.commands
     }
 }

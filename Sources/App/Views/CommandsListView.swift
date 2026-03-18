@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct CommandsListView: View {
     @ObservedObject private var manager = CommandsManager.shared
@@ -7,6 +8,14 @@ struct CommandsListView: View {
     @State private var commandToDelete: Command?
     @State private var showingDeleteConfirmation = false
     @State private var searchText = ""
+    @State private var showingImportConfirmation = false
+    @State private var importURL: URL?
+
+    private static let exportDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd_HHmmss"
+        return formatter
+    }()
 
     private var filteredCommands: [Command] {
         if searchText.isEmpty {
@@ -21,14 +30,22 @@ struct CommandsListView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("命令管理")
+                Text("命令设置")
                     .font(.headline)
                 Spacer()
-                Button(action: {
-                    editingCommand = nil
-                    showingEditor = true
-                }) {
-                    Label("添加命令", systemImage: "plus")
+                HStack(spacing: 12) {
+                    Button(action: exportConfig) {
+                        Label("导出", systemImage: "square.and.arrow.up")
+                    }
+                    Button(action: showImportPanel) {
+                        Label("导入", systemImage: "square.and.arrow.down")
+                    }
+                    Button(action: {
+                        editingCommand = nil
+                        showingEditor = true
+                    }) {
+                        Label("添加命令", systemImage: "plus")
+                    }
                 }
             }
             .padding()
@@ -135,6 +152,46 @@ struct CommandsListView: View {
             }
         } message: {
             Text(manager.lastError?.errorDescription ?? "未知错误")
+        }
+        .alert("确认导入", isPresented: $showingImportConfirmation) {
+            Button("导入", role: .destructive) {
+                if let url = importURL {
+                    manager.importCommands(from: url)
+                }
+                importURL = nil
+            }
+            Button("取消", role: .cancel) {
+                importURL = nil
+            }
+        } message: {
+            Text("导入将覆盖当前所有命令配置，确定要继续吗？")
+        }
+    }
+
+    private func exportConfig() {
+        let timestamp = Self.exportDateFormatter.string(from: Date())
+
+        let panel = NSSavePanel()
+        panel.title = "导出配置"
+        panel.nameFieldStringValue = "commands-\(timestamp).json"
+        panel.allowedContentTypes = [UTType.json]
+        panel.canCreateDirectories = true
+
+        if panel.runModal() == .OK, let url = panel.url {
+            manager.exportConfig(to: url)
+        }
+    }
+
+    private func showImportPanel() {
+        let panel = NSOpenPanel()
+        panel.title = "导入配置"
+        panel.allowedContentTypes = [UTType.json]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+
+        if panel.runModal() == .OK, let url = panel.url {
+            importURL = url
+            showingImportConfirmation = true
         }
     }
 }

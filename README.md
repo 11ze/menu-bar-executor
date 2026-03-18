@@ -110,7 +110,7 @@ Sources/App/
 ├── AppDelegate.swift             # App 代理，菜单栏管理
 ├── Command.swift                 # 命令模型
 ├── CommandExecutor.swift         # Shell 命令执行器
-├── CommandsManager.swift         # 命令管理器
+├── CommandsManager.swift         # 命令设置器
 ├── ConfigLoader.swift            # 配置文件加载器
 ├── NotificationManager.swift     # 通知管理器
 ├── ExecutionHistory.swift        # 执行历史管理
