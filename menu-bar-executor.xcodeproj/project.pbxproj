@@ -7,34 +7,34 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		206964E42E85FCA00A08374F /* ExecutionHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2AD11CD9100101B40D6639E /* ExecutionHistory.swift */; };
-		217D8B66CA81552C52E574C0 /* HistoryWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F546DA52F75C953D3F36B768 /* HistoryWindowController.swift */; };
-		2C0930F2BD606CBA0BA2C6B1 /* ExecutionRecordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14B1163230FFB666809580CC /* ExecutionRecordTests.swift */; };
-		2EB86CC5EEBD619BBBE6CA90 /* CommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B0A1B3CD55B63263017DFD5 /* CommandTests.swift */; };
-		46D5C6BCC97A1BC447CE34F4 /* AppPaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CFABB67A94EF726CFDFCF7F /* AppPaths.swift */; };
-		608F07571328B15B0F347122 /* CommandEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE107B13A523C46A2B7B779 /* CommandEditorView.swift */; };
-		6333152BF6C561B4C7C088BC /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ACB75E92D607A4CB1C6BD53 /* HistoryView.swift */; };
-		7D0B47C8D5646FCD6E2ECE35 /* AppError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 574EACA6D883D60B0B87F178 /* AppError.swift */; };
-		900E9229E77F5B36AEF51F60 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBB51205F4901BA6B86D689A /* NotificationManager.swift */; };
-		A645571E78903815A1F3A3F3 /* ConfigLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99973B3BA21E360711036472 /* ConfigLoader.swift */; };
-		AB9A6F51B3E93E144FDDA136 /* CommandsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D7D61090F4A463C8D90AE55 /* CommandsListView.swift */; };
-		ACAED94D21DA8EED4C39E953 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8BCC47786F8B40FFC7101D4 /* AppDelegate.swift */; };
-		B7181131ED30C6D52D405399 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9FB859C1EEB745C249C5457E /* Assets.xcassets */; };
-		D31A6DEAB40AD4C0F3630E50 /* StringExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED99260826BDCB59EAABC110 /* StringExtensions.swift */; };
-		D504524AF9A457070B83462A /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67649DC5E0CED941426BB035 /* SettingsWindowController.swift */; };
-		D8AD50CA697B5255ACC8BB68 /* CommandExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC6C4FAB6EA65A46AA471A0 /* CommandExecutor.swift */; };
-		E53FC7CAE943D388B12C00CE /* MenuBarExecutorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 376A98A5A89A0ADF45CB6F30 /* MenuBarExecutorApp.swift */; };
-		FC400BA9DB56841FA116F2EF /* CommandsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F375BA81AAC5D1C6B2CC03D /* CommandsManager.swift */; };
-		FDBF6B0F93191BDD8091933C /* Command.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD2C2235CB8A5EC42862D834 /* Command.swift */; };
+		0508AA3AD34B5B7F16FBB910 /* AppPaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CFABB67A94EF726CFDFCF7F /* AppPaths.swift */; };
+		10047C9EAC3E464410372895 /* ConfigLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99973B3BA21E360711036472 /* ConfigLoader.swift */; };
+		1834D30127FF381FC28D53DC /* HistoryWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F546DA52F75C953D3F36B768 /* HistoryWindowController.swift */; };
+		1A9796A4DF21921B067A5A3B /* ExecutionRecordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14B1163230FFB666809580CC /* ExecutionRecordTests.swift */; };
+		34242EFEEF319491EA6847FF /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ACB75E92D607A4CB1C6BD53 /* HistoryView.swift */; };
+		3D939FF72F75C956D43DEE07 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67649DC5E0CED941426BB035 /* SettingsWindowController.swift */; };
+		4620815E69194E31AF02D7E2 /* CommandsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D7D61090F4A463C8D90AE55 /* CommandsListView.swift */; };
+		7AF95E66E1C2749EFCBE5551 /* CommandEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE107B13A523C46A2B7B779 /* CommandEditorView.swift */; };
+		81EA2202F22F926C4EB31B25 /* CommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B0A1B3CD55B63263017DFD5 /* CommandTests.swift */; };
+		987FBD5785566A83D8B0882F /* CommandExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC6C4FAB6EA65A46AA471A0 /* CommandExecutor.swift */; };
+		B1FC38E32260E4789659A31D /* MenuBarExecutorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 376A98A5A89A0ADF45CB6F30 /* MenuBarExecutorApp.swift */; };
+		B614A36B06485096DBC7DE0B /* Command.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD2C2235CB8A5EC42862D834 /* Command.swift */; };
+		BF513E193E6B126A875A131F /* CommandsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F375BA81AAC5D1C6B2CC03D /* CommandsManager.swift */; };
+		C2ACF1981CEF875D2EC88FD2 /* AppError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 574EACA6D883D60B0B87F178 /* AppError.swift */; };
+		C864C0D2A80F7C24295438DC /* ExecutionHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2AD11CD9100101B40D6639E /* ExecutionHistory.swift */; };
+		C8A01FDEC4ADE8CCC3C28302 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8BCC47786F8B40FFC7101D4 /* AppDelegate.swift */; };
+		CD6A6BD24AB0C55D28CD9779 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9FB859C1EEB745C249C5457E /* Assets.xcassets */; };
+		D8B8CDDCF471BD4691C5B774 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBB51205F4901BA6B86D689A /* NotificationManager.swift */; };
+		F08E0469B2C6301EEBB84F9B /* StringExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED99260826BDCB59EAABC110 /* StringExtensions.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		67FDF9961CBA9280B7DC5830 /* PBXContainerItemProxy */ = {
+		5BB99D6B73760EE93B33D37E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 4084B6A8BAC6261E3C703B68 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = E0F0F5DD8C446C8C15BBD6BB;
-			remoteInfo = "menu-bar-executor";
+			remoteGlobalIDString = 81A320F252B03D17AE2391E4;
+			remoteInfo = MenuBarExecutor;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -46,18 +46,18 @@
 		3B0A1B3CD55B63263017DFD5 /* CommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandTests.swift; sourceTree = "<group>"; };
 		3EE107B13A523C46A2B7B779 /* CommandEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandEditorView.swift; sourceTree = "<group>"; };
 		574EACA6D883D60B0B87F178 /* AppError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppError.swift; sourceTree = "<group>"; };
-		579CA3C4859B81019CE4A31A /* menu-bar-executor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "menu-bar-executor.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		67649DC5E0CED941426BB035 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		6CFABB67A94EF726CFDFCF7F /* AppPaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPaths.swift; sourceTree = "<group>"; };
 		7D7D61090F4A463C8D90AE55 /* CommandsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandsListView.swift; sourceTree = "<group>"; };
+		86A9FE31D7CA4FD550DBAD73 /* MenuBarExecutorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MenuBarExecutorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		99973B3BA21E360711036472 /* ConfigLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigLoader.swift; sourceTree = "<group>"; };
 		9FB859C1EEB745C249C5457E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C2AD11CD9100101B40D6639E /* ExecutionHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecutionHistory.swift; sourceTree = "<group>"; };
 		CBB51205F4901BA6B86D689A /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		CBC6C4FAB6EA65A46AA471A0 /* CommandExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandExecutor.swift; sourceTree = "<group>"; };
+		CD347AF29622F9A0B4184103 /* MenuBarExecutor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MenuBarExecutor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DD2C2235CB8A5EC42862D834 /* Command.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Command.swift; sourceTree = "<group>"; };
 		ED99260826BDCB59EAABC110 /* StringExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringExtensions.swift; sourceTree = "<group>"; };
-		F51934FAA32CDB59079B2471 /* menu-bar-executorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "menu-bar-executorTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F546DA52F75C953D3F36B768 /* HistoryWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryWindowController.swift; sourceTree = "<group>"; };
 		F8BCC47786F8B40FFC7101D4 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -93,8 +93,8 @@
 		9810EB6C6B102A875A8CF03C /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				579CA3C4859B81019CE4A31A /* menu-bar-executor.app */,
-				F51934FAA32CDB59079B2471 /* menu-bar-executorTests.xctest */,
+				CD347AF29622F9A0B4184103 /* MenuBarExecutor.app */,
+				86A9FE31D7CA4FD550DBAD73 /* MenuBarExecutorTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -141,41 +141,41 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		DF46507007929B6911822B25 /* menu-bar-executorTests */ = {
+		81A320F252B03D17AE2391E4 /* MenuBarExecutor */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 2263FBC884DB8260D6219DF4 /* Build configuration list for PBXNativeTarget "menu-bar-executorTests" */;
+			buildConfigurationList = BB1D6F522CDD2CF53A024347 /* Build configuration list for PBXNativeTarget "MenuBarExecutor" */;
 			buildPhases = (
-				7926D09257029A7601236459 /* Sources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				B4D67243F177A5340F5B29D9 /* PBXTargetDependency */,
-			);
-			name = "menu-bar-executorTests";
-			packageProductDependencies = (
-			);
-			productName = "menu-bar-executorTests";
-			productReference = F51934FAA32CDB59079B2471 /* menu-bar-executorTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
-		E0F0F5DD8C446C8C15BBD6BB /* menu-bar-executor */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = DC8908222C9B8CCB41AF035D /* Build configuration list for PBXNativeTarget "menu-bar-executor" */;
-			buildPhases = (
-				F391255D8CA63DB32BAD6E24 /* Sources */,
-				7DC796F2505AF8C3A15DADDE /* Resources */,
+				7118C9CE11951FCAD0FB6472 /* Sources */,
+				55ACE596692B747B17498F08 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = "menu-bar-executor";
+			name = MenuBarExecutor;
 			packageProductDependencies = (
 			);
-			productName = "menu-bar-executor";
-			productReference = 579CA3C4859B81019CE4A31A /* menu-bar-executor.app */;
+			productName = MenuBarExecutor;
+			productReference = CD347AF29622F9A0B4184103 /* MenuBarExecutor.app */;
 			productType = "com.apple.product-type.application";
+		};
+		C4A0BA66A9754F32DF140D83 /* MenuBarExecutorTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 947DF0EACCCD36764AB18413 /* Build configuration list for PBXNativeTarget "MenuBarExecutorTests" */;
+			buildPhases = (
+				E968F463930D696C3A61D8A6 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				615491747E61D8F3B2D0B14E /* PBXTargetDependency */,
+			);
+			name = MenuBarExecutorTests;
+			packageProductDependencies = (
+			);
+			productName = MenuBarExecutorTests;
+			productReference = 86A9FE31D7CA4FD550DBAD73 /* MenuBarExecutorTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -186,10 +186,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
-					DF46507007929B6911822B25 = {
+					81A320F252B03D17AE2391E4 = {
 						ProvisioningStyle = Manual;
 					};
-					E0F0F5DD8C446C8C15BBD6BB = {
+					C4A0BA66A9754F32DF140D83 = {
 						ProvisioningStyle = Manual;
 					};
 				};
@@ -208,102 +208,85 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				E0F0F5DD8C446C8C15BBD6BB /* menu-bar-executor */,
-				DF46507007929B6911822B25 /* menu-bar-executorTests */,
+				81A320F252B03D17AE2391E4 /* MenuBarExecutor */,
+				C4A0BA66A9754F32DF140D83 /* MenuBarExecutorTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		7DC796F2505AF8C3A15DADDE /* Resources */ = {
+		55ACE596692B747B17498F08 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B7181131ED30C6D52D405399 /* Assets.xcassets in Resources */,
+				CD6A6BD24AB0C55D28CD9779 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		7926D09257029A7601236459 /* Sources */ = {
+		7118C9CE11951FCAD0FB6472 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2EB86CC5EEBD619BBBE6CA90 /* CommandTests.swift in Sources */,
-				2C0930F2BD606CBA0BA2C6B1 /* ExecutionRecordTests.swift in Sources */,
+				C8A01FDEC4ADE8CCC3C28302 /* AppDelegate.swift in Sources */,
+				C2ACF1981CEF875D2EC88FD2 /* AppError.swift in Sources */,
+				0508AA3AD34B5B7F16FBB910 /* AppPaths.swift in Sources */,
+				B614A36B06485096DBC7DE0B /* Command.swift in Sources */,
+				7AF95E66E1C2749EFCBE5551 /* CommandEditorView.swift in Sources */,
+				987FBD5785566A83D8B0882F /* CommandExecutor.swift in Sources */,
+				4620815E69194E31AF02D7E2 /* CommandsListView.swift in Sources */,
+				BF513E193E6B126A875A131F /* CommandsManager.swift in Sources */,
+				10047C9EAC3E464410372895 /* ConfigLoader.swift in Sources */,
+				C864C0D2A80F7C24295438DC /* ExecutionHistory.swift in Sources */,
+				34242EFEEF319491EA6847FF /* HistoryView.swift in Sources */,
+				1834D30127FF381FC28D53DC /* HistoryWindowController.swift in Sources */,
+				B1FC38E32260E4789659A31D /* MenuBarExecutorApp.swift in Sources */,
+				D8B8CDDCF471BD4691C5B774 /* NotificationManager.swift in Sources */,
+				3D939FF72F75C956D43DEE07 /* SettingsWindowController.swift in Sources */,
+				F08E0469B2C6301EEBB84F9B /* StringExtensions.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		F391255D8CA63DB32BAD6E24 /* Sources */ = {
+		E968F463930D696C3A61D8A6 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				ACAED94D21DA8EED4C39E953 /* AppDelegate.swift in Sources */,
-				7D0B47C8D5646FCD6E2ECE35 /* AppError.swift in Sources */,
-				46D5C6BCC97A1BC447CE34F4 /* AppPaths.swift in Sources */,
-				FDBF6B0F93191BDD8091933C /* Command.swift in Sources */,
-				608F07571328B15B0F347122 /* CommandEditorView.swift in Sources */,
-				D8AD50CA697B5255ACC8BB68 /* CommandExecutor.swift in Sources */,
-				AB9A6F51B3E93E144FDDA136 /* CommandsListView.swift in Sources */,
-				FC400BA9DB56841FA116F2EF /* CommandsManager.swift in Sources */,
-				A645571E78903815A1F3A3F3 /* ConfigLoader.swift in Sources */,
-				206964E42E85FCA00A08374F /* ExecutionHistory.swift in Sources */,
-				6333152BF6C561B4C7C088BC /* HistoryView.swift in Sources */,
-				217D8B66CA81552C52E574C0 /* HistoryWindowController.swift in Sources */,
-				E53FC7CAE943D388B12C00CE /* MenuBarExecutorApp.swift in Sources */,
-				900E9229E77F5B36AEF51F60 /* NotificationManager.swift in Sources */,
-				D504524AF9A457070B83462A /* SettingsWindowController.swift in Sources */,
-				D31A6DEAB40AD4C0F3630E50 /* StringExtensions.swift in Sources */,
+				81EA2202F22F926C4EB31B25 /* CommandTests.swift in Sources */,
+				1A9796A4DF21921B067A5A3B /* ExecutionRecordTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		B4D67243F177A5340F5B29D9 /* PBXTargetDependency */ = {
+		615491747E61D8F3B2D0B14E /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = E0F0F5DD8C446C8C15BBD6BB /* menu-bar-executor */;
-			targetProxy = 67FDF9961CBA9280B7DC5830 /* PBXContainerItemProxy */;
+			target = 81A320F252B03D17AE2391E4 /* MenuBarExecutor */;
+			targetProxy = 5BB99D6B73760EE93B33D37E /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		0D94CDA723CB4807DDF7F24F /* Debug */ = {
+		087B8B1D37059BE3D4359E49 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				ENABLE_HARDENED_RUNTIME = NO;
-				INFOPLIST_FILE = Resources/Info.plist;
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.cai.menu-bar-executor";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.cai.menu-bar-executor.tests";
 				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MenuBarExecutor.app/Contents/MacOS/MenuBarExecutor";
 			};
 			name = Debug;
-		};
-		17C13B49855C61FBC6187DDD /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Manual;
-				COMBINE_HIDPI_IMAGES = YES;
-				ENABLE_HARDENED_RUNTIME = NO;
-				INFOPLIST_FILE = Resources/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.cai.menu-bar-executor";
-				SDKROOT = macosx;
-			};
-			name = Release;
 		};
 		32CDCC8E26089D1D5CD73492 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -424,26 +407,45 @@
 			};
 			name = Release;
 		};
-		68F0578243D3B2992196FB1F /* Release */ = {
+		B4F5E053AC99F44B9B80BFCB /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
-					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.cai.menu-bar-executor.tests";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.cai.menu-bar-executor";
+				PRODUCT_NAME = MenuBarExecutor;
 				SDKROOT = macosx;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/menu-bar-executor.app/Contents/MacOS/menu-bar-executor";
 			};
 			name = Release;
 		};
-		A1CC340D86D167268E4747C4 /* Debug */ = {
+		BB26D0FBEE3B4AAE020E2E55 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.cai.menu-bar-executor";
+				PRODUCT_NAME = MenuBarExecutor;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		EA5F633115642F0006DFECAE /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -458,18 +460,27 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.cai.menu-bar-executor.tests";
 				SDKROOT = macosx;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/menu-bar-executor.app/Contents/MacOS/menu-bar-executor";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MenuBarExecutor.app/Contents/MacOS/MenuBarExecutor";
 			};
-			name = Debug;
+			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		2263FBC884DB8260D6219DF4 /* Build configuration list for PBXNativeTarget "menu-bar-executorTests" */ = {
+		947DF0EACCCD36764AB18413 /* Build configuration list for PBXNativeTarget "MenuBarExecutorTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				A1CC340D86D167268E4747C4 /* Debug */,
-				68F0578243D3B2992196FB1F /* Release */,
+				087B8B1D37059BE3D4359E49 /* Debug */,
+				EA5F633115642F0006DFECAE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		BB1D6F522CDD2CF53A024347 /* Build configuration list for PBXNativeTarget "MenuBarExecutor" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB26D0FBEE3B4AAE020E2E55 /* Debug */,
+				B4F5E053AC99F44B9B80BFCB /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -479,15 +490,6 @@
 			buildConfigurations = (
 				32CDCC8E26089D1D5CD73492 /* Debug */,
 				3BF359C04A49318F901AD3DD /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
-		DC8908222C9B8CCB41AF035D /* Build configuration list for PBXNativeTarget "menu-bar-executor" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				0D94CDA723CB4807DDF7F24F /* Debug */,
-				17C13B49855C61FBC6187DDD /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

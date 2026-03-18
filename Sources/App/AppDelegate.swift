@@ -12,7 +12,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
         if let button = statusItem?.button {
-            if let image = NSImage(systemSymbolName: "terminal.fill", accessibilityDescription: "Menu Bar Executor") {
+            if let image = NSImage(systemSymbolName: "terminal.fill", accessibilityDescription: "MenuBarExecutor") {
                 image.isTemplate = true
                 button.image = image
             } else {

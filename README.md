@@ -1,4 +1,4 @@
-# Menu Bar Executor
+# MenuBarExecutor
 
 macOS 菜单栏命令执行器，让你快速执行自定义 Shell 命令。
 
@@ -22,7 +22,7 @@ macOS 菜单栏命令执行器，让你快速执行自定义 Shell 命令。
 ### 从 Release 下载
 
 1. 从 [Releases](../../releases) 页面下载最新版本
-2. 解压并将 `menu-bar-executor.app` 拖入 `Applications` 文件夹
+2. 解压并将 `MenuBarExecutor.app` 拖入 `Applications` 文件夹
 3. 首次运行可能需要在「系统设置 > 隐私与安全性」中允许运行
 
 ### 从源码构建
@@ -37,10 +37,10 @@ brew install xcodegen
 
 # 生成并构建项目
 xcodegen generate
-xcodebuild -project menu-bar-executor.xcodeproj -scheme menu-bar-executor -configuration Release -derivedDataPath ./build build
+xcodebuild -project menu-bar-executor.xcodeproj -scheme MenuBarExecutor -configuration Release -derivedDataPath ./build build
 
 # 运行
-open ./build/Build/Products/Release/menu-bar-executor.app
+open ./build/Build/Products/Release/MenuBarExecutor.app
 ```
 
 ## 使用方法
@@ -129,10 +129,10 @@ Tests/                            # 单元测试
 xcodegen generate
 
 # Debug 构建
-xcodebuild -project menu-bar-executor.xcodeproj -scheme menu-bar-executor -configuration Debug -derivedDataPath ./build build
+xcodebuild -project menu-bar-executor.xcodeproj -scheme MenuBarExecutor -configuration Debug -derivedDataPath ./build build
 
 # 运行测试
-xcodebuild test -project menu-bar-executor.xcodeproj -scheme menu-bar-executorTests -destination 'platform=macOS'
+xcodebuild test -project menu-bar-executor.xcodeproj -scheme MenuBarExecutorTests -destination 'platform=macOS'
 
 # 打包发布版本
 ./release.sh 1.0.0

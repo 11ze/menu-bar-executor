@@ -1,5 +1,5 @@
 import XCTest
-@testable import menu_bar_executor
+@testable import MenuBarExecutor
 
 final class ExecutionRecordTests: XCTestCase {
 
