@@ -5,9 +5,9 @@ macOS 菜单栏命令执行器，让你快速执行自定义 Shell 命令。
 ## 功能特性
 
 - **自定义命令**：添加任意 Shell 命令，一键执行
-- **命令分组**：将命令归类到分组，菜单显示为子菜单
-- **快捷键绑定**：为命令设置单键快捷键
 - **命令搜索**：在设置窗口实时搜索过滤命令
+- **拖拽排序**：拖动命令列表项调整顺序
+- **导入导出**：导出配置为 JSON 文件，导入已有配置
 - **执行历史**：记录最近 100 条执行记录（Cmd+H 打开）
 - **执行通知**：命令执行完成后显示系统通知
 - **图形界面**：通过设置窗口管理命令（Cmd+, 打开）
@@ -61,10 +61,13 @@ open ./build/Build/Products/Release/MenuBarExecutor.app
    - **名称**：显示在菜单中的名称
    - **命令**：要执行的 Shell 命令
    - **工作目录**：命令执行的目录（默认 `~`）
-   - **图标**：SF Symbols 图标名称
-   - **分组**：可选，用于组织命令
-   - **快捷键**：可选，单键快捷键
    - **显示通知**：执行完成后是否显示通知
+
+### 导入导出配置
+
+在设置窗口中：
+- 点击「导出」按钮，将当前配置保存为 JSON 文件
+- 点击「导入」按钮，从 JSON 文件加载配置（会覆盖当前配置）
 
 ## 配置文件
 
@@ -78,10 +81,7 @@ open ./build/Build/Products/Release/MenuBarExecutor.app
       "name": "Ping Google",
       "command": "ping -c 3 google.com",
       "workingDirectory": "~",
-      "icon": "antenna.radiowaves.left.and.right",
-      "notification": true,
-      "group": "Network",
-      "shortcut": "p"
+      "notification": true
     }
   ]
 }
@@ -95,10 +95,7 @@ open ./build/Build/Products/Release/MenuBarExecutor.app
 | `name` | String | 是 | 命令名称 |
 | `command` | String | 是 | 要执行的 Shell 命令 |
 | `workingDirectory` | String | 否 | 工作目录，默认 `~` |
-| `icon` | String | 否 | SF Symbols 图标名称 |
 | `notification` | Bool | 否 | 是否显示通知，默认 `true` |
-| `group` | String | 否 | 分组名称 |
-| `shortcut` | String | 否 | 单键快捷键 |
 
 ## 开发
 
@@ -110,16 +107,23 @@ Sources/App/
 ├── AppDelegate.swift             # App 代理，菜单栏管理
 ├── Command.swift                 # 命令模型
 ├── CommandExecutor.swift         # Shell 命令执行器
-├── CommandsManager.swift         # 命令设置器
+├── CommandsManager.swift         # 命令管理器
 ├── ConfigLoader.swift            # 配置文件加载器
 ├── NotificationManager.swift     # 通知管理器
 ├── ExecutionHistory.swift        # 执行历史管理
+├── HistoryWindowController.swift # 历史窗口控制器
+├── SettingsWindowController.swift # 设置窗口控制器
+├── AppError.swift                # 错误类型定义
+├── AppPaths.swift                # 统一路径管理
+├── StringExtensions.swift        # 字符串扩展工具
 └── Views/                        # SwiftUI 视图
     ├── CommandsListView.swift    # 命令列表
     ├── CommandEditorView.swift   # 命令编辑器
     └── HistoryView.swift         # 历史视图
 
 Tests/                            # 单元测试
+├── CommandTests.swift
+└── ExecutionRecordTests.swift
 ```
 
 ### 构建与测试
