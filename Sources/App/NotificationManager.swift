@@ -28,8 +28,8 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
     func showSuccess(commandName: String, output: String?) {
         let content = UNMutableNotificationContent()
-        content.title = "✅ 执行成功"
-        content.subtitle = commandName
+        content.title = "Menu Bar Executor"
+        content.subtitle = "✅ \(commandName)"
 
         if let output = output?.truncated(to: 100), !output.isEmpty {
             content.body = "输出：\n\(output)"
@@ -48,8 +48,8 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
     func showFailure(commandName: String, error: String, output: String?) {
         let content = UNMutableNotificationContent()
-        content.title = "❌ 执行失败"
-        content.subtitle = commandName
+        content.title = "Menu Bar Executor"
+        content.subtitle = "❌ \(commandName)"
 
         var body = "错误：\n\(error)"
         if let output = output?.truncated(to: 100), !output.isEmpty {
