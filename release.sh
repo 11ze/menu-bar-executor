@@ -11,6 +11,26 @@ SCHEME="MenuBarExecutor"
 APP_NAME="MenuBarExecutor"
 CONFIG="Release"
 
+# 拉取最新 tag，确保版本信息最新
+echo "🔄 拉取最新标签..."
+git fetch --tags
+
+# 生成发布说明
+generate_release_notes() {
+    local last_tag
+    last_tag=$(git describe --tags --abbrev=0 2>/dev/null) || last_tag="0.0.0"
+
+    # 使用 awk 单次调用解析提交信息，替代多次 sed
+    git log ${last_tag}..HEAD --pretty=format:"%s" 2>/dev/null | awk -F': ' '{
+        split($1, a, "(")
+        type = a[1]
+        msg = $2
+        if (type == "feat") print "Added " msg
+        else if (type == "fix") print "Fixed " msg
+        else if (type == "style" || type == "perf") print "Improved " msg
+    }'
+}
+
 echo "📦 开始构建 ${PROJECT_NAME} v${VERSION} ..."
 
 # 清理并构建（指定构建目录到项目目录）
@@ -45,10 +65,21 @@ cd ${RELEASE_DIR}
 zip -r ${APP_NAME}-${VERSION}.zip ${APP_NAME}.app
 cd ..
 
+# 生成并保存发布说明
+echo ""
+echo "📝 生成发布说明..."
+RELEASE_NOTES=$(generate_release_notes)
+echo "${RELEASE_NOTES}"
+echo "${RELEASE_NOTES}" > "./${RELEASE_DIR}/RELEASE_NOTES.md"
+
+echo ""
 echo "✅ 完成！"
-echo "📁 输出文件: Release/${APP_NAME}-${VERSION}.zip"
+echo "📁 输出文件:"
+echo "   - Release/${APP_NAME}-${VERSION}.zip"
+echo "   - Release/RELEASE_NOTES.md"
 echo ""
 echo "下一步："
 echo "1. 访问 GitHub Releases"
 echo "2. 创建新 Release (v${VERSION})"
 echo "3. 上传 Release/${APP_NAME}-${VERSION}.zip"
+echo "4. 复制 Release/RELEASE_NOTES.md 内容到 Release Description"
