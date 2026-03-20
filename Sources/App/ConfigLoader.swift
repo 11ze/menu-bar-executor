@@ -64,7 +64,7 @@ final class ConfigLoader {
 
         let config = CommandsConfig(commands: commands)
         let encoder = JSONEncoder()
-        encoder.outputFormatting = .prettyPrinted
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(config)
 
         // 检查是否是软链接
