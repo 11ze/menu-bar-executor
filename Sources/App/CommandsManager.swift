@@ -27,6 +27,14 @@ final class CommandsManager: ObservableObject {
         notificationManager.showReloadSuccess()
     }
 
+    func filteredCommands(by searchText: String) -> [Command] {
+        guard !searchText.isEmpty else { return commands }
+        return commands.filter {
+            $0.name.localizedCaseInsensitiveContains(searchText) ||
+            $0.command.localizedCaseInsensitiveContains(searchText)
+        }
+    }
+
     func execute(_ command: Command) {
         executor.execute(command: command) { [weak self] success, output in
             guard let self = self else { return }

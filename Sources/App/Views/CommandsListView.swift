@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import KeyboardShortcuts
 
 struct CommandsListView: View {
     @ObservedObject private var manager = CommandsManager.shared
@@ -18,13 +19,7 @@ struct CommandsListView: View {
     }()
 
     private var filteredCommands: [Command] {
-        if searchText.isEmpty {
-            return manager.commands
-        }
-        return manager.commands.filter { command in
-            command.name.localizedCaseInsensitiveContains(searchText) ||
-            command.command.localizedCaseInsensitiveContains(searchText)
-        }
+        manager.filteredCommands(by: searchText)
     }
 
     var body: some View {
@@ -165,6 +160,22 @@ struct CommandsListView: View {
             }
         } message: {
             Text("导入将覆盖当前所有命令配置，确定要继续吗？")
+        }
+        .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 0) {
+                Divider()
+                HStack {
+                    Text("全局快捷键")
+                        .font(.headline)
+                    Spacer()
+                    KeyboardShortcuts.Recorder("全局快捷键:", name: .commandPalette)
+                    Button("清除") {
+                        KeyboardShortcuts.setShortcut(nil, for: .commandPalette)
+                    }
+                }
+                .padding()
+                .background(Color(nsColor: .controlBackgroundColor))
+            }
         }
     }
 
