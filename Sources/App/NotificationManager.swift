@@ -40,7 +40,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         content.subtitle = "\(commandName)"
 
         if let output = output?.truncated(to: 100), !output.isEmpty {
-            content.body = "✅ 输出：\n\(output)"
+            content.body = "✅\n\(output)"
         }
 
         content.sound = .default
@@ -52,9 +52,9 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         content.title = Self.appName
         content.subtitle = "\(commandName)"
 
-        var body = "❌ 错误：\n\(error)"
+        var body = "❌\n\(error)"
         if let output = output?.truncated(to: 100), !output.isEmpty {
-            body += "\n\n输出：\n\(output)"
+            body += "\n\(output)"
         }
 
         content.body = body
