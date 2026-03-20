@@ -2,11 +2,12 @@ import AppKit
 import SwiftUI
 
 // MARK: - KeyCode 常量
-private enum KeyCode {
+enum KeyCode {
     static let escape: UInt16 = 53
     static let returnKey: UInt16 = 36
     static let upArrow: UInt16 = 126
     static let downArrow: UInt16 = 125
+    static let settingsShortcut = ","  // ⌘+, 打开设置
 }
 
 /// 处理键盘事件的 NSView，嵌入 SwiftUI 视图
@@ -14,6 +15,17 @@ final class PaletteContainerView: NSView {
     override var acceptsFirstResponder: Bool { true }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        // 处理 ⌘+, (打开设置)
+        if event.modifierFlags.contains(.command),
+           let chars = event.charactersIgnoringModifiers,
+           chars == KeyCode.settingsShortcut {
+            Task { @MainActor in
+                CommandPaletteWindowController.shared.hide()
+                SettingsWindowController.shared.showWindow()
+            }
+            return true
+        }
+
         // 拦截 ⌘+数字（执行相对于可见区域的命令）
         if event.modifierFlags.contains(.command),
            let chars = event.charactersIgnoringModifiers,
