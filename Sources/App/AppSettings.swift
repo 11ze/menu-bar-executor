@@ -110,6 +110,9 @@ final class AppSettingsManager: ObservableObject {
         do {
             let data = try Data(contentsOf: filePath)
             settings = try JSONDecoder().decode(AppSettings.self, from: data)
+            if fixDuplicateCommandIds() {
+                save()
+            }
         } catch {
             // 加载失败使用默认值
         }
@@ -137,6 +140,25 @@ final class AppSettingsManager: ObservableObject {
         } catch {
             // 保存失败静默忽略
         }
+    }
+
+    /// 修复重复的命令 ID，返回是否有修复
+    private func fixDuplicateCommandIds() -> Bool {
+        var seenIds = Set<UUID>()
+        var hasDuplicates = false
+
+        for i in settings.commands.indices {
+            let id = settings.commands[i].id
+            if seenIds.contains(id) {
+                settings.commands[i].id = UUID()
+                seenIds.insert(settings.commands[i].id)
+                hasDuplicates = true
+            } else {
+                seenIds.insert(id)
+            }
+        }
+
+        return hasDuplicates
     }
 
     /// 更新窗口帧（位置和尺寸）
@@ -182,6 +204,7 @@ final class AppSettingsManager: ObservableObject {
     func importSettings(from url: URL) throws {
         let data = try Data(contentsOf: url)
         settings = try JSONDecoder().decode(AppSettings.self, from: data)
+        _ = fixDuplicateCommandIds()
         save()
     }
 }

@@ -1,7 +1,7 @@
 import Foundation
 
 struct Command: Identifiable, Codable {
-    let id: UUID
+    internal(set) var id: UUID
     var name: String
     let command: String
     var workingDirectory: String?
