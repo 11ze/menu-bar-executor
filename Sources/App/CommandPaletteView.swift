@@ -4,6 +4,8 @@ import SwiftUI
 enum PaletteConfig {
     /// 面板关闭动画完成后执行命令的延迟
     static let executionDelay: TimeInterval = 0.1
+    /// 焦点设置延迟（确保窗口完全显示）
+    static let focusDelay: TimeInterval = 0.05
     static let width: CGFloat = 500
     static let totalHeight: CGFloat = 380
     static let maxVisibleItems = 8
@@ -55,12 +57,6 @@ final class PaletteCoordinator: ObservableObject {
         execute(filteredCommands[selectedIndex])
     }
 
-    func tabComplete() {
-        if let firstMatch = filteredCommands.first {
-            searchText = firstMatch.name
-        }
-    }
-
     func reset() {
         selectedIndex = 0
         searchText = ""
@@ -110,11 +106,12 @@ struct CommandPaletteView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        ForEach(Array(coordinator.filteredCommands.prefix(PaletteConfig.maxVisibleItems).enumerated()), id: \.element.id) { index, command in
+                        ForEach(Array(coordinator.filteredCommands.prefix(PaletteConfig.maxVisibleItems).enumerated()), id: \.offset) { index, command in
                             CommandPaletteRow(
                                 command: command,
                                 index: index + 1,
-                                isSelected: index == coordinator.selectedIndex
+                                isSelected: index == coordinator.selectedIndex,
+                                searchText: coordinator.searchText
                             )
                             .id(index)
                             .contentShape(Rectangle())
@@ -142,7 +139,7 @@ struct CommandPaletteView: View {
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()
-                Text("Tab 补全")
+                Text("↑↓ 导航")
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()
@@ -159,9 +156,12 @@ struct CommandPaletteView: View {
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10)
         .onAppear {
-            isSearchFocused = true
             coordinator.refreshCommands()
             coordinator.reset()
+            // 延迟设置焦点，确保窗口已完全显示
+            DispatchQueue.main.asyncAfter(deadline: .now() + PaletteConfig.focusDelay) {
+                isSearchFocused = true
+            }
         }
         .onDisappear {
             coordinator.reset()
@@ -173,6 +173,7 @@ struct CommandPaletteRow: View {
     let command: Command
     let index: Int
     let isSelected: Bool
+    let searchText: String
 
     var body: some View {
         HStack(spacing: 12) {
@@ -182,7 +183,7 @@ struct CommandPaletteRow: View {
                 .frame(width: 16)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(command.name)
+                HighlightedText(text: command.name, search: searchText)
                     .font(.body)
                     .foregroundColor(.primary)
                 if let wd = command.workingDirectory, !wd.isEmpty {

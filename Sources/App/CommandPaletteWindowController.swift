@@ -4,7 +4,6 @@ import SwiftUI
 // MARK: - KeyCode 常量
 private enum KeyCode {
     static let escape: UInt16 = 53
-    static let tab: UInt16 = 48
     static let returnKey: UInt16 = 36
     static let upArrow: UInt16 = 126
     static let downArrow: UInt16 = 125
@@ -13,49 +12,6 @@ private enum KeyCode {
 /// 处理键盘事件的 NSView，嵌入 SwiftUI 视图
 final class PaletteContainerView: NSView {
     override var acceptsFirstResponder: Bool { true }
-
-    override func keyDown(with event: NSEvent) {
-        let keyCode = event.keyCode
-
-        if keyCode == KeyCode.escape {
-            CommandPaletteWindowController.shared.hide()
-            return
-        }
-
-        // Tab: 补全
-        if keyCode == KeyCode.tab {
-            Task { @MainActor in
-                PaletteCoordinator.shared.tabComplete()
-            }
-            return
-        }
-
-        // Return: 执行选中命令
-        if keyCode == KeyCode.returnKey {
-            Task { @MainActor in
-                PaletteCoordinator.shared.executeSelected()
-            }
-            return
-        }
-
-        // Up/Down: 列表导航
-        if keyCode == KeyCode.upArrow {
-            Task { @MainActor in
-                PaletteCoordinator.shared.moveUp()
-            }
-            return
-        }
-
-        if keyCode == KeyCode.downArrow {
-            Task { @MainActor in
-                PaletteCoordinator.shared.moveDown()
-            }
-            return
-        }
-
-        // 其他按键传递给 text field
-        super.keyDown(with: event)
-    }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         // 拦截 ⌘+数字
@@ -82,6 +38,7 @@ final class CommandPaletteWindowController: NSWindowController {
     private var panel: NSPanel!
     private var paletteView: PaletteContainerView!
     private let settings = AppSettingsManager.shared
+    private var eventMonitor: Any?
 
     private init() {
         let contentView = CommandPaletteView()
@@ -123,6 +80,10 @@ final class CommandPaletteWindowController: NSWindowController {
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+        // eventMonitor 的移除可以在任何线程进行
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
     }
 
     required init?(coder: NSCoder) {
@@ -137,11 +98,11 @@ final class CommandPaletteWindowController: NSWindowController {
             panel.center()
         }
         panel.makeKeyAndOrderFront(nil)
-        // 聚焦到面板
-        paletteView.window?.makeFirstResponder(paletteView)
+        setupEventMonitor()
     }
 
     func hide() {
+        removeEventMonitor()
         // 仅当位置变化且仍在屏幕范围内时才保存
         let frame = panel.frame
         if isPositionValid(at: frame.origin) {
@@ -152,6 +113,47 @@ final class CommandPaletteWindowController: NSWindowController {
             }
         }
         panel.orderOut(nil)
+    }
+
+    private func setupEventMonitor() {
+        guard eventMonitor == nil else { return }
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self = self, self.panel.isKeyWindow else { return event }
+
+            let keyCode = event.keyCode
+
+            // 拦截导航键
+            if keyCode == KeyCode.upArrow {
+                PaletteCoordinator.shared.moveUp()
+                return nil
+            }
+            if keyCode == KeyCode.downArrow {
+                PaletteCoordinator.shared.moveDown()
+                return nil
+            }
+            if keyCode == KeyCode.escape {
+                if PaletteCoordinator.shared.searchText.isEmpty {
+                    self.hide()
+                } else {
+                    PaletteCoordinator.shared.clearSearch()
+                }
+                return nil
+            }
+            if keyCode == KeyCode.returnKey {
+                PaletteCoordinator.shared.executeSelected()
+                return nil
+            }
+
+            // 其他键正常传递
+            return event
+        }
+    }
+
+    private func removeEventMonitor() {
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+            eventMonitor = nil
+        }
     }
 
     private func isPositionValid(at point: CGPoint) -> Bool {
