@@ -1,6 +1,6 @@
 import Foundation
 
-struct Command: Identifiable, Codable {
+struct Command: Identifiable, Codable, Equatable {
     internal(set) var id: UUID
     var name: String
     let command: String

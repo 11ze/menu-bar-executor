@@ -31,3 +31,6 @@ Release/
 # 日志
 Logs/
 *.log
+
+# 代码覆盖率
+*.profraw

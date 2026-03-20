@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 // MARK: - 面板配置常量
@@ -44,12 +45,28 @@ final class PaletteCoordinator: ObservableObject {
     @Published private(set) var filteredCommands: [Command] = []
     @Published var firstVisibleIndex: Int = 0  // 第一个可见行的索引（用于相对编号）
 
+    private var cancellables = Set<AnyCancellable>()
+
     init() {
         filteredCommands = CommandsManager.shared.commands
+
+        // 监听命令列表变化，自动更新过滤后的命令
+        CommandsManager.shared.$commands
+            .sink { [weak self] _ in
+                self?.updateFilteredCommands()
+            }
+            .store(in: &cancellables)
     }
 
     private func updateFilteredCommands() {
-        filteredCommands = CommandsManager.shared.filteredCommands(by: searchText)
+        let newFiltered = CommandsManager.shared.filteredCommands(by: searchText)
+        // 变化检测，避免无操作更新
+        guard newFiltered != filteredCommands else { return }
+        filteredCommands = newFiltered
+        // 命令列表变化时修正选中状态
+        if selectedIndex >= newFiltered.count {
+            selectedIndex = max(0, newFiltered.count - 1)
+        }
     }
 
     func refreshCommands() {
@@ -82,9 +99,8 @@ final class PaletteCoordinator: ObservableObject {
 
     func reset() {
         selectedIndex = 0
-        searchText = ""
+        searchText = ""  // didSet 会调用 updateFilteredCommands()
         firstVisibleIndex = 0
-        updateFilteredCommands()
     }
 
     func clearSearch() {
@@ -138,7 +154,7 @@ struct CommandPaletteView: View {
                                 isSelected: index == coordinator.selectedIndex,
                                 searchText: coordinator.searchText
                             )
-                            .id(index)
+                            .id(command.id)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 coordinator.execute(command)
@@ -164,8 +180,10 @@ struct CommandPaletteView: View {
                     }
                 }
                 .onChange(of: coordinator.selectedIndex) { newIndex in
+                    guard newIndex < coordinator.filteredCommands.count else { return }
+                    let targetId = coordinator.filteredCommands[newIndex].id
                     withAnimation(.easeInOut(duration: 0.15)) {
-                        proxy.scrollTo(newIndex, anchor: .center)
+                        proxy.scrollTo(targetId, anchor: .center)
                     }
                 }
             }
