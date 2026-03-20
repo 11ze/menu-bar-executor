@@ -13,6 +13,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
     /// 延迟显示辅助功能权限提示的秒数
     private let accessibilityPromptDelay: TimeInterval = 2.0
+    /// UserDefaults key：是否已提示过辅助功能权限
+    private let hasShownAccessibilityPromptKey = "hasShownAccessibilityPrompt"
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -43,22 +45,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             CommandPaletteWindowController.shared.show()
         }
 
-        // 权限检测引导
-        let options = [kAXTrustedCheckOptionPrompt.takeRetainedValue(): true] as CFDictionary
-        if !AXIsProcessTrustedWithOptions(options) {
-            // 延迟提示，避免启动时弹窗干扰
-            DispatchQueue.main.asyncAfter(deadline: .now() + accessibilityPromptDelay) {
-                let alert = NSAlert()
-                alert.messageText = "需要辅助功能权限"
-                alert.informativeText = "全局快捷键需要「系统偏好设置 → 隐私与安全性 → 辅助功能」中授权本应用。授权后快捷键才能正常工作。"
-                alert.alertStyle = .informational
-                alert.addButton(withTitle: "打开系统设置")
-                alert.addButton(withTitle: "稍后")
-                if alert.runModal() == .alertFirstButtonReturn {
-                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-                        NSWorkspace.shared.open(url)
-                    }
-                }
+        // 静默检查辅助功能权限
+        let hasPermission = AXIsProcessTrusted()
+        let hasShownPrompt = UserDefaults.standard.bool(forKey: hasShownAccessibilityPromptKey)
+
+        // 仅首次未授权时提示，避免每次启动都打断用户
+        guard !hasPermission, !hasShownPrompt else { return }
+
+        UserDefaults.standard.set(true, forKey: hasShownAccessibilityPromptKey)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + accessibilityPromptDelay) {
+            let alert = NSAlert()
+            alert.messageText = "需要辅助功能权限"
+            alert.informativeText = "全局快捷键需要「系统设置 → 隐私与安全性 → 辅助功能」中授权本应用。\n\n授权后快捷键才能正常工作。"
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "打开系统设置")
+            alert.addButton(withTitle: "稍后提醒")
+            if alert.runModal() == .alertFirstButtonReturn,
+               let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                NSWorkspace.shared.open(url)
             }
         }
     }
