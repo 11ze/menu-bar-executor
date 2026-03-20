@@ -1,12 +1,86 @@
 import Foundation
 import CoreGraphics
+import Combine
 
-/// 全局设置（独立于 commands.json）
-struct AppSettings: Codable {
-    var palettePosition: CGPoint?   // 面板位置（单位：屏幕坐标，左下角为原点）
-    var paletteSize: NSSize?        // 面板尺寸
-    var defaultInputSourceID: String?  // 默认输入法 ID（打开面板时自动切换）
+// MARK: - 辅助结构体（对象格式的 CGPoint 和 NSSize）
+
+/// 用于 JSON 编解码的 CGPoint 表示（对象格式）
+private struct CGPointObject: Codable, Equatable {
+    var x: CGFloat
+    var y: CGFloat
+
+    init(from point: CGPoint) {
+        self.x = point.x
+        self.y = point.y
+    }
+
+    var cgPoint: CGPoint { CGPoint(x: x, y: y) }
 }
+
+/// 用于 JSON 编解码的 NSSize 表示（对象格式）
+private struct NSSizeObject: Codable, Equatable {
+    var width: CGFloat
+    var height: CGFloat
+
+    init(from size: NSSize) {
+        self.width = size.width
+        self.height = size.height
+    }
+
+    var nsSize: NSSize { NSSize(width: width, height: height) }
+}
+
+// MARK: - 统一配置结构
+
+/// 统一配置结构
+struct AppSettings: Codable {
+    var commands: [Command] = []
+    var windowPosition: CGPoint?
+    var windowSize: NSSize?
+    var defaultInputSourceID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case commands
+        case windowPosition
+        case windowSize
+        case defaultInputSourceID
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        commands = try container.decodeIfPresent([Command].self, forKey: .commands) ?? []
+        defaultInputSourceID = try container.decodeIfPresent(String.self, forKey: .defaultInputSourceID)
+
+        if let posObj = try container.decodeIfPresent(CGPointObject.self, forKey: .windowPosition) {
+            windowPosition = posObj.cgPoint
+        }
+        if let sizeObj = try container.decodeIfPresent(NSSizeObject.self, forKey: .windowSize) {
+            windowSize = sizeObj.nsSize
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(commands, forKey: .commands)
+        try container.encodeIfPresent(defaultInputSourceID, forKey: .defaultInputSourceID)
+
+        if let pos = windowPosition {
+            try container.encode(CGPointObject(from: pos), forKey: .windowPosition)
+        }
+        if let size = windowSize {
+            try container.encode(NSSizeObject(from: size), forKey: .windowSize)
+        }
+    }
+}
+
+/// 配置重载通知
+extension Notification.Name {
+    static let settingsDidReload = Notification.Name("settingsDidReload")
+}
+
+// MARK: - 配置管理器
 
 @MainActor
 final class AppSettingsManager: ObservableObject {
@@ -15,48 +89,99 @@ final class AppSettingsManager: ObservableObject {
     @Published var settings: AppSettings = AppSettings()
 
     private let filePath: URL
+    private let resolvedFilePath: URL
+    private let notificationManager = NotificationManager.shared
 
     private init() {
         filePath = AppPaths.settingsFile
+        // 初始化时一次性解析软链接
+        if let resolved = try? FileManager.default.destinationOfSymbolicLink(atPath: filePath.path) {
+            resolvedFilePath = URL(fileURLWithPath: resolved)
+        } else {
+            resolvedFilePath = filePath
+        }
         load()
     }
 
+    // MARK: - 加载
+
     func load() {
+        guard FileManager.default.fileExists(atPath: filePath.path) else { return }
         do {
             let data = try Data(contentsOf: filePath)
             settings = try JSONDecoder().decode(AppSettings.self, from: data)
         } catch {
-            // 加载失败使用默认值（文件不存在或解析失败）
+            // 加载失败使用默认值
         }
     }
+
+    // MARK: - 保存
 
     func save() {
         do {
             try AppPaths.ensureDirectoryExists()
             let encoder = JSONEncoder()
-            encoder.outputFormatting = .prettyPrinted
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             let data = try encoder.encode(settings)
-            let tempPath = filePath.appendingPathExtension("tmp")
+
+            // 原子写入
+            let fileManager = FileManager.default
+            let tempPath = resolvedFilePath.appendingPathExtension("tmp")
             try data.write(to: tempPath, options: .atomic)
-            try FileManager.default.replaceItem(at: filePath, withItemAt: tempPath, backupItemName: nil, resultingItemURL: nil)
+
+            if fileManager.fileExists(atPath: resolvedFilePath.path) {
+                try fileManager.replaceItem(at: resolvedFilePath, withItemAt: tempPath, backupItemName: nil, resultingItemURL: nil)
+            } else {
+                try fileManager.moveItem(at: tempPath, to: resolvedFilePath)
+            }
         } catch {
             // 保存失败静默忽略
         }
     }
 
-    /// 更新面板窗口帧（位置和尺寸）
+    /// 更新窗口帧（位置和尺寸）
     func updateWindowFrame(origin: CGPoint?, size: NSSize?) {
         var changed = false
-        if let origin = origin, settings.palettePosition != origin {
-            settings.palettePosition = origin
+        if let origin = origin, settings.windowPosition != origin {
+            settings.windowPosition = origin
             changed = true
         }
-        if let size = size, settings.paletteSize != size {
-            settings.paletteSize = size
+        if let size = size, settings.windowSize != size {
+            settings.windowSize = size
             changed = true
         }
         if changed {
             save()
         }
+    }
+
+    // MARK: - 命令管理
+
+    func saveCommands(_ commands: [Command]) throws {
+        settings.commands = commands
+        save()
+    }
+
+    // MARK: - 重载
+
+    func reload() {
+        load()
+        notificationManager.showReloadSuccess()
+        NotificationCenter.default.post(name: .settingsDidReload, object: nil)
+    }
+
+    // MARK: - 导入导出
+
+    func exportSettings(to url: URL) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(settings)
+        try data.write(to: url)
+    }
+
+    func importSettings(from url: URL) throws {
+        let data = try Data(contentsOf: url)
+        settings = try JSONDecoder().decode(AppSettings.self, from: data)
+        save()
     }
 }

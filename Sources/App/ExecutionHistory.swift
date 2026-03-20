@@ -61,7 +61,7 @@ final class ExecutionHistory: ObservableObject {
         do {
             try AppPaths.ensureDirectoryExists()
             let encoder = JSONEncoder()
-            encoder.outputFormatting = .prettyPrinted
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             let data = try encoder.encode(records)
             try data.write(to: AppPaths.historyFile, options: .atomic)
         } catch {

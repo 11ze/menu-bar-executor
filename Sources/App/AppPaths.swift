@@ -7,10 +7,7 @@ enum AppPaths {
         .appendingPathComponent(".config")
         .appendingPathComponent("menu-bar-executor")
 
-    /// 命令配置文件路径
-    static var commandsFile: URL { configDirectory.appendingPathComponent("commands.json") }
-
-    /// 全局设置文件路径
+    /// 配置文件路径
     static var settingsFile: URL { configDirectory.appendingPathComponent("settings.json") }
 
     /// 执行历史文件路径

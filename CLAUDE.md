@@ -21,13 +21,12 @@ Sources/App/
 ├── Command.swift                      # 命令模型（UUID 主键）
 ├── CommandExecutor.swift              # Shell 命令执行器（30 秒超时）
 ├── CommandsManager.swift              # 命令管理器（CRUD + 回滚）
-├── ConfigLoader.swift                 # 配置文件加载器（原子写入 + 导入导出）
 ├── NotificationManager.swift          # 通知管理器
 ├── ExecutionHistory.swift             # 执行历史管理（最近 100 条）
 ├── HistoryWindowController.swift      # 历史窗口控制器
 ├── SettingsWindowController.swift     # 设置窗口控制器
 ├── CommandPaletteWindowController.swift # 命令面板窗口控制器
-├── AppSettings.swift                  # 全局设置（面板位置/尺寸/快捷键/输入法）
+├── AppSettings.swift                  # 统一配置管理（命令 + 窗口设置 + 导入导出）
 ├── InputSourceHelper.swift            # 输入法切换工具
 ├── AppError.swift                     # 错误类型定义
 ├── AppPaths.swift                     # 统一路径管理
@@ -40,7 +39,7 @@ Sources/App/
     └── HistoryView.swift              # 执行历史视图
 
 Tests/
-├── CommandTests.swift                 # Command 模型测试
+├── CommandTests.swift                 # Command 和 AppSettings 测试
 └── ExecutionRecordTests.swift         # 历史记录测试
 ```
 
@@ -76,7 +75,7 @@ Tests/
 
 ## 配置文件格式
 
-配置路径：`~/.config/menu-bar-executor/commands.json`
+配置路径：`~/.config/menu-bar-executor/settings.json`
 
 ```json
 {
@@ -88,7 +87,10 @@ Tests/
       "workingDirectory": "~",
       "notification": true
     }
-  ]
+  ],
+  "windowPosition": { "x": 100, "y": 200 },
+  "windowSize": { "width": 400, "height": 300 },
+  "defaultInputSourceID": "com.apple.keylayout.ABC"
 }
 ```
 
@@ -121,7 +123,7 @@ pkill -f MenuBarExecutor; open ./build/Build/Products/Debug/MenuBarExecutor.app
 xcodebuild test -project menu-bar-executor.xcodeproj -scheme MenuBarExecutorTests -destination 'platform=macOS'
 
 # 检查配置
-cat ~/.config/menu-bar-executor/commands.json
+cat ~/.config/menu-bar-executor/settings.json
 ```
 
 ## 其他
@@ -130,6 +132,8 @@ cat ~/.config/menu-bar-executor/commands.json
 ```bash
 pkill -f MenuBarExecutor && xcodebuild -project menu-bar-executor.xcodeproj -scheme MenuBarExecutor build && open ./build/Build/Products/Debug/MenuBarExecutor.app
 ```
+
+每次修改后更新 CLAUDE.md 和 README.md。
 
 # currentDate
 Today's date is 2026-03-21.

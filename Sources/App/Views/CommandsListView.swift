@@ -151,7 +151,7 @@ struct CommandsListView: View {
         .alert("确认导入", isPresented: $showingImportConfirmation) {
             Button("导入", role: .destructive) {
                 if let url = importURL {
-                    manager.importCommands(from: url)
+                    manager.importSettings(from: url)
                 }
                 importURL = nil
             }
@@ -159,7 +159,7 @@ struct CommandsListView: View {
                 importURL = nil
             }
         } message: {
-            Text("导入将覆盖当前所有命令配置，确定要继续吗？")
+            Text("导入将覆盖当前所有设置（包括命令和面板配置），确定要继续吗？")
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {
@@ -209,12 +209,12 @@ struct CommandsListView: View {
 
         let panel = NSSavePanel()
         panel.title = "导出配置"
-        panel.nameFieldStringValue = "commands-\(timestamp).json"
+        panel.nameFieldStringValue = "settings-\(timestamp).json"
         panel.allowedContentTypes = [UTType.json]
         panel.canCreateDirectories = true
 
         if panel.runModal() == .OK, let url = panel.url {
-            manager.exportConfig(to: url)
+            manager.exportSettings(to: url)
         }
     }
 

@@ -51,14 +51,15 @@ final class CommandTests: XCTestCase {
         XCTAssertEqual(command.workingDirectory, "~")
     }
 
-    func testCommandsConfigEncoding() throws {
-        let config = CommandsConfig(commands: [
+    func testAppSettingsEncoding() throws {
+        var settings = AppSettings()
+        settings.commands = [
             Command(name: "Cmd1", command: "echo 1"),
             Command(name: "Cmd2", command: "echo 2")
-        ])
+        ]
 
-        let data = try JSONEncoder().encode(config)
-        let decoded = try JSONDecoder().decode(CommandsConfig.self, from: data)
+        let data = try JSONEncoder().encode(settings)
+        let decoded = try JSONDecoder().decode(AppSettings.self, from: data)
 
         XCTAssertEqual(decoded.commands.count, 2)
         XCTAssertEqual(decoded.commands[0].name, "Cmd1")

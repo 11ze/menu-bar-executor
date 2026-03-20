@@ -84,7 +84,7 @@ open ./build/Build/Products/Release/MenuBarExecutor.app
 
 ## 配置文件
 
-配置路径：`~/.config/menu-bar-executor/commands.json`
+配置路径：`~/.config/menu-bar-executor/settings.json`
 
 ```json
 {
@@ -96,7 +96,10 @@ open ./build/Build/Products/Release/MenuBarExecutor.app
       "workingDirectory": "~",
       "notification": true
     }
-  ]
+  ],
+  "windowPosition": { "x": 100, "y": 200 },
+  "windowSize": { "width": 400, "height": 300 },
+  "defaultInputSourceID": "com.apple.keylayout.ABC"
 }
 ```
 
@@ -121,13 +124,12 @@ Sources/App/
 ├── Command.swift                      # 命令模型
 ├── CommandExecutor.swift              # Shell 命令执行器
 ├── CommandsManager.swift              # 命令管理器
-├── ConfigLoader.swift                 # 配置文件加载器
 ├── NotificationManager.swift          # 通知管理器
 ├── ExecutionHistory.swift             # 执行历史管理
 ├── HistoryWindowController.swift      # 历史窗口控制器
 ├── SettingsWindowController.swift     # 设置窗口控制器
 ├── CommandPaletteWindowController.swift # 命令面板窗口控制器
-├── AppSettings.swift                  # 全局设置
+├── AppSettings.swift                  # 统一配置管理
 ├── InputSourceHelper.swift            # 输入法切换工具
 ├── AppError.swift                     # 错误类型定义
 ├── AppPaths.swift                     # 统一路径管理

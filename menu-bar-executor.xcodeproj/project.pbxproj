@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		0508AA3AD34B5B7F16FBB910 /* AppPaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CFABB67A94EF726CFDFCF7F /* AppPaths.swift */; };
-		10047C9EAC3E464410372895 /* ConfigLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99973B3BA21E360711036472 /* ConfigLoader.swift */; };
 		1834D30127FF381FC28D53DC /* HistoryWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F546DA52F75C953D3F36B768 /* HistoryWindowController.swift */; };
 		1A9796A4DF21921B067A5A3B /* ExecutionRecordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14B1163230FFB666809580CC /* ExecutionRecordTests.swift */; };
 		24723446D3CADA6C75F0B43D /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 3B44509A4F11363AFC888068 /* KeyboardShortcuts */; };
@@ -60,7 +59,6 @@
 		7D7D61090F4A463C8D90AE55 /* CommandsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandsListView.swift; sourceTree = "<group>"; };
 		7D8F92FA63F5937750E9C003 /* CommandPaletteWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPaletteWindowController.swift; sourceTree = "<group>"; };
 		86A9FE31D7CA4FD550DBAD73 /* MenuBarExecutorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MenuBarExecutorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		99973B3BA21E360711036472 /* ConfigLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigLoader.swift; sourceTree = "<group>"; };
 		9D936954E3895BD37AB2FE75 /* CommandPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPaletteView.swift; sourceTree = "<group>"; };
 		9FB859C1EEB745C249C5457E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C2AD11CD9100101B40D6639E /* ExecutionHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecutionHistory.swift; sourceTree = "<group>"; };
@@ -133,7 +131,6 @@
 				9D936954E3895BD37AB2FE75 /* CommandPaletteView.swift */,
 				7D8F92FA63F5937750E9C003 /* CommandPaletteWindowController.swift */,
 				1F375BA81AAC5D1C6B2CC03D /* CommandsManager.swift */,
-				99973B3BA21E360711036472 /* ConfigLoader.swift */,
 				C2AD11CD9100101B40D6639E /* ExecutionHistory.swift */,
 				68D4E51EE67D0C67807855CA /* HighlightedText.swift */,
 				F546DA52F75C953D3F36B768 /* HistoryWindowController.swift */,
@@ -273,7 +270,6 @@
 				C2DEC26C4ACFBA909E239F2E /* CommandPaletteWindowController.swift in Sources */,
 				4620815E69194E31AF02D7E2 /* CommandsListView.swift in Sources */,
 				BF513E193E6B126A875A131F /* CommandsManager.swift in Sources */,
-				10047C9EAC3E464410372895 /* ConfigLoader.swift in Sources */,
 				C864C0D2A80F7C24295438DC /* ExecutionHistory.swift in Sources */,
 				4FA76398E7543DC8C7A378F3 /* HighlightedText.swift in Sources */,
 				34242EFEEF319491EA6847FF /* HistoryView.swift in Sources */,

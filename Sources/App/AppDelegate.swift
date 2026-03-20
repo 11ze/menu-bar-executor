@@ -118,7 +118,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func reloadConfig() {
         Task { @MainActor in
-            CommandsManager.shared.reload()
+            AppSettingsManager.shared.reload()
         }
     }
 

@@ -40,7 +40,3 @@ struct Command: Identifiable, Codable {
         notification = try container.decodeIfPresent(Bool.self, forKey: .notification) ?? true
     }
 }
-
-struct CommandsConfig: Codable {
-    var commands: [Command]
-}

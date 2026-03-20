@@ -8,23 +8,25 @@ final class CommandsManager: ObservableObject {
     @Published private(set) var commands: [Command] = []
     @Published var lastError: AppError?
 
-    private let configLoader = ConfigLoader.shared
+    private let settingsManager = AppSettingsManager.shared
     private let executor = CommandExecutor.shared
     private let notificationManager = NotificationManager.shared
     private let history = ExecutionHistory.shared
+    private var cancellables = Set<AnyCancellable>()
 
     private init() {
         loadCommands()
+        // 监听配置重载通知
+        NotificationCenter.default.publisher(for: .settingsDidReload)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.loadCommands()
+            }
+            .store(in: &cancellables)
     }
 
     func loadCommands() {
-        configLoader.ensureConfigDirectoryExists()
-        commands = configLoader.loadConfig()
-    }
-
-    func reload() {
-        loadCommands()
-        notificationManager.showReloadSuccess()
+        commands = settingsManager.settings.commands
     }
 
     func filteredCommands(by searchText: String) -> [Command] {
@@ -58,7 +60,7 @@ final class CommandsManager: ObservableObject {
         commands.append(command)
 
         do {
-            try configLoader.saveConfig(commands)
+            try settingsManager.saveCommands(commands)
         } catch {
             commands = originalCommands
             lastError = .configSaveFailed(error)
@@ -72,7 +74,7 @@ final class CommandsManager: ObservableObject {
         commands[index] = command
 
         do {
-            try configLoader.saveConfig(commands)
+            try settingsManager.saveCommands(commands)
         } catch {
             commands = originalCommands
             lastError = .configSaveFailed(error)
@@ -86,7 +88,7 @@ final class CommandsManager: ObservableObject {
         commands.remove(at: index)
 
         do {
-            try configLoader.saveConfig(commands)
+            try settingsManager.saveCommands(commands)
         } catch {
             commands = originalCommands
             lastError = .configSaveFailed(error)
@@ -98,7 +100,7 @@ final class CommandsManager: ObservableObject {
         commands.move(fromOffsets: source, toOffset: destination)
 
         do {
-            try configLoader.saveConfig(commands)
+            try settingsManager.saveCommands(commands)
         } catch {
             commands = originalCommands
             lastError = .configSaveFailed(error)
@@ -109,21 +111,20 @@ final class CommandsManager: ObservableObject {
         lastError = nil
     }
 
-    func importCommands(from url: URL) {
+    func importSettings(from url: URL) {
         let originalCommands = commands
         do {
-            let importedCommands = try configLoader.importConfig(from: url)
-            try configLoader.saveConfig(importedCommands)
-            commands = importedCommands
+            try settingsManager.importSettings(from: url)
+            commands = settingsManager.settings.commands
         } catch {
             commands = originalCommands
             lastError = .configSaveFailed(error)
         }
     }
 
-    func exportConfig(to url: URL) {
+    func exportSettings(to url: URL) {
         do {
-            try configLoader.exportConfig(to: url)
+            try settingsManager.exportSettings(to: url)
         } catch {
             lastError = .configExportFailed(error)
         }
