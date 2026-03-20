@@ -29,6 +29,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         buildMenu()
 
+        // 同步自启动状态
+        LaunchAtLoginManager.shared.sync(withSettings: AppSettingsManager.shared.settings.launchAtLogin)
+
         // 注册全局快捷键（呼出命令面板）
         KeyboardShortcuts.onKeyUp(for: .commandPalette) {
             CommandPaletteWindowController.shared.show()

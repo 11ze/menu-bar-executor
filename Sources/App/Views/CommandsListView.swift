@@ -197,6 +197,21 @@ struct CommandsListView: View {
                         }
                         .frame(width: 200)
                     }
+
+                    Divider()
+
+                    // 开机自启（仅 macOS 13+ 支持）
+                    if LaunchAtLoginManager.shared.isSupported {
+                        HStack {
+                            Text("开机自启")
+                                .font(.headline)
+                            Spacer()
+                            Toggle("", isOn: $manager.launchAtLogin)
+                                .onChange(of: manager.launchAtLogin) { newValue in
+                                    manager.updateLaunchAtLogin(newValue)
+                                }
+                        }
+                    }
                 }
                 .padding()
                 .background(Color(nsColor: .controlBackgroundColor))

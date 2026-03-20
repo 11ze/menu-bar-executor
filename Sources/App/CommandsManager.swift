@@ -7,6 +7,7 @@ final class CommandsManager: ObservableObject {
 
     @Published private(set) var commands: [Command] = []
     @Published var lastError: AppError?
+    @Published var launchAtLogin: Bool = false
 
     private let settingsManager = AppSettingsManager.shared
     private let executor = CommandExecutor.shared
@@ -27,6 +28,14 @@ final class CommandsManager: ObservableObject {
 
     func loadCommands() {
         commands = settingsManager.settings.commands
+        launchAtLogin = settingsManager.settings.launchAtLogin
+    }
+
+    func updateLaunchAtLogin(_ enabled: Bool) {
+        launchAtLogin = enabled
+        settingsManager.settings.launchAtLogin = enabled
+        LaunchAtLoginManager.shared.isEnabled = enabled
+        settingsManager.save()
     }
 
     func filteredCommands(by searchText: String) -> [Command] {

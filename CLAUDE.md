@@ -28,6 +28,7 @@ Sources/App/
 ├── CommandPaletteWindowController.swift # 命令面板窗口控制器
 ├── AppSettings.swift                  # 统一配置管理（命令 + 窗口设置 + 导入导出）
 ├── InputSourceHelper.swift            # 输入法切换工具
+├── LaunchAtLoginManager.swift         # 开机自启动管理（macOS 13+）
 ├── AppError.swift                     # 错误类型定义
 ├── AppPaths.swift                     # 统一路径管理
 ├── StringExtensions.swift             # 字符串扩展工具
@@ -59,6 +60,7 @@ Tests/
 - **图形界面**：通过设置窗口管理命令（Cmd+, 打开）
 - **拖拽排序**：拖动命令列表项调整顺序
 - **导入导出**：导出配置为 JSON 文件，导入已有配置
+- **开机自启**：可设置开机自动启动（macOS 13+，默认关闭）
 
 ### 执行与历史
 
@@ -90,7 +92,8 @@ Tests/
   ],
   "palettePosition": { "x": 100, "y": 200 },
   "paletteSize": { "width": 400, "height": 300 },
-  "defaultInputSourceID": "com.apple.keylayout.ABC"
+  "defaultInputSourceID": "com.apple.keylayout.ABC",
+  "launchAtLogin": false
 }
 ```
 

@@ -11,6 +11,7 @@
 		1834D30127FF381FC28D53DC /* HistoryWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F546DA52F75C953D3F36B768 /* HistoryWindowController.swift */; };
 		1A9796A4DF21921B067A5A3B /* ExecutionRecordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14B1163230FFB666809580CC /* ExecutionRecordTests.swift */; };
 		24723446D3CADA6C75F0B43D /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 3B44509A4F11363AFC888068 /* KeyboardShortcuts */; };
+		310EB660DE91CC7199218BE3 /* LaunchAtLoginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E41AFE255DFA7A6BF832B709 /* LaunchAtLoginManager.swift */; };
 		34242EFEEF319491EA6847FF /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ACB75E92D607A4CB1C6BD53 /* HistoryView.swift */; };
 		3D939FF72F75C956D43DEE07 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67649DC5E0CED941426BB035 /* SettingsWindowController.swift */; };
 		4620815E69194E31AF02D7E2 /* CommandsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D7D61090F4A463C8D90AE55 /* CommandsListView.swift */; };
@@ -66,6 +67,7 @@
 		CBC6C4FAB6EA65A46AA471A0 /* CommandExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandExecutor.swift; sourceTree = "<group>"; };
 		CD347AF29622F9A0B4184103 /* MenuBarExecutor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MenuBarExecutor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DD2C2235CB8A5EC42862D834 /* Command.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Command.swift; sourceTree = "<group>"; };
+		E41AFE255DFA7A6BF832B709 /* LaunchAtLoginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManager.swift; sourceTree = "<group>"; };
 		ED99260826BDCB59EAABC110 /* StringExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringExtensions.swift; sourceTree = "<group>"; };
 		F546DA52F75C953D3F36B768 /* HistoryWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryWindowController.swift; sourceTree = "<group>"; };
 		F8BCC47786F8B40FFC7101D4 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -135,6 +137,7 @@
 				68D4E51EE67D0C67807855CA /* HighlightedText.swift */,
 				F546DA52F75C953D3F36B768 /* HistoryWindowController.swift */,
 				62F367700CD9756382417EE8 /* InputSourceHelper.swift */,
+				E41AFE255DFA7A6BF832B709 /* LaunchAtLoginManager.swift */,
 				376A98A5A89A0ADF45CB6F30 /* MenuBarExecutorApp.swift */,
 				CBB51205F4901BA6B86D689A /* NotificationManager.swift */,
 				67649DC5E0CED941426BB035 /* SettingsWindowController.swift */,
@@ -275,6 +278,7 @@
 				34242EFEEF319491EA6847FF /* HistoryView.swift in Sources */,
 				1834D30127FF381FC28D53DC /* HistoryWindowController.swift in Sources */,
 				52C1561C6863C55D7B5328C5 /* InputSourceHelper.swift in Sources */,
+				310EB660DE91CC7199218BE3 /* LaunchAtLoginManager.swift in Sources */,
 				B1FC38E32260E4789659A31D /* MenuBarExecutorApp.swift in Sources */,
 				D8B8CDDCF471BD4691C5B774 /* NotificationManager.swift in Sources */,
 				3D939FF72F75C956D43DEE07 /* SettingsWindowController.swift in Sources */,

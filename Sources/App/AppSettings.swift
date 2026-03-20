@@ -38,12 +38,14 @@ struct AppSettings: Codable {
     var palettePosition: CGPoint?
     var paletteSize: NSSize?
     var defaultInputSourceID: String?
+    var launchAtLogin: Bool = false
 
     enum CodingKeys: String, CodingKey {
         case commands
         case palettePosition
         case paletteSize
         case defaultInputSourceID
+        case launchAtLogin
     }
 
     init() {}
@@ -52,6 +54,7 @@ struct AppSettings: Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         commands = try container.decodeIfPresent([Command].self, forKey: .commands) ?? []
         defaultInputSourceID = try container.decodeIfPresent(String.self, forKey: .defaultInputSourceID)
+        launchAtLogin = try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
 
         if let posObj = try container.decodeIfPresent(CGPointObject.self, forKey: .palettePosition) {
             palettePosition = posObj.cgPoint
@@ -65,6 +68,7 @@ struct AppSettings: Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(commands, forKey: .commands)
         try container.encodeIfPresent(defaultInputSourceID, forKey: .defaultInputSourceID)
+        try container.encode(launchAtLogin, forKey: .launchAtLogin)
 
         if let pos = palettePosition {
             try container.encode(CGPointObject(from: pos), forKey: .palettePosition)
