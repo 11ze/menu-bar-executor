@@ -14,15 +14,18 @@ final class PaletteContainerView: NSView {
     override var acceptsFirstResponder: Bool { true }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        // 拦截 ⌘+数字
+        // 拦截 ⌘+数字（执行相对于可见区域的命令）
         if event.modifierFlags.contains(.command),
            let chars = event.charactersIgnoringModifiers,
            let num = Int(chars),
            (1...9).contains(num) {
             Task { @MainActor in
-                let commands = PaletteCoordinator.shared.filteredCommands
-                if num <= commands.count {
-                    PaletteCoordinator.shared.execute(commands[num - 1])
+                let coordinator = PaletteCoordinator.shared
+                let commands = coordinator.filteredCommands
+                // 计算实际索引：firstVisibleIndex + (num - 1)
+                let actualIndex = coordinator.firstVisibleIndex + (num - 1)
+                if actualIndex < commands.count {
+                    coordinator.execute(commands[actualIndex])
                 }
             }
             return true
@@ -41,18 +44,21 @@ final class CommandPaletteWindowController: NSWindowController {
     private var eventMonitor: Any?
 
     private init() {
+        // 获取保存的尺寸或使用默认值
+        let savedSize = settings.settings.paletteSize ?? NSSize(width: PaletteConfig.defaultWidth, height: PaletteConfig.defaultHeight)
+
         let contentView = CommandPaletteView()
         let hostingView = NSHostingView(rootView: contentView)
 
         // 用 PaletteContainerView 包裹 hostingView 以处理键盘事件
-        paletteView = PaletteContainerView(frame: NSRect(x: 0, y: 0, width: PaletteConfig.width, height: PaletteConfig.totalHeight))
+        paletteView = PaletteContainerView(frame: NSRect(origin: .zero, size: savedSize))
         paletteView.addSubview(hostingView)
         hostingView.frame = paletteView.bounds
         hostingView.autoresizingMask = [.width, .height]
 
         panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: PaletteConfig.width, height: PaletteConfig.totalHeight),
-            styleMask: [.nonactivatingPanel, .fullSizeContentView, .titled, .closable],
+            contentRect: NSRect(origin: .zero, size: savedSize),
+            styleMask: [.nonactivatingPanel, .fullSizeContentView, .titled, .closable, .resizable],
             backing: .buffered,
             defer: false
         )
@@ -66,6 +72,8 @@ final class CommandPaletteWindowController: NSWindowController {
         panel.isOpaque = false
         panel.hasShadow = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.minSize = NSSize(width: PaletteConfig.minWidth, height: PaletteConfig.minHeight)
+        panel.maxSize = NSSize(width: PaletteConfig.maxWidth, height: PaletteConfig.maxHeight)
 
         super.init(window: panel)
 
@@ -91,6 +99,12 @@ final class CommandPaletteWindowController: NSWindowController {
     }
 
     func show() {
+        // 切换到默认输入法（仅当当前输入法不同时才切换）
+        if let inputSourceID = settings.settings.defaultInputSourceID,
+           InputSourceHelper.currentInputSourceID() != inputSourceID {
+            _ = InputSourceHelper.switchToInputSource(id: inputSourceID)
+        }
+
         // 恢复上次位置或居中
         if let pos = settings.settings.palettePosition, isPositionValid(at: pos) {
             panel.setFrameOrigin(pos)
@@ -103,14 +117,10 @@ final class CommandPaletteWindowController: NSWindowController {
 
     func hide() {
         removeEventMonitor()
-        // 仅当位置变化且仍在屏幕范围内时才保存
+        // 保存位置和尺寸
         let frame = panel.frame
         if isPositionValid(at: frame.origin) {
-            let currentOrigin = frame.origin
-            if settings.settings.palettePosition != currentOrigin {
-                settings.settings.palettePosition = currentOrigin
-                settings.save()
-            }
+            settings.updateWindowFrame(origin: frame.origin, size: frame.size)
         }
         panel.orderOut(nil)
     }

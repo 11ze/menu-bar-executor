@@ -4,6 +4,8 @@ import CoreGraphics
 /// 全局设置（独立于 commands.json）
 struct AppSettings: Codable {
     var palettePosition: CGPoint?   // 面板位置（单位：屏幕坐标，左下角为原点）
+    var paletteSize: NSSize?        // 面板尺寸
+    var defaultInputSourceID: String?  // 默认输入法 ID（打开面板时自动切换）
 }
 
 @MainActor
@@ -39,6 +41,22 @@ final class AppSettingsManager: ObservableObject {
             try FileManager.default.replaceItem(at: filePath, withItemAt: tempPath, backupItemName: nil, resultingItemURL: nil)
         } catch {
             // 保存失败静默忽略
+        }
+    }
+
+    /// 更新面板窗口帧（位置和尺寸）
+    func updateWindowFrame(origin: CGPoint?, size: NSSize?) {
+        var changed = false
+        if let origin = origin, settings.palettePosition != origin {
+            settings.palettePosition = origin
+            changed = true
+        }
+        if let size = size, settings.paletteSize != size {
+            settings.paletteSize = size
+            changed = true
+        }
+        if changed {
+            save()
         }
     }
 }

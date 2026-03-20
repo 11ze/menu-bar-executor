@@ -17,6 +17,7 @@
 		4620815E69194E31AF02D7E2 /* CommandsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D7D61090F4A463C8D90AE55 /* CommandsListView.swift */; };
 		4E7960412E10FDE32E7762B3 /* CommandPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D936954E3895BD37AB2FE75 /* CommandPaletteView.swift */; };
 		4FA76398E7543DC8C7A378F3 /* HighlightedText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68D4E51EE67D0C67807855CA /* HighlightedText.swift */; };
+		52C1561C6863C55D7B5328C5 /* InputSourceHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62F367700CD9756382417EE8 /* InputSourceHelper.swift */; };
 		7AF95E66E1C2749EFCBE5551 /* CommandEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE107B13A523C46A2B7B779 /* CommandEditorView.swift */; };
 		81EA2202F22F926C4EB31B25 /* CommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B0A1B3CD55B63263017DFD5 /* CommandTests.swift */; };
 		987FBD5785566A83D8B0882F /* CommandExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC6C4FAB6EA65A46AA471A0 /* CommandExecutor.swift */; };
@@ -51,6 +52,7 @@
 		3B0A1B3CD55B63263017DFD5 /* CommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandTests.swift; sourceTree = "<group>"; };
 		3EE107B13A523C46A2B7B779 /* CommandEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandEditorView.swift; sourceTree = "<group>"; };
 		574EACA6D883D60B0B87F178 /* AppError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppError.swift; sourceTree = "<group>"; };
+		62F367700CD9756382417EE8 /* InputSourceHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputSourceHelper.swift; sourceTree = "<group>"; };
 		67649DC5E0CED941426BB035 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		68D4E51EE67D0C67807855CA /* HighlightedText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HighlightedText.swift; sourceTree = "<group>"; };
 		6BEF0C2CBF810F2B83BDF275 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
@@ -135,6 +137,7 @@
 				C2AD11CD9100101B40D6639E /* ExecutionHistory.swift */,
 				68D4E51EE67D0C67807855CA /* HighlightedText.swift */,
 				F546DA52F75C953D3F36B768 /* HistoryWindowController.swift */,
+				62F367700CD9756382417EE8 /* InputSourceHelper.swift */,
 				376A98A5A89A0ADF45CB6F30 /* MenuBarExecutorApp.swift */,
 				CBB51205F4901BA6B86D689A /* NotificationManager.swift */,
 				67649DC5E0CED941426BB035 /* SettingsWindowController.swift */,
@@ -275,6 +278,7 @@
 				4FA76398E7543DC8C7A378F3 /* HighlightedText.swift in Sources */,
 				34242EFEEF319491EA6847FF /* HistoryView.swift in Sources */,
 				1834D30127FF381FC28D53DC /* HistoryWindowController.swift in Sources */,
+				52C1561C6863C55D7B5328C5 /* InputSourceHelper.swift in Sources */,
 				B1FC38E32260E4789659A31D /* MenuBarExecutorApp.swift in Sources */,
 				D8B8CDDCF471BD4691C5B774 /* NotificationManager.swift in Sources */,
 				3D939FF72F75C956D43DEE07 /* SettingsWindowController.swift in Sources */,

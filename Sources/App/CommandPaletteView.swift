@@ -6,9 +6,31 @@ enum PaletteConfig {
     static let executionDelay: TimeInterval = 0.1
     /// 焦点设置延迟（确保窗口完全显示）
     static let focusDelay: TimeInterval = 0.05
-    static let width: CGFloat = 500
-    static let totalHeight: CGFloat = 380
-    static let maxVisibleItems = 8
+    /// 默认尺寸
+    static let defaultWidth: CGFloat = 500
+    static let defaultHeight: CGFloat = 380
+    /// 尺寸范围
+    static let minWidth: CGFloat = 300
+    static let minHeight: CGFloat = 200
+    static let maxWidth: CGFloat = 800
+    static let maxHeight: CGFloat = 600
+    /// 快捷键最大数量（⌘+1 到 ⌘+9）
+    static let maxQuickSelectCount = 9
+    /// 滚动位置容差（像素）
+    static let scrollPositionTolerance: CGFloat = 10
+}
+
+// MARK: - 行位置 PreferenceKey
+private struct RowPosition: Equatable {
+    let index: Int
+    let minY: CGFloat
+}
+
+private struct RowPositionsPreferenceKey: PreferenceKey {
+    static var defaultValue: [RowPosition] = []
+    static func reduce(value: inout [RowPosition], nextValue: () -> [RowPosition]) {
+        value.append(contentsOf: nextValue())
+    }
 }
 
 // MARK: - PaletteCoordinator
@@ -20,6 +42,7 @@ final class PaletteCoordinator: ObservableObject {
     @Published var selectedIndex: Int = 0
     @Published var searchText: String = "" { didSet { updateFilteredCommands() } }
     @Published private(set) var filteredCommands: [Command] = []
+    @Published var firstVisibleIndex: Int = 0  // 第一个可见行的索引（用于相对编号）
 
     init() {
         filteredCommands = CommandsManager.shared.commands
@@ -60,6 +83,7 @@ final class PaletteCoordinator: ObservableObject {
     func reset() {
         selectedIndex = 0
         searchText = ""
+        firstVisibleIndex = 0
         updateFilteredCommands()
     }
 
@@ -102,14 +126,15 @@ struct CommandPaletteView: View {
 
             Divider()
 
-            // 命令列表（最多显示 8 条）
+            // 命令列表
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        ForEach(Array(coordinator.filteredCommands.prefix(PaletteConfig.maxVisibleItems).enumerated()), id: \.offset) { index, command in
+                        ForEach(Array(coordinator.filteredCommands.enumerated()), id: \.element.id) { index, command in
+                            let displayIndex = max(1, index - coordinator.firstVisibleIndex + 1)
                             CommandPaletteRow(
                                 command: command,
-                                index: index + 1,
+                                displayIndex: displayIndex,
                                 isSelected: index == coordinator.selectedIndex,
                                 searchText: coordinator.searchText
                             )
@@ -118,10 +143,26 @@ struct CommandPaletteView: View {
                             .onTapGesture {
                                 coordinator.execute(command)
                             }
+                            .background(
+                                GeometryReader { geo in
+                                    Color.clear.preference(
+                                        key: RowPositionsPreferenceKey.self,
+                                        value: [RowPosition(index: index, minY: geo.frame(in: .named("scroll")).minY)]
+                                    )
+                                }
+                            )
                         }
                     }
                 }
-                .frame(maxHeight: CGFloat(PaletteConfig.maxVisibleItems) * 40)
+                .coordinateSpace(name: "scroll")
+                .onPreferenceChange(RowPositionsPreferenceKey.self) { positions in
+                    // 找到 minY 最接近 0 且在容差范围内的行作为第一个可见行
+                    let tolerance = PaletteConfig.scrollPositionTolerance
+                    if let first = positions.filter({ $0.minY >= -tolerance }).min(by: { abs($0.minY) < abs($1.minY) }),
+                       coordinator.firstVisibleIndex != first.index {
+                        coordinator.firstVisibleIndex = first.index
+                    }
+                }
                 .onChange(of: coordinator.selectedIndex) { newIndex in
                     withAnimation(.easeInOut(duration: 0.15)) {
                         proxy.scrollTo(newIndex, anchor: .center)
@@ -151,7 +192,6 @@ struct CommandPaletteView: View {
             .padding(.vertical, 6)
             .background(Color(nsColor: .controlBackgroundColor))
         }
-        .frame(width: PaletteConfig.width)
         .background(Color(nsColor: .windowBackgroundColor))
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10)
@@ -171,16 +211,23 @@ struct CommandPaletteView: View {
 
 struct CommandPaletteRow: View {
     let command: Command
-    let index: Int
+    let displayIndex: Int
     let isSelected: Bool
     let searchText: String
 
     var body: some View {
         HStack(spacing: 12) {
-            Text("\(index)")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .frame(width: 16)
+            // 显示索引，仅 1-9 显示快捷键提示
+            Group {
+                if displayIndex <= PaletteConfig.maxQuickSelectCount {
+                    Text("\(displayIndex)")
+                        .foregroundColor(.secondary)
+                } else {
+                    Text(" ")
+                }
+            }
+            .font(.caption)
+            .frame(width: 16, height: 16, alignment: .trailing)
 
             VStack(alignment: .leading, spacing: 2) {
                 HighlightedText(text: command.name, search: searchText)

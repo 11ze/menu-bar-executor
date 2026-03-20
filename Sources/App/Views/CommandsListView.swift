@@ -164,13 +164,38 @@ struct CommandsListView: View {
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {
                 Divider()
-                HStack {
-                    Text("全局快捷键")
-                        .font(.headline)
-                    Spacer()
-                    KeyboardShortcuts.Recorder("全局快捷键:", name: .commandPalette)
-                    Button("清除") {
-                        KeyboardShortcuts.setShortcut(nil, for: .commandPalette)
+                VStack(spacing: 12) {
+                    // 全局快捷键
+                    HStack {
+                        Text("全局快捷键")
+                            .font(.headline)
+                        Spacer()
+                        KeyboardShortcuts.Recorder("全局快捷键:", name: .commandPalette)
+                        Button("清除") {
+                            KeyboardShortcuts.setShortcut(nil, for: .commandPalette)
+                        }
+                    }
+
+                    Divider()
+
+                    // 默认输入法
+                    HStack {
+                        Text("默认输入法")
+                            .font(.headline)
+                        Spacer()
+                        Picker("", selection: Binding(
+                            get: { AppSettingsManager.shared.settings.defaultInputSourceID ?? "" },
+                            set: { newValue in
+                                AppSettingsManager.shared.settings.defaultInputSourceID = newValue.isEmpty ? nil : newValue
+                                AppSettingsManager.shared.save()
+                            }
+                        )) {
+                            Text("不切换").tag("")
+                            ForEach(InputSourceHelper.availableInputSources(), id: \.id) { source in
+                                Text(source.name).tag(source.id)
+                            }
+                        }
+                        .frame(width: 200)
                     }
                 }
                 .padding()
