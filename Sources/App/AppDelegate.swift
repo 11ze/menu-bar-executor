@@ -1,6 +1,5 @@
 import AppKit
 import SwiftUI
-import Combine
 import KeyboardShortcuts
 
 extension KeyboardShortcuts.Name {
@@ -10,7 +9,6 @@ extension KeyboardShortcuts.Name {
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
-    private var cancellables = Set<AnyCancellable>()
     /// 延迟显示辅助功能权限提示的秒数
     private let accessibilityPromptDelay: TimeInterval = 2.0
     /// UserDefaults key：是否已提示过辅助功能权限
@@ -31,17 +29,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         buildMenu()
 
-        Task { @MainActor in
-            CommandsManager.shared.$commands
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] _ in
-                    self?.buildMenu()
-                }
-                .store(in: &cancellables)
-        }
-
         // 注册全局快捷键（呼出命令面板）
-        KeyboardShortcuts.onKeyUp(for: .commandPalette) { [self] in
+        KeyboardShortcuts.onKeyUp(for: .commandPalette) {
             CommandPaletteWindowController.shared.show()
         }
 
@@ -72,13 +61,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard let button = statusItem?.button else { return }
 
         let menu = NSMenu()
-        let manager = CommandsManager.shared
-
-        for command in manager.commands {
-            menu.addItem(createMenuItem(for: command))
-        }
-
-        menu.addItem(NSMenuItem.separator())
 
         let reloadItem = NSMenuItem(
             title: "重载配置",
@@ -122,17 +104,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
     }
 
-    private func createMenuItem(for command: Command) -> NSMenuItem {
-        let item = NSMenuItem(
-            title: command.name,
-            action: #selector(executeCommand(_:)),
-            keyEquivalent: ""
-        )
-        item.representedObject = command
-        item.target = self
-        return item
-    }
-
     @objc private func statusBarButtonClicked(_ sender: NSStatusBarButton) {
         // 左键点击：呼出命令面板
         // 右键点击：显示原有菜单
@@ -142,14 +113,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else if event.type == .rightMouseUp {
             guard let menu = sender.menu else { return }
             menu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height + 5), in: sender)
-        }
-    }
-
-    @objc private func executeCommand(_ sender: NSMenuItem) {
-        guard let command = sender.representedObject as? Command else { return }
-
-        Task { @MainActor in
-            CommandsManager.shared.execute(command)
         }
     }
 
