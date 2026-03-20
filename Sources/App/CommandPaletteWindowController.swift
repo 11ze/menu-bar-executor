@@ -10,6 +10,12 @@ enum KeyCode {
     static let settingsShortcut = ","  // ⌘+, 打开设置
 }
 
+// MARK: - 自定义 Panel（支持无标题栏时接收键盘事件）
+final class KeyPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+}
+
 /// 处理键盘事件的 NSView，嵌入 SwiftUI 视图
 final class PaletteContainerView: NSView {
     override var acceptsFirstResponder: Bool { true }
@@ -50,7 +56,7 @@ final class PaletteContainerView: NSView {
 final class CommandPaletteWindowController: NSWindowController {
     static let shared = CommandPaletteWindowController()
 
-    private var panel: NSPanel!
+    private var panel: KeyPanel!
     private var paletteView: PaletteContainerView!
     private let settings = AppSettingsManager.shared
     private var eventMonitor: Any?
@@ -68,18 +74,17 @@ final class CommandPaletteWindowController: NSWindowController {
         hostingView.frame = paletteView.bounds
         hostingView.autoresizingMask = [.width, .height]
 
-        panel = NSPanel(
+        panel = KeyPanel(
             contentRect: NSRect(origin: .zero, size: savedSize),
-            styleMask: [.nonactivatingPanel, .fullSizeContentView, .titled, .closable, .resizable],
+            styleMask: [.nonactivatingPanel, .fullSizeContentView, .resizable],
             backing: .buffered,
             defer: false
         )
 
         panel.contentView = paletteView
         panel.level = .floating
-        panel.titlebarAppearsTransparent = true
-        panel.titleVisibility = .hidden
         panel.isMovableByWindowBackground = true
+        panel.becomesKeyOnlyIfNeeded = false  // 允许无标题栏面板成为 key window
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = true
