@@ -45,7 +45,7 @@ final class CommandPaletteWindowController: NSWindowController {
 
     private init() {
         // 获取保存的尺寸或使用默认值
-        let savedSize = settings.settings.windowSize ?? NSSize(width: PaletteConfig.defaultWidth, height: PaletteConfig.defaultHeight)
+        let savedSize = settings.settings.paletteSize ?? NSSize(width: PaletteConfig.defaultWidth, height: PaletteConfig.defaultHeight)
 
         let contentView = CommandPaletteView()
         let hostingView = NSHostingView(rootView: contentView)
@@ -106,7 +106,7 @@ final class CommandPaletteWindowController: NSWindowController {
         }
 
         // 恢复上次位置或居中
-        if let pos = settings.settings.windowPosition, isPositionValid(at: pos) {
+        if let pos = settings.settings.palettePosition, isPositionValid(at: pos) {
             panel.setFrameOrigin(pos)
         } else {
             panel.center()
@@ -120,7 +120,7 @@ final class CommandPaletteWindowController: NSWindowController {
         // 保存位置和尺寸
         let frame = panel.frame
         if isPositionValid(at: frame.origin) {
-            settings.updateWindowFrame(origin: frame.origin, size: frame.size)
+            settings.updatePaletteFrame(origin: frame.origin, size: frame.size)
         }
         panel.orderOut(nil)
     }

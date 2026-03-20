@@ -35,14 +35,14 @@ private struct NSSizeObject: Codable, Equatable {
 /// 统一配置结构
 struct AppSettings: Codable {
     var commands: [Command] = []
-    var windowPosition: CGPoint?
-    var windowSize: NSSize?
+    var palettePosition: CGPoint?
+    var paletteSize: NSSize?
     var defaultInputSourceID: String?
 
     enum CodingKeys: String, CodingKey {
         case commands
-        case windowPosition
-        case windowSize
+        case palettePosition
+        case paletteSize
         case defaultInputSourceID
     }
 
@@ -53,11 +53,11 @@ struct AppSettings: Codable {
         commands = try container.decodeIfPresent([Command].self, forKey: .commands) ?? []
         defaultInputSourceID = try container.decodeIfPresent(String.self, forKey: .defaultInputSourceID)
 
-        if let posObj = try container.decodeIfPresent(CGPointObject.self, forKey: .windowPosition) {
-            windowPosition = posObj.cgPoint
+        if let posObj = try container.decodeIfPresent(CGPointObject.self, forKey: .palettePosition) {
+            palettePosition = posObj.cgPoint
         }
-        if let sizeObj = try container.decodeIfPresent(NSSizeObject.self, forKey: .windowSize) {
-            windowSize = sizeObj.nsSize
+        if let sizeObj = try container.decodeIfPresent(NSSizeObject.self, forKey: .paletteSize) {
+            paletteSize = sizeObj.nsSize
         }
     }
 
@@ -66,11 +66,11 @@ struct AppSettings: Codable {
         try container.encode(commands, forKey: .commands)
         try container.encodeIfPresent(defaultInputSourceID, forKey: .defaultInputSourceID)
 
-        if let pos = windowPosition {
-            try container.encode(CGPointObject(from: pos), forKey: .windowPosition)
+        if let pos = palettePosition {
+            try container.encode(CGPointObject(from: pos), forKey: .palettePosition)
         }
-        if let size = windowSize {
-            try container.encode(NSSizeObject(from: size), forKey: .windowSize)
+        if let size = paletteSize {
+            try container.encode(NSSizeObject(from: size), forKey: .paletteSize)
         }
     }
 }
@@ -161,15 +161,15 @@ final class AppSettingsManager: ObservableObject {
         return hasDuplicates
     }
 
-    /// 更新窗口帧（位置和尺寸）
-    func updateWindowFrame(origin: CGPoint?, size: NSSize?) {
+    /// 更新面板帧（位置和尺寸）
+    func updatePaletteFrame(origin: CGPoint?, size: NSSize?) {
         var changed = false
-        if let origin = origin, settings.windowPosition != origin {
-            settings.windowPosition = origin
+        if let origin = origin, settings.palettePosition != origin {
+            settings.palettePosition = origin
             changed = true
         }
-        if let size = size, settings.windowSize != size {
-            settings.windowSize = size
+        if let size = size, settings.paletteSize != size {
+            settings.paletteSize = size
             changed = true
         }
         if changed {

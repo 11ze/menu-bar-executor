@@ -88,8 +88,8 @@ Tests/
       "notification": true
     }
   ],
-  "windowPosition": { "x": 100, "y": 200 },
-  "windowSize": { "width": 400, "height": 300 },
+  "palettePosition": { "x": 100, "y": 200 },
+  "paletteSize": { "width": 400, "height": 300 },
   "defaultInputSourceID": "com.apple.keylayout.ABC"
 }
 ```
