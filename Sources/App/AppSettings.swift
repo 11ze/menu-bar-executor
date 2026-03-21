@@ -40,12 +40,20 @@ struct AppSettings: Codable {
     var defaultInputSourceID: String?
     var launchAtLogin: Bool = false
 
+    /// 上次检查更新时间
+    var lastUpdateCheckDate: Date?
+
+    /// 用户跳过的版本号
+    var skippedVersion: String?
+
     enum CodingKeys: String, CodingKey {
         case commands
         case palettePosition
         case paletteSize
         case defaultInputSourceID
         case launchAtLogin
+        case lastUpdateCheckDate
+        case skippedVersion
     }
 
     init() {}
@@ -55,6 +63,8 @@ struct AppSettings: Codable {
         commands = try container.decodeIfPresent([Command].self, forKey: .commands) ?? []
         defaultInputSourceID = try container.decodeIfPresent(String.self, forKey: .defaultInputSourceID)
         launchAtLogin = try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
+        lastUpdateCheckDate = try container.decodeIfPresent(Date.self, forKey: .lastUpdateCheckDate)
+        skippedVersion = try container.decodeIfPresent(String.self, forKey: .skippedVersion)
 
         if let posObj = try container.decodeIfPresent(CGPointObject.self, forKey: .palettePosition) {
             palettePosition = posObj.cgPoint
@@ -69,6 +79,8 @@ struct AppSettings: Codable {
         try container.encode(commands, forKey: .commands)
         try container.encodeIfPresent(defaultInputSourceID, forKey: .defaultInputSourceID)
         try container.encode(launchAtLogin, forKey: .launchAtLogin)
+        try container.encodeIfPresent(lastUpdateCheckDate, forKey: .lastUpdateCheckDate)
+        try container.encodeIfPresent(skippedVersion, forKey: .skippedVersion)
 
         if let pos = palettePosition {
             try container.encode(CGPointObject(from: pos), forKey: .palettePosition)

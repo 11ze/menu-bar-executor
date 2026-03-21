@@ -29,6 +29,8 @@ Sources/App/
 ├── AppSettings.swift                  # 统一配置管理（命令 + 窗口设置 + 导入导出）
 ├── InputSourceHelper.swift            # 输入法切换工具
 ├── LaunchAtLoginManager.swift         # 开机自启动管理（macOS 13+）
+├── UpdateManager.swift                # 版本更新检查管理器
+├── UpdateInfo.swift                   # 版本更新信息模型
 ├── AppError.swift                     # 错误类型定义
 ├── AppPaths.swift                     # 统一路径管理
 ├── StringExtensions.swift             # 字符串扩展工具
@@ -38,6 +40,9 @@ Sources/App/
     ├── CommandEditorView.swift        # 命令编辑器
     ├── CommandPaletteView.swift       # 命令面板（全局快捷键 + 搜索 + 键盘导航）
     └── HistoryView.swift              # 执行历史视图
+
+Scripts/
+└── update_build_number.sh             # 自动更新构建号脚本
 
 Tests/
 ├── CommandTests.swift                 # Command 和 AppSettings 测试
@@ -73,7 +78,15 @@ Tests/
 ### 菜单栏交互
 
 - **左键点击**：直接呼出命令面板
-- **右键点击**：显示设置菜单（重载配置、设置、历史、退出）
+- **右键点击**：显示设置菜单（重载配置、设置、历史、检查更新、退出）
+
+### 版本更新
+
+- **自动检查**：启动时自动检查更新（24 小时内不重复检查）
+- **手动检查**：菜单栏右键菜单中点击"检查更新..."
+- **更新提示**：自动检查使用系统通知，手动检查使用弹窗
+- **跳过版本**：可选择跳过当前版本，不再提示
+- **下载更新**：点击下载后打开 GitHub Releases 页面
 
 ## 配置文件格式
 
@@ -93,7 +106,9 @@ Tests/
   "palettePosition": { "x": 100, "y": 200 },
   "paletteSize": { "width": 400, "height": 300 },
   "defaultInputSourceID": "com.apple.keylayout.ABC",
-  "launchAtLogin": false
+  "launchAtLogin": false,
+  "lastUpdateCheckDate": "2026-03-21T00:00:00Z",
+  "skippedVersion": null
 }
 ```
 

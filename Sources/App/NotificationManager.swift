@@ -8,10 +8,17 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
     private static let appName = "MenuBarExecutor"
 
+    /// 更新通知的标识符
+    private static let updateNotificationIdentifier = "com.cai.menu-bar-executor.update"
+
+    /// 更新通知点击后的回调
+    private var updateActionHandler: (() -> Void)?
+
     private override init() {
         super.init()
         UNUserNotificationCenter.current().delegate = self
         requestAuthorization()
+        registerUpdateNotificationCategory()
     }
 
     private func requestAuthorization() {
@@ -32,6 +39,20 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         completionHandler([.banner, .sound])
+    }
+
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        Task { @MainActor in
+            if response.notification.request.content.categoryIdentifier == Self.updateNotificationIdentifier {
+                updateActionHandler?()
+                updateActionHandler = nil
+            }
+        }
+        completionHandler()
     }
 
     func showSuccess(commandName: String, output: String?) {
@@ -68,6 +89,38 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         content.body = "配置已重载: 命令列表已更新"
         content.sound = .default
         postNotification(content)
+    }
+
+    /// 显示更新可用通知
+    /// - Parameters:
+    ///   - version: 最新版本号
+    ///   - action: 点击通知后的回调
+    func showUpdateAvailable(version: String, action: @escaping () -> Void) {
+        updateActionHandler = action
+
+        let content = UNMutableNotificationContent()
+        content.title = Self.appName
+        content.body = "发现新版本 \(version)，点击下载"
+        content.sound = .default
+        content.categoryIdentifier = Self.updateNotificationIdentifier
+
+        let request = UNNotificationRequest(
+            identifier: Self.updateNotificationIdentifier,
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    /// 注册更新通知类别
+    private func registerUpdateNotificationCategory() {
+        let category = UNNotificationCategory(
+            identifier: Self.updateNotificationIdentifier,
+            actions: [],
+            intentIdentifiers: [],
+            options: []
+        )
+        UNUserNotificationCenter.current().setNotificationCategories([category])
     }
 
     private func postNotification(_ content: UNMutableNotificationContent) {

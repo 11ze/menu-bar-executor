@@ -42,7 +42,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let hasShownPrompt = UserDefaults.standard.bool(forKey: hasShownAccessibilityPromptKey)
 
         // 仅首次未授权时提示，避免每次启动都打断用户
-        guard !hasPermission, !hasShownPrompt else { return }
+        guard !hasPermission, !hasShownPrompt else {
+            // 自动检查更新
+            UpdateManager.shared.performAutoCheck()
+            return
+        }
 
         UserDefaults.standard.set(true, forKey: hasShownAccessibilityPromptKey)
 
@@ -57,6 +61,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
                 NSWorkspace.shared.open(url)
             }
+
+            // 自动检查更新
+            UpdateManager.shared.performAutoCheck()
         }
     }
 
@@ -90,6 +97,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         historyItem.target = self
         historyItem.keyEquivalentModifierMask = [.command]
         menu.addItem(historyItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        let checkUpdateItem = NSMenuItem(
+            title: "检查更新...",
+            action: #selector(checkForUpdates),
+            keyEquivalent: ""
+        )
+        checkUpdateItem.target = self
+        menu.addItem(checkUpdateItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -135,5 +152,50 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openHistory() {
         HistoryWindowController.shared.showWindow()
+    }
+
+    @objc private func checkForUpdates() {
+        Task {
+            let updateManager = UpdateManager.shared
+            let updateInfo = await updateManager.checkForUpdate(force: true)
+
+            if let info = updateInfo {
+                // 有新版本
+                let alert = NSAlert()
+                alert.messageText = "发现新版本 \(info.latestVersion)"
+                alert.informativeText = "当前版本: \(info.currentVersion)\n\n\(info.releaseNotes ?? "点击下载查看更新内容")"
+                alert.alertStyle = .informational
+                alert.addButton(withTitle: "下载")
+                alert.addButton(withTitle: "跳过此版本")
+                alert.addButton(withTitle: "取消")
+
+                let response = alert.runModal()
+                if response == .alertFirstButtonReturn {
+                    updateManager.openReleasePage()
+                } else if response == .alertSecondButtonReturn {
+                    updateManager.skipVersion(info.latestVersion)
+                }
+            } else if let error = updateManager.lastError {
+                // 检查失败
+                let alert = NSAlert()
+                alert.messageText = "检查更新失败"
+                alert.informativeText = error.errorDescription ?? "未知错误"
+                alert.alertStyle = .warning
+                alert.addButton(withTitle: "重试")
+                alert.addButton(withTitle: "取消")
+
+                if alert.runModal() == .alertFirstButtonReturn {
+                    checkForUpdates()
+                }
+            } else {
+                // 已是最新版本
+                let alert = NSAlert()
+                alert.messageText = "已是最新版本"
+                alert.informativeText = "当前版本: \(updateManager.getCurrentVersion())"
+                alert.alertStyle = .informational
+                alert.addButton(withTitle: "确定")
+                alert.runModal()
+            }
+        }
     }
 }

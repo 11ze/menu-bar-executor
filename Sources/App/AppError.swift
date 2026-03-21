@@ -37,3 +37,32 @@ enum AppError: LocalizedError {
         }
     }
 }
+
+/// 更新检查相关错误
+enum UpdateError: LocalizedError {
+    case networkError(Error)
+    case invalidResponse
+    case versionParseFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .networkError(let error):
+            return "网络连接失败: \(error.localizedDescription)"
+        case .invalidResponse:
+            return "服务器响应格式错误"
+        case .versionParseFailed:
+            return "版本信息解析失败"
+        }
+    }
+
+    var recoverySuggestion: String? {
+        switch self {
+        case .networkError:
+            return "请检查网络连接后重试"
+        case .invalidResponse:
+            return "请稍后重试"
+        case .versionParseFailed:
+            return "请稍后重试"
+        }
+    }
+}

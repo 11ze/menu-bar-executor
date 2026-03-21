@@ -1,15 +1,40 @@
 #!/bin/bash
 
 # menu-bar-executor Release 打包脚本
-# 用法: ./release.sh [version]
+# 用法: ./release.sh <version>
+# 示例: ./release.sh 1.1.0
 
 set -e
 
-VERSION=${1:-"1.0.0"}
+VERSION=${1:-""}
 PROJECT_NAME="menu-bar-executor"
 SCHEME="MenuBarExecutor"
 APP_NAME="MenuBarExecutor"
 CONFIG="Release"
+PLIST="Resources/Info.plist"
+
+# 检查版本号参数
+if [ -z "$VERSION" ]; then
+    echo "❌ 请提供版本号"
+    echo "用法: ./release.sh <version>"
+    echo "示例: ./release.sh 1.1.0"
+    exit 1
+fi
+
+# 更新 Info.plist 版本号
+echo "📝 更新版本号到 ${VERSION}..."
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${VERSION}" "$PLIST"
+
+# 更新构建号
+SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/Scripts"
+if [ -f "$SCRIPTS_DIR/update_build_number.sh" ]; then
+    "$SCRIPTS_DIR/update_build_number.sh"
+else
+    # 如果脚本不存在，使用日期格式
+    BUILD_NUMBER=$(date +"%Y%m%d01")
+    /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${BUILD_NUMBER}" "$PLIST"
+    echo "Build number updated to ${BUILD_NUMBER}"
+fi
 
 # 拉取最新 tag，确保版本信息最新
 echo "🔄 拉取最新标签..."
@@ -79,7 +104,12 @@ echo "   - Release/${APP_NAME}-${VERSION}.zip"
 echo "   - Release/RELEASE_NOTES.md"
 echo ""
 echo "下一步："
-echo "1. 访问 GitHub Releases"
-echo "2. 创建新 Release (v${VERSION})"
-echo "3. 上传 Release/${APP_NAME}-${VERSION}.zip"
-echo "4. 复制 Release/RELEASE_NOTES.md 内容到 Release Description"
+echo "1. 提交版本更新："
+echo "   git add Resources/Info.plist && git commit -m \"chore: bump version to ${VERSION}\""
+echo "2. 创建标签："
+echo "   git tag v${VERSION}"
+echo "3. 推送："
+echo "   git push && git push --tags"
+echo "4. 访问 GitHub Releases 创建新 Release"
+echo "5. 上传 Release/${APP_NAME}-${VERSION}.zip"
+echo "6. 复制 Release/RELEASE_NOTES.md 内容到 Release Description"

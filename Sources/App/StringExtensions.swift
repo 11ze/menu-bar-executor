@@ -8,4 +8,9 @@ extension String {
 
     /// 如果字符串为空则返回 nil
     var nilIfEmpty: String? { isEmpty ? nil : self }
+
+    /// 去除版本号的 "v" 或 "V" 前缀
+    var cleanVersionString: String {
+        hasPrefix("v") || hasPrefix("V") ? String(dropFirst()) : self
+    }
 }
