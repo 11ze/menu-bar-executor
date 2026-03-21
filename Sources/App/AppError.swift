@@ -41,6 +41,8 @@ enum AppError: LocalizedError {
 /// 更新检查相关错误
 enum UpdateError: LocalizedError {
     case networkError(Error)
+    case apiRateLimited
+    case noReleaseFound
     case invalidResponse
     case versionParseFailed
 
@@ -48,6 +50,10 @@ enum UpdateError: LocalizedError {
         switch self {
         case .networkError(let error):
             return "网络连接失败: \(error.localizedDescription)"
+        case .apiRateLimited:
+            return "GitHub API 请求次数已达上限"
+        case .noReleaseFound:
+            return "未找到发布版本"
         case .invalidResponse:
             return "服务器响应格式错误"
         case .versionParseFailed:
@@ -59,6 +65,10 @@ enum UpdateError: LocalizedError {
         switch self {
         case .networkError:
             return "请检查网络连接后重试"
+        case .apiRateLimited:
+            return "请稍后重试，或直接访问 GitHub Releases 页面"
+        case .noReleaseFound:
+            return "请稍后重试"
         case .invalidResponse:
             return "请稍后重试"
         case .versionParseFailed:

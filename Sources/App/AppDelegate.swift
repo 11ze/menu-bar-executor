@@ -181,11 +181,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 alert.messageText = "检查更新失败"
                 alert.informativeText = error.errorDescription ?? "未知错误"
                 alert.alertStyle = .warning
-                alert.addButton(withTitle: "重试")
-                alert.addButton(withTitle: "取消")
 
-                if alert.runModal() == .alertFirstButtonReturn {
-                    checkForUpdates()
+                // 针对 API 限流提供直接访问 GitHub 的选项
+                if case .apiRateLimited = error {
+                    alert.addButton(withTitle: "访问 GitHub")
+                    alert.addButton(withTitle: "取消")
+                    if alert.runModal() == .alertFirstButtonReturn {
+                        updateManager.openReleasePage()
+                    }
+                } else {
+                    alert.addButton(withTitle: "重试")
+                    alert.addButton(withTitle: "取消")
+                    if alert.runModal() == .alertFirstButtonReturn {
+                        checkForUpdates()
+                    }
                 }
             } else {
                 // 已是最新版本

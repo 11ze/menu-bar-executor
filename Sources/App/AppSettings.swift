@@ -125,7 +125,9 @@ final class AppSettingsManager: ObservableObject {
         guard FileManager.default.fileExists(atPath: filePath.path) else { return }
         do {
             let data = try Data(contentsOf: filePath)
-            settings = try JSONDecoder().decode(AppSettings.self, from: data)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            settings = try decoder.decode(AppSettings.self, from: data)
             if fixDuplicateCommandIds() {
                 save()
             }
@@ -141,6 +143,7 @@ final class AppSettingsManager: ObservableObject {
             try AppPaths.ensureDirectoryExists()
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            encoder.dateEncodingStrategy = .iso8601
             let data = try encoder.encode(settings)
 
             // 原子写入
@@ -213,13 +216,16 @@ final class AppSettingsManager: ObservableObject {
     func exportSettings(to url: URL) throws {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
         let data = try encoder.encode(settings)
         try data.write(to: url)
     }
 
     func importSettings(from url: URL) throws {
         let data = try Data(contentsOf: url)
-        settings = try JSONDecoder().decode(AppSettings.self, from: data)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        settings = try decoder.decode(AppSettings.self, from: data)
         _ = fixDuplicateCommandIds()
         save()
     }

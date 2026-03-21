@@ -153,7 +153,17 @@ final class UpdateManager: ObservableObject {
             throw UpdateError.invalidResponse
         }
 
-        guard httpResponse.statusCode == 200 else {
+        // 处理特定的 HTTP 状态码
+        switch httpResponse.statusCode {
+        case 200:
+            break
+        case 403:
+            // API 限流
+            throw UpdateError.apiRateLimited
+        case 404:
+            // 没有找到 release
+            throw UpdateError.noReleaseFound
+        default:
             throw UpdateError.invalidResponse
         }
 

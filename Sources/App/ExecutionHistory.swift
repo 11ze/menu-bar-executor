@@ -47,7 +47,9 @@ final class ExecutionHistory: ObservableObject {
 
         do {
             let data = try Data(contentsOf: AppPaths.historyFile)
-            records = try JSONDecoder().decode([ExecutionRecord].self, from: data)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            records = try decoder.decode([ExecutionRecord].self, from: data)
             // 限制加载的记录数量
             if records.count > maxRecords {
                 records = Array(records.prefix(maxRecords))
@@ -62,6 +64,7 @@ final class ExecutionHistory: ObservableObject {
             try AppPaths.ensureDirectoryExists()
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            encoder.dateEncodingStrategy = .iso8601
             let data = try encoder.encode(records)
             try data.write(to: AppPaths.historyFile, options: .atomic)
         } catch {
