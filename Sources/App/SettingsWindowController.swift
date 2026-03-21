@@ -16,7 +16,7 @@ final class SettingsWindowController: NSWindowController {
             defer: false
         )
         window.center()
-        window.title = "命令设置"
+        window.title = "设置"
         window.contentView = NSHostingView(rootView: contentView)
         window.isReleasedWhenClosed = false
 

@@ -72,6 +72,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let menu = NSMenu()
 
+        let settingsItem = NSMenuItem(
+            title: "设置",
+            action: #selector(openSettings),
+            keyEquivalent: ","
+        )
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+
         let reloadItem = NSMenuItem(
             title: "重载配置",
             action: #selector(reloadConfig),
@@ -81,16 +89,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         reloadItem.keyEquivalentModifierMask = [.command]
         menu.addItem(reloadItem)
 
-        let settingsItem = NSMenuItem(
-            title: "命令设置...",
-            action: #selector(openSettings),
-            keyEquivalent: ","
-        )
-        settingsItem.target = self
-        menu.addItem(settingsItem)
-
         let historyItem = NSMenuItem(
-            title: "执行历史...",
+            title: "执行历史",
             action: #selector(openHistory),
             keyEquivalent: "h"
         )
@@ -101,7 +101,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem.separator())
 
         let checkUpdateItem = NSMenuItem(
-            title: "检查更新...",
+            title: "检查更新",
             action: #selector(checkForUpdates),
             keyEquivalent: ""
         )

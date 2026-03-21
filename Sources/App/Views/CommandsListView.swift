@@ -27,18 +27,10 @@ struct CommandsListView: View {
                 Text("命令设置")
                     .font(.headline)
                 Spacer()
-                HStack(spacing: 12) {
-                    Button(action: exportConfig) {
-                        Label("导出", systemImage: "square.and.arrow.up")
-                    }
-                    Button(action: showImportPanel) {
-                        Label("导入", systemImage: "square.and.arrow.down")
-                    }
-                    Button(action: {
-                        editingCommand = Command(name: "", command: "")
-                    }) {
-                        Label("添加命令", systemImage: "plus")
-                    }
+                Button(action: {
+                    editingCommand = Command(name: "", command: "")
+                }) {
+                    Label("添加命令", systemImage: "plus")
                 }
             }
             .padding()
@@ -207,6 +199,23 @@ struct CommandsListView: View {
                                 .onChange(of: manager.launchAtLogin) { newValue in
                                     manager.updateLaunchAtLogin(newValue)
                                 }
+                        }
+                    }
+
+                    Divider()
+
+                    // 导入导出
+                    HStack {
+                        Text("配置")
+                            .font(.headline)
+                        Spacer()
+                        HStack(spacing: 12) {
+                            Button(action: exportConfig) {
+                                Label("导出", systemImage: "square.and.arrow.up")
+                            }
+                            Button(action: showImportPanel) {
+                                Label("导入", systemImage: "square.and.arrow.down")
+                            }
                         }
                     }
                 }
