@@ -5,7 +5,6 @@ import KeyboardShortcuts
 struct CommandsListView: View {
     @ObservedObject private var manager = CommandsManager.shared
     @State private var editingCommand: Command?
-    @State private var showingEditor = false
     @State private var commandToDelete: Command?
     @State private var showingDeleteConfirmation = false
     @State private var searchText = ""
@@ -36,8 +35,7 @@ struct CommandsListView: View {
                         Label("导入", systemImage: "square.and.arrow.down")
                     }
                     Button(action: {
-                        editingCommand = nil
-                        showingEditor = true
+                        editingCommand = Command(name: "", command: "")
                     }) {
                         Label("添加命令", systemImage: "plus")
                     }
@@ -85,7 +83,6 @@ struct CommandsListView: View {
                         HStack(spacing: 8) {
                             Button(action: {
                                 editingCommand = command
-                                showingEditor = true
                             }) {
                                 Image(systemName: "pencil")
                             }
@@ -116,12 +113,12 @@ struct CommandsListView: View {
             }
         }
         .frame(minWidth: 500, minHeight: 400)
-        .sheet(isPresented: $showingEditor) {
-            CommandEditorView(command: editingCommand) { command in
-                if editingCommand != nil {
-                    manager.updateCommand(command)
+        .sheet(item: $editingCommand) { command in
+            CommandEditorView(command: command) { newCommand in
+                if manager.commands.contains(where: { $0.id == command.id }) {
+                    manager.updateCommand(newCommand)
                 } else {
-                    manager.addCommand(command)
+                    manager.addCommand(newCommand)
                 }
             }
         }
