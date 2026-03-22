@@ -52,7 +52,7 @@ generate_release_notes() {
         msg = $2
         if (type == "feat") print "Added " msg
         else if (type == "fix") print "Fixed " msg
-        else if (type == "style" || type == "perf") print "Improved " msg
+        else if (type == "style" || type == "perf" || type == "refactor") print "Improved " msg
     }'
 }
 
@@ -105,7 +105,7 @@ echo "   - Release/RELEASE_NOTES.md"
 echo ""
 echo "下一步："
 echo "1. 一键发布："
-echo "   git add Resources/Info.plist && git commit -m \"chore: bump version to ${VERSION}\" && git tag v${VERSION} && git push --follow-tags"
+echo "   git add Resources/Info.plist && git commit -m \"chore: bump version to ${VERSION}\" && git tag -a v${VERSION} -m \"version ${VERSION}\" && git push --follow-tags"
 echo "2. 访问 GitHub Releases 创建新 Release"
 echo "3. 上传 Release/${APP_NAME}-${VERSION}.zip"
 echo "4. 复制 Release/RELEASE_NOTES.md 内容到 Release Description"
