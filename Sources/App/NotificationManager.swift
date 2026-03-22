@@ -58,10 +58,10 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     func showSuccess(commandName: String, output: String?) {
         let content = UNMutableNotificationContent()
         content.title = Self.appName
-        content.subtitle = "\(commandName)"
+        content.subtitle = "\(commandName) ✅\n"
 
         if let output = output?.truncated(to: 100), !output.isEmpty {
-            content.body = "✅\n\(output)"
+            content.body = "\(output)"
         }
 
         content.sound = .default
@@ -71,9 +71,9 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     func showFailure(commandName: String, error: String, output: String?) {
         let content = UNMutableNotificationContent()
         content.title = Self.appName
-        content.subtitle = "\(commandName)"
+        content.subtitle = "\(commandName) ❌\n"
 
-        var body = "❌\n\(error)"
+        var body = "\(error)"
         if let output = output?.truncated(to: 100), !output.isEmpty {
             body += "\n\(output)"
         }

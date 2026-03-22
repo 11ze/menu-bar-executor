@@ -9,12 +9,12 @@ enum PaletteConfig {
     static let focusDelay: TimeInterval = 0.05
     /// 默认尺寸
     static let defaultWidth: CGFloat = 500
-    static let defaultHeight: CGFloat = 380
+    static let defaultHeight: CGFloat = 480
     /// 尺寸范围
     static let minWidth: CGFloat = 300
-    static let minHeight: CGFloat = 200
+    static let minHeight: CGFloat = 250
     static let maxWidth: CGFloat = 800
-    static let maxHeight: CGFloat = 600
+    static let maxHeight: CGFloat = 1000
     /// 快捷键最大数量（⌘+1 到 ⌘+9）
     static let maxQuickSelectCount = 9
     /// 滚动位置容差（像素）

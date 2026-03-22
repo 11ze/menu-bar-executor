@@ -81,7 +81,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(settingsItem)
 
         let reloadItem = NSMenuItem(
-            title: "重载配置",
+            title: "重载设置",
             action: #selector(reloadConfig),
             keyEquivalent: "r"
         )
