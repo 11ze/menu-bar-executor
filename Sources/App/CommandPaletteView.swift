@@ -190,11 +190,7 @@ struct CommandPaletteView: View {
 
             // 底部提示
             HStack {
-                Text("↵ 执行")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text("⌘+数字 快速执行")
+                Text("↵ 回车 / 点击 / ⌘+数字 执行")
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()

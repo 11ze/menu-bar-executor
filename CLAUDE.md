@@ -35,18 +35,22 @@ Sources/App/
 ├── AppPaths.swift                     # 统一路径管理
 ├── StringExtensions.swift             # 字符串扩展工具
 ├── HighlightedText.swift              # 搜索高亮组件
+├── CommandPaletteView.swift           # 命令面板（全局快捷键 + 搜索 + 键盘导航）
 └── Views/
     ├── CommandsListView.swift         # 命令列表视图（搜索 + 导入导出 + 拖拽排序）
     ├── CommandEditorView.swift        # 命令编辑器
-    ├── CommandPaletteView.swift       # 命令面板（全局快捷键 + 搜索 + 键盘导航）
     └── HistoryView.swift              # 执行历史视图
 
 Scripts/
-└── update_build_number.sh             # 自动更新构建号脚本
+├── update_build_number.sh             # 自动更新构建号脚本
+├── create_icons.py                    # 创建图标脚本
+└── generate_appicon.py                # 生成 App 图标脚本
 
 Tests/
 ├── CommandTests.swift                 # Command 和 AppSettings 测试
 └── ExecutionRecordTests.swift         # 历史记录测试
+
+release.sh                             # 自动化发布脚本（版本号更新 + git tag + release notes）
 ```
 
 ## 功能特性
@@ -155,4 +159,4 @@ pkill -f MenuBarExecutor && xcodebuild -project menu-bar-executor.xcodeproj -sch
 每次修改后更新 CLAUDE.md 和 README.md。
 
 # currentDate
-Today's date is 2026-03-21.
+Today's date is 2026-03-27.
