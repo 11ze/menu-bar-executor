@@ -115,6 +115,14 @@ final class CommandPaletteWindowController: NSWindowController {
         fatalError("init(coder:) has not been implemented")
     }
 
+    var isPanelVisible: Bool {
+        panel.isVisible
+    }
+
+    func toggle() {
+        isPanelVisible ? hide() : show()
+    }
+
     func show() {
         // 切换到默认输入法（仅当当前输入法不同时才切换）
         if let inputSourceID = settings.settings.defaultInputSourceID,

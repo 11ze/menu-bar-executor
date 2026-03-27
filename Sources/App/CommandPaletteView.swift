@@ -233,6 +233,18 @@ struct CommandPaletteRow: View {
     let isSelected: Bool
     let searchText: String
 
+    @State private var isHovered = false
+
+    private var rowBackground: Color {
+        if isSelected {
+            Color.accentColor.opacity(0.15)
+        } else if isHovered {
+            Color.primary.opacity(0.05)
+        } else {
+            Color.clear
+        }
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             // 显示索引，仅 1-9 显示快捷键提示
@@ -268,7 +280,8 @@ struct CommandPaletteRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
+        .background(rowBackground)
+        .onHover { isHovered = $0 }
         .contentShape(Rectangle())
     }
 }

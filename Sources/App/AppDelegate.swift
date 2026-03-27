@@ -32,9 +32,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 同步自启动状态
         LaunchAtLoginManager.shared.sync(withSettings: AppSettingsManager.shared.settings.launchAtLogin)
 
-        // 注册全局快捷键（呼出命令面板）
+        // 注册全局快捷键（呼出/关闭命令面板）
         KeyboardShortcuts.onKeyUp(for: .commandPalette) {
-            CommandPaletteWindowController.shared.show()
+            CommandPaletteWindowController.shared.toggle()
         }
 
         // 静默检查辅助功能权限
@@ -125,11 +125,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func statusBarButtonClicked(_ sender: NSStatusBarButton) {
-        // 左键点击：呼出命令面板
+        // 左键点击：呼出/关闭命令面板
         // 右键点击：显示原有菜单
         guard let event = NSApp.currentEvent else { return }
         if event.type == .leftMouseUp {
-            CommandPaletteWindowController.shared.show()
+            CommandPaletteWindowController.shared.toggle()
         } else if event.type == .rightMouseUp {
             guard let menu = sender.menu else { return }
             menu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height + 5), in: sender)
