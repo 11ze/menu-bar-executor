@@ -60,6 +60,9 @@ final class CommandPaletteWindowController: NSWindowController {
     private var paletteView: PaletteContainerView!
     private let settings = AppSettingsManager.shared
     private var eventMonitor: Any?
+    private var previousInputSourceID: String?
+    /// 标记面板是否刚被 resign key 隐藏，防止 toggle() 误重新打开
+    private var hiddenByResignKey = false
 
     private init() {
         // 获取保存的尺寸或使用默认值
@@ -120,10 +123,22 @@ final class CommandPaletteWindowController: NSWindowController {
     }
 
     func toggle() {
-        isPanelVisible ? hide() : show()
+        if isPanelVisible {
+            hide()
+        } else if hiddenByResignKey {
+            // 面板刚被 resign key 隐藏（如点击菜单栏图标），不重新打开
+            hiddenByResignKey = false
+        } else {
+            show()
+        }
     }
 
     func show() {
+        // 保存当前输入法（仅当面板当前不可见时）
+        if !isPanelVisible {
+            previousInputSourceID = InputSourceHelper.currentInputSourceID()
+        }
+
         // 切换到默认输入法（仅当当前输入法不同时才切换）
         if let inputSourceID = settings.settings.defaultInputSourceID,
            InputSourceHelper.currentInputSourceID() != inputSourceID {
@@ -142,18 +157,33 @@ final class CommandPaletteWindowController: NSWindowController {
 
     func hide() {
         removeEventMonitor()
+
+        // 捕获并立即清空，防止 windowDidResignKey → hide() 重复恢复
+        let restoreID = previousInputSourceID
+        previousInputSourceID = nil
+
         // 保存位置和尺寸
         let frame = panel.frame
         if isPositionValid(at: frame.origin) {
             settings.updatePaletteFrame(origin: frame.origin, size: frame.size)
         }
         panel.orderOut(nil)
+
+        // 在面板完全隐藏、系统窗口管理完成后，再恢复输入法。
+        // 必须在 orderOut 之后执行：.nonactivatingPanel 的 orderOut 会触发系统
+        // 恢复活跃应用的记忆输入法，覆盖我们在 orderOut 之前设置的输入法。
+        if let restoreID {
+            DispatchQueue.main.async {
+                guard InputSourceHelper.currentInputSourceID() != restoreID else { return }
+                _ = InputSourceHelper.switchToInputSource(id: restoreID)
+            }
+        }
     }
 
     private func setupEventMonitor() {
         guard eventMonitor == nil else { return }
         eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self = self, self.panel.isKeyWindow else { return event }
+            guard let self, self.panel.isKeyWindow else { return event }
 
             let keyCode = event.keyCode
 
@@ -197,6 +227,10 @@ final class CommandPaletteWindowController: NSWindowController {
     }
 
     @objc private func windowDidResignKey(_ notification: Notification) {
+        hiddenByResignKey = true
         hide()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            self?.hiddenByResignKey = false
+        }
     }
 }
