@@ -126,7 +126,6 @@ final class CommandPaletteWindowController: NSWindowController {
         if isPanelVisible {
             hide()
         } else if hiddenByResignKey {
-            // 面板刚被 resign key 隐藏（如点击菜单栏图标），不重新打开
             hiddenByResignKey = false
         } else {
             show()
@@ -134,14 +133,14 @@ final class CommandPaletteWindowController: NSWindowController {
     }
 
     func show() {
-        // 保存当前输入法（仅当面板当前不可见时）
+        // 保存当前输入法（防止 show() 被重复调用时覆盖原始输入法记录）
         if !isPanelVisible {
             previousInputSourceID = InputSourceHelper.currentInputSourceID()
         }
 
-        // 切换到默认输入法（仅当当前输入法不同时才切换）
+        // 切换到默认输入法
         if let inputSourceID = settings.settings.defaultInputSourceID,
-           InputSourceHelper.currentInputSourceID() != inputSourceID {
+           previousInputSourceID != inputSourceID {
             _ = InputSourceHelper.switchToInputSource(id: inputSourceID)
         }
 
@@ -156,6 +155,7 @@ final class CommandPaletteWindowController: NSWindowController {
     }
 
     func hide() {
+        guard isPanelVisible else { return }
         removeEventMonitor()
 
         // 捕获并立即清空，防止 windowDidResignKey → hide() 重复恢复
