@@ -65,4 +65,136 @@ final class CommandTests: XCTestCase {
         XCTAssertEqual(decoded.commands[0].name, "Cmd1")
         XCTAssertEqual(decoded.commands[1].name, "Cmd2")
     }
+
+    // MARK: - Equatable
+
+    func testEquatable_SameValues() {
+        let uuid = UUID()
+        let a = Command(id: uuid, name: "Test", command: "echo", notification: true)
+        let b = Command(id: uuid, name: "Test", command: "echo", notification: true)
+        XCTAssertEqual(a, b)
+    }
+
+    func testEquatable_DifferentNames() {
+        let uuid = UUID()
+        let a = Command(id: uuid, name: "A", command: "echo", notification: true)
+        let b = Command(id: uuid, name: "B", command: "echo", notification: true)
+        XCTAssertNotEqual(a, b)
+    }
+
+    func testEquatable_DifferentUUIDs() {
+        let a = Command(id: UUID(), name: "Test", command: "echo", notification: true)
+        let b = Command(id: UUID(), name: "Test", command: "echo", notification: true)
+        XCTAssertNotEqual(a, b)
+    }
+
+    // MARK: - 默认值
+
+    func testDefaultNotification_IsTrue() {
+        let command = Command(name: "Test", command: "echo")
+        XCTAssertTrue(command.notification)
+    }
+
+    // MARK: - 解码边界
+
+    func testDecoding_MalformedUUID() throws {
+        let json = """
+        {
+            "id": "not-a-uuid",
+            "name": "Test",
+            "command": "echo",
+            "notification": true
+        }
+        """.data(using: .utf8)!
+
+        let command = try JSONDecoder().decode(Command.self, from: json)
+        // 无效 UUID 应触发 try? 回退，生成新 UUID
+        XCTAssertNotEqual(command.id.uuidString, "not-a-uuid")
+    }
+
+    func testDecoding_NonStringUUID() throws {
+        let json = """
+        {
+            "id": 12345,
+            "name": "Test",
+            "command": "echo",
+            "notification": true
+        }
+        """.data(using: .utf8)!
+
+        let command = try JSONDecoder().decode(Command.self, from: json)
+        XCTAssertNotNil(command.id)
+    }
+
+    func testDecoding_MissingNotification() throws {
+        let json = """
+        {
+            "name": "Test",
+            "command": "echo"
+        }
+        """.data(using: .utf8)!
+
+        let command = try JSONDecoder().decode(Command.self, from: json)
+        XCTAssertTrue(command.notification)
+    }
+
+    func testDecoding_ExplicitFalseNotification() throws {
+        let json = """
+        {
+            "name": "Test",
+            "command": "echo",
+            "notification": false
+        }
+        """.data(using: .utf8)!
+
+        let command = try JSONDecoder().decode(Command.self, from: json)
+        XCTAssertFalse(command.notification)
+    }
+
+    func testDecoding_WithWorkingDirectory() throws {
+        let json = """
+        {
+            "name": "Test",
+            "command": "pwd",
+            "workingDirectory": "/tmp"
+        }
+        """.data(using: .utf8)!
+
+        let command = try JSONDecoder().decode(Command.self, from: json)
+        XCTAssertEqual(command.workingDirectory, "/tmp")
+    }
+
+    func testDecoding_WithoutWorkingDirectory() throws {
+        let json = """
+        {
+            "name": "Test",
+            "command": "pwd"
+        }
+        """.data(using: .utf8)!
+
+        let command = try JSONDecoder().decode(Command.self, from: json)
+        XCTAssertNil(command.workingDirectory)
+    }
+
+    func testEncoding_WithWorkingDirectory() throws {
+        let command = Command(name: "Test", command: "pwd", workingDirectory: "/home/user")
+        let data = try JSONEncoder().encode(command)
+        let json = String(data: data, encoding: .utf8)!
+        XCTAssertTrue(json.contains("workingDirectory"))
+    }
+
+    func testEncoding_AllFieldsRoundTrip() throws {
+        let command = Command(
+            name: "Full",
+            command: "ls -la",
+            workingDirectory: "/tmp",
+            notification: false
+        )
+        let data = try JSONEncoder().encode(command)
+        let decoded = try JSONDecoder().decode(Command.self, from: data)
+        XCTAssertEqual(decoded.name, "Full")
+        XCTAssertEqual(decoded.command, "ls -la")
+        XCTAssertEqual(decoded.workingDirectory, "/tmp")
+        XCTAssertFalse(decoded.notification)
+    }
 }

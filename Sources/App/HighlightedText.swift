@@ -45,7 +45,7 @@ struct HighlightedText: View {
     }
 }
 
-private extension String {
+extension String {
     /// 查找所有匹配的范围
     func ranges(of substring: String, options: String.CompareOptions = []) -> [Range<String.Index>] {
         guard !substring.isEmpty else { return [] }
