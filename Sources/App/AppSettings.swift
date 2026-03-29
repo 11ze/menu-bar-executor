@@ -108,6 +108,14 @@ final class AppSettingsManager: ObservableObject {
     private let resolvedFilePath: URL
     private let notificationManager = NotificationManager.shared
 
+    // MARK: - 文件监听
+
+    private var fileMonitorSource: DispatchSourceFileSystemObject?
+    private var monitorFileDescriptor: Int32 = -1
+    private var debounceTask: Task<Void, Never>?
+    /// 自身 save() 触发文件变化时跳过自动重载
+    private var skipNextFileChange = false
+
     private init() {
         filePath = AppPaths.settingsFile
         // 初始化时一次性解析软链接
@@ -117,11 +125,76 @@ final class AppSettingsManager: ObservableObject {
             resolvedFilePath = filePath
         }
         load()
+        startFileMonitoring()
+    }
+
+    deinit {
+        fileMonitorSource?.cancel()
+        fileMonitorSource = nil
+        if monitorFileDescriptor >= 0 {
+            close(monitorFileDescriptor)
+        }
+        debounceTask?.cancel()
+    }
+
+    private func startFileMonitoring() {
+        let fd = open(resolvedFilePath.path, O_EVTONLY)
+        guard fd >= 0 else { return }
+        monitorFileDescriptor = fd
+
+        fileMonitorSource = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd,
+            eventMask: .write,
+            queue: DispatchQueue(label: "com.menu-bar-executor.settings-monitor")
+        )
+
+        fileMonitorSource?.setEventHandler { [weak self] in
+            Task { @MainActor in
+                self?.handleFileChange()
+            }
+        }
+
+        fileMonitorSource?.resume()
+    }
+
+    private func stopFileMonitoring() {
+        fileMonitorSource?.cancel()
+        fileMonitorSource = nil
+        if monitorFileDescriptor >= 0 {
+            close(monitorFileDescriptor)
+            monitorFileDescriptor = -1
+        }
+    }
+
+    private func restartFileMonitoring() {
+        stopFileMonitoring()
+        startFileMonitoring()
+    }
+
+    private func handleFileChange() {
+        // 自身 save() 触发的变化，跳过
+        if skipNextFileChange {
+            skipNextFileChange = false
+            return
+        }
+        // 防抖：0.3 秒内多次变化只重载一次
+        debounceTask?.cancel()
+        debounceTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
+            self?.reloadSilent()
+        }
+    }
+
+    /// 自动重载（不弹通知，不弹错误）
+    private func reloadSilent() {
+        load(notifyError: false)
+        NotificationCenter.default.post(name: .settingsDidReload, object: nil)
     }
 
     // MARK: - 加载
 
-    func load() {
+    func load(notifyError: Bool = true) {
         guard FileManager.default.fileExists(atPath: filePath.path) else { return }
         do {
             let data = try Data(contentsOf: filePath)
@@ -132,13 +205,17 @@ final class AppSettingsManager: ObservableObject {
                 save()
             }
         } catch {
-            // 加载失败使用默认值
+            if notifyError {
+                notificationManager.showConfigLoadError(error)
+            }
         }
     }
 
     // MARK: - 保存
 
     func save() {
+        // 标记自身写入，防止文件监听误触发自动重载
+        skipNextFileChange = true
         do {
             try AppPaths.ensureDirectoryExists()
             let encoder = JSONEncoder()
@@ -156,6 +233,9 @@ final class AppSettingsManager: ObservableObject {
             } else {
                 try fileManager.moveItem(at: tempPath, to: resolvedFilePath)
             }
+
+            // 原子写入会替换 inode，旧文件描述符失效，需要重建监听
+            restartFileMonitoring()
         } catch {
             // 保存失败静默忽略
         }
@@ -228,5 +308,7 @@ final class AppSettingsManager: ObservableObject {
         settings = try decoder.decode(AppSettings.self, from: data)
         _ = fixDuplicateCommandIds()
         save()
+        // 通知下游（CommandsManager / PaletteCoordinator）命令已更新
+        NotificationCenter.default.post(name: .settingsDidReload, object: nil)
     }
 }

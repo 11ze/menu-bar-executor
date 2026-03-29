@@ -91,6 +91,14 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         postNotification(content)
     }
 
+    func showConfigLoadError(_ error: Error) {
+        let content = UNMutableNotificationContent()
+        content.title = Self.appName
+        content.body = "配置加载失败: \(error.localizedDescription)"
+        content.sound = .default
+        postNotification(content)
+    }
+
     /// 显示更新可用通知
     /// - Parameters:
     ///   - version: 最新版本号

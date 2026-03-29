@@ -61,9 +61,6 @@ final class CommandPaletteWindowController: NSWindowController {
     private let settings = AppSettingsManager.shared
     private var eventMonitor: Any?
     private var previousInputSourceID: String?
-    /// 标记面板是否刚被 resign key 隐藏，防止 toggle() 误重新打开
-    private var hiddenByResignKey = false
-
     private init() {
         // 获取保存的尺寸或使用默认值
         let savedSize = settings.settings.paletteSize ?? NSSize(width: PaletteConfig.defaultWidth, height: PaletteConfig.defaultHeight)
@@ -125,8 +122,6 @@ final class CommandPaletteWindowController: NSWindowController {
     func toggle() {
         if isPanelVisible {
             hide()
-        } else if hiddenByResignKey {
-            hiddenByResignKey = false
         } else {
             show()
         }
@@ -227,10 +222,6 @@ final class CommandPaletteWindowController: NSWindowController {
     }
 
     @objc private func windowDidResignKey(_ notification: Notification) {
-        hiddenByResignKey = true
         hide()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-            self?.hiddenByResignKey = false
-        }
     }
 }
