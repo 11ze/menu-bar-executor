@@ -187,9 +187,10 @@ final class AppSettingsManager: ObservableObject {
     }
 
     /// 自动重载（不弹通知，不弹错误）
-    private func reloadSilent() {
+    func reloadSilent() {
         load(notifyError: false)
         NotificationCenter.default.post(name: .settingsDidReload, object: nil)
+        restartFileMonitoring()
     }
 
     // MARK: - 加载

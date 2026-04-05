@@ -60,6 +60,9 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         content.title = Self.appName
         content.subtitle = "Command: \(commandName)"
 
+        // output 去掉首尾空白
+        let output = output?.trimmingCharacters(in: .whitespacesAndNewlines)
+
         if let output = output?.truncated(to: 100), !output.isEmpty {
             content.body = "Output: \(output)"
         }
@@ -72,6 +75,11 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         let content = UNMutableNotificationContent()
         content.title = Self.appName
         content.subtitle = "Command: \(commandName)"
+
+        // error 去掉首尾空白
+        let error = error.trimmingCharacters(in: .whitespacesAndNewlines)
+        // output 去掉首尾空白
+        let output = output?.trimmingCharacters(in: .whitespacesAndNewlines)
 
         var body = "Error: \(error)"
         if let output = output?.truncated(to: 100), !output.isEmpty {

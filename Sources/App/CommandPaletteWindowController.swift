@@ -128,6 +128,10 @@ final class CommandPaletteWindowController: NSWindowController {
     }
 
     func show() {
+        // 从磁盘重新加载配置，确保显示最新的命令（解决外部编辑文件后的刷新问题）
+        settings.reloadSilent()
+        PaletteCoordinator.shared.reset()
+
         // 保存当前输入法（防止 show() 被重复调用时覆盖原始输入法记录）
         if !isPanelVisible {
             previousInputSourceID = InputSourceHelper.currentInputSourceID()
@@ -160,6 +164,8 @@ final class CommandPaletteWindowController: NSWindowController {
         // 保存位置和尺寸
         let frame = panel.frame
         if isPositionValid(at: frame.origin) {
+            // 先从磁盘加载最新配置，防止用旧数据覆盖外部修改
+            settings.load(notifyError: false)
             settings.updatePaletteFrame(origin: frame.origin, size: frame.size)
         }
         panel.orderOut(nil)
