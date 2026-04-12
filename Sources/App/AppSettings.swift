@@ -104,6 +104,9 @@ final class AppSettingsManager: ObservableObject {
 
     @Published var settings: AppSettings = AppSettings()
 
+    /// 配置是否已成功从磁盘加载（防止加载失败时空默认值覆盖真实配置）
+    private var isLoaded = false
+
     private let filePath: URL
     private let resolvedFilePath: URL
     private let notificationManager = NotificationManager.shared
@@ -196,12 +199,17 @@ final class AppSettingsManager: ObservableObject {
     // MARK: - 加载
 
     func load(notifyError: Bool = true) {
-        guard FileManager.default.fileExists(atPath: filePath.path) else { return }
+        guard FileManager.default.fileExists(atPath: filePath.path) else {
+            // 文件不存在，视为首次安装，允许保存
+            isLoaded = true
+            return
+        }
         do {
             let data = try Data(contentsOf: filePath)
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             settings = try decoder.decode(AppSettings.self, from: data)
+            isLoaded = true
             if fixDuplicateCommandIds() {
                 save()
             }
@@ -215,6 +223,8 @@ final class AppSettingsManager: ObservableObject {
     // MARK: - 保存
 
     func save() {
+        // 配置未加载成功时拒绝写入，防止空默认值覆盖真实配置
+        guard isLoaded else { return }
         // 标记自身写入，防止文件监听误触发自动重载
         skipNextFileChange = true
         do {
