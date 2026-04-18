@@ -58,13 +58,13 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     func showSuccess(commandName: String, output: String?) {
         let content = UNMutableNotificationContent()
         content.title = Self.appName
-        content.subtitle = "Command: \(commandName)"
+        content.subtitle = "命令: \(commandName)"
 
         // output 去掉首尾空白
         let output = output?.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if let output = output?.truncated(to: 100), !output.isEmpty {
-            content.body = "Output: \(output)"
+            content.body = "输出: \(output)"
         }
 
         content.sound = .default
@@ -74,16 +74,16 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     func showFailure(commandName: String, error: String, output: String?) {
         let content = UNMutableNotificationContent()
         content.title = Self.appName
-        content.subtitle = "Command: \(commandName)"
+        content.subtitle = "命令: \(commandName)"
 
         // error 去掉首尾空白
         let error = error.trimmingCharacters(in: .whitespacesAndNewlines)
         // output 去掉首尾空白
         let output = output?.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        var body = "Error: \(error)"
+        var body = "错误: \(error)"
         if let output = output?.truncated(to: 100), !output.isEmpty {
-            body += "\nOutput: \(output)"
+            body += "\n输出: \(output)"
         }
 
         content.body = body
