@@ -8,6 +8,7 @@ struct CommandEditorView: View {
     @State private var commandText: String
     @State private var workingDirectory: String
     @State private var notification: Bool
+    @State private var autoExecute: Bool
 
     let onSave: (Command) -> Void
 
@@ -20,11 +21,13 @@ struct CommandEditorView: View {
             _commandText = State(initialValue: command.command)
             _workingDirectory = State(initialValue: command.workingDirectory ?? "")
             _notification = State(initialValue: command.notification)
+            _autoExecute = State(initialValue: command.autoExecute)
         } else {
             _name = State(initialValue: "")
             _commandText = State(initialValue: "")
             _workingDirectory = State(initialValue: "")
             _notification = State(initialValue: true)
+            _autoExecute = State(initialValue: false)
         }
     }
 
@@ -38,6 +41,7 @@ struct CommandEditorView: View {
 
             Section("显示设置") {
                 Toggle("显示通知", isOn: $notification)
+                Toggle("打开面板时自动执行", isOn: $autoExecute)
             }
 
             Section {
@@ -67,7 +71,8 @@ struct CommandEditorView: View {
             name: name,
             command: commandText,
             workingDirectory: workingDirectory.isEmpty ? nil : workingDirectory,
-            notification: notification
+            notification: notification,
+            autoExecute: autoExecute
         )
         onSave(newCommand)
         dismiss()

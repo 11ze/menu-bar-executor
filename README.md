@@ -64,6 +64,7 @@ open ./build/Build/Products/Release/MenuBarExecutor.app
    - **命令**：要执行的 Shell 命令
    - **工作目录**：命令执行的目录（默认 `~`）
    - **显示通知**：执行完成后是否显示通知
+   - **自动执行**：打开命令面板时自动执行（结果在面板中内联显示）
 
 ### 导入导出配置
 
@@ -83,7 +84,8 @@ open ./build/Build/Products/Release/MenuBarExecutor.app
       "name": "Ping Google",
       "command": "ping -c 3 google.com",
       "workingDirectory": "~",
-      "notification": true
+      "notification": true,
+      "autoExecute": false
     }
   ],
   "palettePosition": { "x": 100, "y": 200 },
@@ -102,6 +104,7 @@ open ./build/Build/Products/Release/MenuBarExecutor.app
 | `command` | String | 是 | 要执行的 Shell 命令 |
 | `workingDirectory` | String | 否 | 工作目录，默认 `~` |
 | `notification` | Bool | 否 | 是否显示通知，默认 `true` |
+| `autoExecute` | Bool | 否 | 打开面板时自动执行，默认 `false` |
 
 ## 许可证
 

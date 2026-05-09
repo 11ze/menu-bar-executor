@@ -151,6 +151,12 @@ final class CommandPaletteWindowController: NSWindowController {
         }
         panel.makeKeyAndOrderFront(nil)
         setupEventMonitor()
+
+        // 延迟执行自动命令，确保面板先渲染出来
+        // 不能依赖 SwiftUI .onAppear，因为 NSPanel show/hide 循环不会重复触发 .onAppear
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            PaletteCoordinator.shared.executeAutoCommands()
+        }
     }
 
     func hide() {

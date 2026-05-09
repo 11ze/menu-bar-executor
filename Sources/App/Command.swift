@@ -6,23 +6,26 @@ struct Command: Identifiable, Codable, Equatable {
     let command: String
     var workingDirectory: String?
     var notification: Bool
+    var autoExecute: Bool
 
     init(
         id: UUID = UUID(),
         name: String,
         command: String,
         workingDirectory: String? = nil,
-        notification: Bool = true
+        notification: Bool = true,
+        autoExecute: Bool = false
     ) {
         self.id = id
         self.name = name
         self.command = command
         self.workingDirectory = workingDirectory
         self.notification = notification
+        self.autoExecute = autoExecute
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, command, workingDirectory, notification
+        case id, name, command, workingDirectory, notification, autoExecute
     }
 
     init(from decoder: Decoder) throws {
@@ -38,5 +41,6 @@ struct Command: Identifiable, Codable, Equatable {
         command = try container.decode(String.self, forKey: .command)
         workingDirectory = try container.decodeIfPresent(String.self, forKey: .workingDirectory)
         notification = try container.decodeIfPresent(Bool.self, forKey: .notification) ?? true
+        autoExecute = try container.decodeIfPresent(Bool.self, forKey: .autoExecute) ?? false
     }
 }

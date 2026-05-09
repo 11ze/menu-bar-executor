@@ -34,6 +34,13 @@ private struct RowPositionsPreferenceKey: PreferenceKey {
     }
 }
 
+// MARK: - 自动执行状态
+enum AutoExecuteState {
+    case loading
+    case success(String)
+    case failure(String)
+}
+
 // MARK: - PaletteCoordinator
 // 协调器：连接 NSView 键盘事件和 SwiftUI 状态，统一管理搜索和选中状态
 @MainActor
@@ -44,6 +51,7 @@ final class PaletteCoordinator: ObservableObject {
     @Published var searchText: String = "" { didSet { updateFilteredCommands() } }
     @Published private(set) var filteredCommands: [Command] = []
     @Published var firstVisibleIndex: Int = 0  // 第一个可见行的索引（用于相对编号）
+    @Published var autoExecuteResults: [UUID: AutoExecuteState] = [:]
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -101,6 +109,26 @@ final class PaletteCoordinator: ObservableObject {
         selectedIndex = 0
         searchText = ""  // didSet 会调用 updateFilteredCommands()
         firstVisibleIndex = 0
+        autoExecuteResults.removeAll()
+    }
+
+    func executeAutoCommands() {
+        let autoCommands = filteredCommands.filter { $0.autoExecute }
+        guard !autoCommands.isEmpty else { return }
+
+        for command in autoCommands {
+            autoExecuteResults[command.id] = .loading
+
+            CommandExecutor.shared.execute(command: command) { [weak self] success, output in
+                guard let self else { return }
+                let trimmed = output?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                if success {
+                    self.autoExecuteResults[command.id] = .success(trimmed)
+                } else {
+                    self.autoExecuteResults[command.id] = .failure(trimmed.isEmpty ? "执行失败" : trimmed)
+                }
+            }
+        }
     }
 
     func clearSearch() {
@@ -152,7 +180,8 @@ struct CommandPaletteView: View {
                                 command: command,
                                 displayIndex: displayIndex,
                                 isSelected: index == coordinator.selectedIndex,
-                                searchText: coordinator.searchText
+                                searchText: coordinator.searchText,
+                                autoExecuteState: coordinator.autoExecuteResults[command.id]
                             )
                             .id(command.id)
                             .contentShape(Rectangle())
@@ -228,6 +257,7 @@ struct CommandPaletteRow: View {
     let displayIndex: Int
     let isSelected: Bool
     let searchText: String
+    let autoExecuteState: AutoExecuteState?
 
     @State private var isHovered = false
 
@@ -256,9 +286,36 @@ struct CommandPaletteRow: View {
             .frame(width: 16, height: 16, alignment: .trailing)
 
             VStack(alignment: .leading, spacing: 2) {
-                HighlightedText(text: command.name, search: searchText)
-                    .font(.body)
-                    .foregroundColor(.primary)
+                switch autoExecuteState {
+                case .loading:
+                    HStack(spacing: 6) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text(command.name)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                case .success(let output):
+                    let displayText = output.isEmpty ? command.name : "\(command.name)：\(output)"
+                    HighlightedText(text: displayText, search: searchText)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+                case .failure(let error):
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                            .font(.caption)
+                        Text(error)
+                            .font(.body)
+                            .foregroundColor(.red)
+                            .lineLimit(2)
+                    }
+                case .none:
+                    HighlightedText(text: command.name, search: searchText)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                }
                 if let wd = command.workingDirectory, !wd.isEmpty {
                     Text(wd)
                         .font(.caption)

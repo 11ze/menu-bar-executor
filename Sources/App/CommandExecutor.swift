@@ -57,7 +57,9 @@ final class CommandExecutor {
                 }
             }
         } catch {
-            completion(false, error.localizedDescription)
+            DispatchQueue.main.async {
+                completion(false, error.localizedDescription)
+            }
         }
     }
 }

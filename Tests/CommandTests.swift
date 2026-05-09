@@ -183,12 +183,57 @@ final class CommandTests: XCTestCase {
         XCTAssertTrue(json.contains("workingDirectory"))
     }
 
+    // MARK: - autoExecute
+
+    func testDefaultAutoExecute_IsFalse() {
+        let command = Command(name: "Test", command: "echo")
+        XCTAssertFalse(command.autoExecute)
+    }
+
+    func testDecoding_MissingAutoExecute() throws {
+        let json = """
+        {
+            "name": "Test",
+            "command": "echo"
+        }
+        """.data(using: .utf8)!
+
+        let command = try JSONDecoder().decode(Command.self, from: json)
+        XCTAssertFalse(command.autoExecute)
+    }
+
+    func testDecoding_ExplicitAutoExecute() throws {
+        let json = """
+        {
+            "name": "Test",
+            "command": "echo",
+            "autoExecute": true
+        }
+        """.data(using: .utf8)!
+
+        let command = try JSONDecoder().decode(Command.self, from: json)
+        XCTAssertTrue(command.autoExecute)
+    }
+
+    func testEncoding_AutoExecuteRoundTrip() throws {
+        let command = Command(
+            name: "Auto",
+            command: "echo hello",
+            notification: true,
+            autoExecute: true
+        )
+        let data = try JSONEncoder().encode(command)
+        let decoded = try JSONDecoder().decode(Command.self, from: data)
+        XCTAssertTrue(decoded.autoExecute)
+    }
+
     func testEncoding_AllFieldsRoundTrip() throws {
         let command = Command(
             name: "Full",
             command: "ls -la",
             workingDirectory: "/tmp",
-            notification: false
+            notification: false,
+            autoExecute: true
         )
         let data = try JSONEncoder().encode(command)
         let decoded = try JSONDecoder().decode(Command.self, from: data)
@@ -196,5 +241,6 @@ final class CommandTests: XCTestCase {
         XCTAssertEqual(decoded.command, "ls -la")
         XCTAssertEqual(decoded.workingDirectory, "/tmp")
         XCTAssertFalse(decoded.notification)
+        XCTAssertTrue(decoded.autoExecute)
     }
 }
