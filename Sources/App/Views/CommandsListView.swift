@@ -66,10 +66,21 @@ struct CommandsListView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(command.name)
                                 .font(.body)
-                            Text(command.command)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
+                            HStack(spacing: 6) {
+                                Text(command.command)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                                if let group = command.group, !group.isEmpty {
+                                    Text(group)
+                                        .font(.caption2)
+                                        .foregroundColor(.blue)
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 1)
+                                        .background(Color.blue.opacity(0.1))
+                                        .cornerRadius(3)
+                                }
+                            }
                         }
                         Spacer()
                         HStack(spacing: 8) {

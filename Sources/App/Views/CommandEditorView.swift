@@ -9,6 +9,7 @@ struct CommandEditorView: View {
     @State private var workingDirectory: String
     @State private var notification: Bool
     @State private var autoExecute: Bool
+    @State private var group: String
 
     let onSave: (Command) -> Void
 
@@ -22,12 +23,14 @@ struct CommandEditorView: View {
             _workingDirectory = State(initialValue: command.workingDirectory ?? "")
             _notification = State(initialValue: command.notification)
             _autoExecute = State(initialValue: command.autoExecute)
+            _group = State(initialValue: command.group ?? "")
         } else {
             _name = State(initialValue: "")
             _commandText = State(initialValue: "")
             _workingDirectory = State(initialValue: "")
             _notification = State(initialValue: true)
             _autoExecute = State(initialValue: false)
+            _group = State(initialValue: "")
         }
     }
 
@@ -36,6 +39,7 @@ struct CommandEditorView: View {
             Section("基本信息") {
                 TextField("命令名称", text: $name)
                 TextField("命令内容", text: $commandText)
+                TextField("分组（可选）", text: $group)
                 TextField("工作目录（可选）", text: $workingDirectory)
             }
 
@@ -72,7 +76,8 @@ struct CommandEditorView: View {
             command: commandText,
             workingDirectory: workingDirectory.isEmpty ? nil : workingDirectory,
             notification: notification,
-            autoExecute: autoExecute
+            autoExecute: autoExecute,
+            group: group.isEmpty ? nil : group
         )
         onSave(newCommand)
         dismiss()

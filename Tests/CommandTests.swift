@@ -243,4 +243,59 @@ final class CommandTests: XCTestCase {
         XCTAssertFalse(decoded.notification)
         XCTAssertTrue(decoded.autoExecute)
     }
+
+    // MARK: - group
+
+    func testDecoding_MissingGroup() throws {
+        let json = """
+        {
+            "name": "Test",
+            "command": "echo"
+        }
+        """.data(using: .utf8)!
+
+        let command = try JSONDecoder().decode(Command.self, from: json)
+        XCTAssertNil(command.group)
+    }
+
+    func testDecoding_WithGroup() throws {
+        let json = """
+        {
+            "name": "Test",
+            "command": "echo",
+            "group": "Claude Code"
+        }
+        """.data(using: .utf8)!
+
+        let command = try JSONDecoder().decode(Command.self, from: json)
+        XCTAssertEqual(command.group, "Claude Code")
+    }
+
+    func testEncoding_GroupRoundTrip() throws {
+        let command = Command(name: "Test", command: "echo", group: "Work Code")
+        let data = try JSONEncoder().encode(command)
+        let decoded = try JSONDecoder().decode(Command.self, from: data)
+        XCTAssertEqual(decoded.group, "Work Code")
+    }
+
+    func testEncoding_NilGroup_OmitsKey() throws {
+        let command = Command(name: "Test", command: "echo")
+        let data = try JSONEncoder().encode(command)
+        let json = String(data: data, encoding: .utf8)!
+        XCTAssertFalse(json.contains("group"))
+    }
+
+    func testEquatable_DifferentGroup() {
+        let uuid = UUID()
+        let a = Command(id: uuid, name: "Test", command: "echo", group: "A")
+        let b = Command(id: uuid, name: "Test", command: "echo", group: "B")
+        XCTAssertNotEqual(a, b)
+    }
+
+    func testEquatable_NilVsNonNilGroup() {
+        let uuid = UUID()
+        let a = Command(id: uuid, name: "Test", command: "echo", group: nil)
+        let b = Command(id: uuid, name: "Test", command: "echo", group: "A")
+        XCTAssertNotEqual(a, b)
+    }
 }

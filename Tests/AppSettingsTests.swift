@@ -168,6 +168,46 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertNil(settings.skippedVersion)
     }
 
+    // MARK: - groupOrder
+
+    func testDecoding_MissingGroupOrder() throws {
+        let json = """
+        {"commands": []}
+        """.data(using: .utf8)!
+
+        let settings = try JSONDecoder().decode(AppSettings.self, from: json)
+        XCTAssertNil(settings.groupOrder)
+    }
+
+    func testDecoding_GroupOrder() throws {
+        let json = """
+        {
+            "commands": [],
+            "groupOrder": ["Status", "Claude Code", "Work Code"]
+        }
+        """.data(using: .utf8)!
+
+        let settings = try JSONDecoder().decode(AppSettings.self, from: json)
+        XCTAssertEqual(settings.groupOrder, ["Status", "Claude Code", "Work Code"])
+    }
+
+    func testEncoding_GroupOrderRoundTrip() throws {
+        var settings = AppSettings()
+        settings.groupOrder = ["A", "B", "C"]
+
+        let encoder = JSONEncoder()
+        let data = try encoder.encode(settings)
+        let decoded = try JSONDecoder().decode(AppSettings.self, from: data)
+        XCTAssertEqual(decoded.groupOrder, ["A", "B", "C"])
+    }
+
+    func testEncoding_NilGroupOrder_OmitsKey() throws {
+        let settings = AppSettings()
+        let data = try JSONEncoder().encode(settings)
+        let json = String(data: data, encoding: .utf8)!
+        XCTAssertFalse(json.contains("groupOrder"))
+    }
+
     // MARK: - 浮点坐标精确往返
 
     func testEncodeDecode_FloatCoordinates() throws {

@@ -46,6 +46,9 @@ struct AppSettings: Codable {
     /// 用户跳过的版本号
     var skippedVersion: String?
 
+    /// 分组显示顺序（nil 时按命令列表中首次出现顺序）
+    var groupOrder: [String]?
+
     enum CodingKeys: String, CodingKey {
         case commands
         case palettePosition
@@ -54,6 +57,7 @@ struct AppSettings: Codable {
         case launchAtLogin
         case lastUpdateCheckDate
         case skippedVersion
+        case groupOrder
     }
 
     init() {}
@@ -65,6 +69,7 @@ struct AppSettings: Codable {
         launchAtLogin = try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
         lastUpdateCheckDate = try container.decodeIfPresent(Date.self, forKey: .lastUpdateCheckDate)
         skippedVersion = try container.decodeIfPresent(String.self, forKey: .skippedVersion)
+        groupOrder = try container.decodeIfPresent([String].self, forKey: .groupOrder)
 
         if let posObj = try container.decodeIfPresent(CGPointObject.self, forKey: .palettePosition) {
             palettePosition = posObj.cgPoint
@@ -81,6 +86,7 @@ struct AppSettings: Codable {
         try container.encode(launchAtLogin, forKey: .launchAtLogin)
         try container.encodeIfPresent(lastUpdateCheckDate, forKey: .lastUpdateCheckDate)
         try container.encodeIfPresent(skippedVersion, forKey: .skippedVersion)
+        try container.encodeIfPresent(groupOrder, forKey: .groupOrder)
 
         if let pos = palettePosition {
             try container.encode(CGPointObject(from: pos), forKey: .palettePosition)
@@ -210,7 +216,8 @@ final class AppSettingsManager: ObservableObject {
             decoder.dateDecodingStrategy = .iso8601
             settings = try decoder.decode(AppSettings.self, from: data)
             isLoaded = true
-            if fixDuplicateCommandIds() {
+            let migrated = migrateFakeGroupCommands()
+            if fixDuplicateCommandIds() || migrated {
                 save()
             }
         } catch {
@@ -250,6 +257,62 @@ final class AppSettingsManager: ObservableObject {
         } catch {
             // 保存失败静默忽略
         }
+    }
+
+    /// 检测假命令（echo 分隔符）并迁移为 group 字段，返回是否发生了迁移
+    private func migrateFakeGroupCommands() -> Bool {
+        var commands = settings.commands
+        var migrated = false
+        var currentGroup: String?
+        var indicesToRemove: IndexSet = []
+
+        for i in commands.indices {
+            let cmd = commands[i]
+            let trimmedName = cmd.name.trimmingCharacters(in: .whitespaces)
+
+            if !cmd.notification
+                && cmd.command.trimmingCharacters(in: .whitespaces).hasPrefix("echo")
+                && isSeparatorCommand(cmd.command)
+                && !trimmedName.isEmpty
+                && trimmedName.count < 30 {
+                currentGroup = trimmedName
+                indicesToRemove.insert(i)
+                migrated = true
+            } else if let group = currentGroup, commands[i].group == nil {
+                commands[i].group = group
+            }
+        }
+
+        if migrated {
+            for index in indicesToRemove.reversed() {
+                commands.remove(at: index)
+            }
+            settings.commands = commands
+
+            // 迁移后建立 groupOrder
+            var seen = Set<String>()
+            var order: [String] = []
+            for cmd in commands {
+                if let g = cmd.group, seen.insert(g).inserted {
+                    order.append(g)
+                }
+            }
+            if !order.isEmpty {
+                settings.groupOrder = order
+            }
+        }
+
+        return migrated
+    }
+
+    /// 判断命令内容是否是纯分隔符（echo 后全是重复的分隔字符）
+    private func isSeparatorCommand(_ command: String) -> Bool {
+        let content = command.trimmingCharacters(in: .whitespaces)
+        guard content.hasPrefix("echo") else { return false }
+        let afterEcho = content.dropFirst(4).trimmingCharacters(in: .whitespaces)
+        guard afterEcho.count >= 3 else { return false }
+        let separators = CharacterSet(charactersIn: "-=#*.")
+        return afterEcho.unicodeScalars.allSatisfy { separators.contains($0) || $0 == " " }
     }
 
     /// 修复重复的命令 ID，返回是否有修复
@@ -317,6 +380,7 @@ final class AppSettingsManager: ObservableObject {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         settings = try decoder.decode(AppSettings.self, from: data)
+        _ = migrateFakeGroupCommands()
         _ = fixDuplicateCommandIds()
         save()
         // 通知下游（CommandsManager / PaletteCoordinator）命令已更新

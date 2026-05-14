@@ -40,7 +40,26 @@ final class CommandsManager: ObservableObject {
 
     func filteredCommands(by searchText: String) -> [Command] {
         guard !searchText.isEmpty else { return commands }
-        return commands.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        return commands.filter {
+            $0.name.localizedCaseInsensitiveContains(searchText)
+            || $0.command.localizedCaseInsensitiveContains(searchText)
+            || ($0.group?.localizedCaseInsensitiveContains(searchText) ?? false)
+        }
+    }
+
+    /// 将命令按 group 分组，返回排序后的组名列表（nil 代表未分组，排在最后）
+    func sortedGroupNames(from commands: [Command]) -> [String?] {
+        var seen = Set<String?>()
+        let appearanceOrder = commands.map(\.group).filter { seen.insert($0).inserted }
+
+        if let order = AppSettingsManager.shared.settings.groupOrder {
+            let ordered = order.filter { name in commands.contains(where: { $0.group == name }) }
+            let remaining = appearanceOrder.compactMap { $0 }.filter { !order.contains($0) }
+            let hasUngrouped = appearanceOrder.contains(nil)
+            return ordered.map { $0 as String? } + remaining.map { $0 as String? } + (hasUngrouped ? [nil] : [])
+        }
+
+        return appearanceOrder
     }
 
     func execute(_ command: Command) {
