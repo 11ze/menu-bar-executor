@@ -1,37 +1,72 @@
 # MenuBarExecutor
 
-macOS 菜单栏命令执行器，通过命令面板快速执行自定义 Shell 命令。
+macOS 菜单栏命令执行器 —— 像 Spotlight 一样轻量，像终端一样强大。
 
-## 功能特性
+```
+  全局快捷键 → 弹出面板 → 搜索/选择 → 执行 → 搞定
+```
 
-- **命令面板**：全局快捷键切换，实时搜索与高亮，键盘导航（↑↓ 选择、Enter 执行、Esc 关闭），⌘+1~9 快捷执行
-- **命令管理**：图形界面添加/编辑/删除命令，拖拽排序，导入导出 JSON 配置
-- **输入法切换**：打开面板时可自动切换到默认输入法（可选）
-- **执行历史**：记录最近 100 条执行记录，执行完成后显示系统通知
-- **配置文件监听**：外部修改配置文件时自动重新加载
-- **版本更新**：启动时自动检查更新，支持跳过版本，GitHub API 限流时提供直接访问选项
+## 它能做什么？
+
+```
+  你的菜单栏多了一个小图标:
+  ┌─────────────────────────────────────────────┐
+  │  ████ ▸  ← 点击或按快捷键，弹出命令面板     │
+  └─────────────────────────────────────────────┘
+                     │
+                     ▼
+  ┌─────────────────────────────────────────────┐
+  │  🔍 搜索命令...                             │
+  ├─────────────────────────────────────────────┤
+  │  📁 部署相关                                │
+  │  ⚡ 1  deploy:prod     部署到生产环境        │
+  │  ⚡ 2  deploy:staging  部署到预发布          │
+  │  📁 Docker                                  │
+  │  ⚡ 3  docker:up        启动容器             │
+  │  ⚡ 4  docker:down      停止容器             │
+  ├─────────────────────────────────────────────┤
+  │  ↑↓ 选择  Enter 执行  ⌘1-9 快捷执行  Esc 关闭 │
+  └─────────────────────────────────────────────┘
+```
+
+## 功能一览
+
+| 功能 | 说明 |
+|------|------|
+| 命令面板 | 全局快捷键呼出、实时搜索高亮、键盘导航、`⌘+1~9` 快捷执行 |
+| 命令管理 | 图形界面增删改、拖拽排序、分组管理 |
+| 自动执行 | 标记命令在面板打开时自动运行，结果内联显示 |
+| 导入/导出 | JSON 格式配置备份与恢复 |
+| 执行历史 | 最近 100 条记录，含执行时间、结果、成功/失败状态 |
+| 配置热重载 | 外部修改 `settings.json` 后自动重新加载 |
+| 输入法切换 | 打开面板时自动切到指定输入法（可选） |
+| 开机自启 | macOS 13+ 原生支持 |
+| 版本更新 | 启动时检查 GitHub Release，支持跳过版本 |
 
 ## 系统要求
 
 - macOS 12.0+
-- Xcode 15.0+（仅开发时需要）
+- 开发需要 Xcode 15.0+
 
 ## 安装
 
 ### 从 Release 下载
 
-1. 从 [Releases](../../releases) 页面下载最新版本
-2. 解压并将 `MenuBarExecutor.app` 拖入 `Applications` 文件夹
-3. 首次运行可能需要在「系统设置 > 隐私与安全性」中允许运行
+1. 前往 [Releases](../../releases) 页面下载最新版
+2. 解压，将 `MenuBarExecutor.app` 拖入「应用程序」
+3. 首次运行需在 **系统设置 > 隐私与安全性** 中允许
 
 ### 从源码构建
 
 ```bash
 git clone https://github.com/11ze/menu-bar-executor.git
 cd menu-bar-executor
-brew install xcodegen          # 如未安装
+brew install xcodegen          # 首次需要
 xcodegen generate
-xcodebuild -project menu-bar-executor.xcodeproj -scheme MenuBarExecutor -configuration Release -derivedDataPath ./build build
+xcodebuild -project menu-bar-executor.xcodeproj \
+  -scheme MenuBarExecutor \
+  -configuration Release \
+  -derivedDataPath ./build build
 open ./build/Build/Products/Release/MenuBarExecutor.app
 ```
 
@@ -41,40 +76,51 @@ open ./build/Build/Products/Release/MenuBarExecutor.app
 
 | 快捷键 | 功能 |
 |--------|------|
-| 全局快捷键 | 切换命令面板显示/隐藏（可在设置中配置） |
-| `⌘+1~9` | 快速执行当前可见的命令 |
-| `↑` `↓` | 在命令面板中选择命令 |
-| `Enter` | 执行选中的命令 |
-| `Esc` | 清空搜索 / 关闭面板 |
-| `Cmd+,` | 打开设置窗口 |
-| `Cmd+H` | 打开执行历史 |
-| `Cmd+R` | 重载设置文件 |
+| 全局快捷键 | 呼出/关闭命令面板（可在设置中配置） |
+| `⌘+1` ~ `⌘+9` | 快捷执行第 N 条可见命令 |
+| `↑` `↓` | 上下选择命令 |
+| `Enter` | 执行选中命令 |
+| `Esc` | 清空搜索，再按关闭面板 |
+| `⌘+,` | 打开设置窗口 |
+| `⌘+H` | 打开执行历史 |
+| `⌘+R` | 重载设置文件 |
 
 ### 菜单栏交互
 
-- **左键点击**：切换命令面板显示/隐藏
-- **右键点击**：显示设置菜单（重载设置、设置、历史、检查更新、退出）
+```
+  左键点击图标 ──▶ 呼出/关闭命令面板
+  右键点击图标 ──▶ 弹出菜单:
+                    ├── 设置...       ⌘,
+                    ├── 重载设置      ⌘R
+                    ├── 执行历史      ⌘H
+                    ├── ─────────────
+                    ├── 检查更新
+                    ├── ─────────────
+                    └── 退出          ⌘Q
+```
 
 ### 添加命令
 
-1. 右键点击菜单栏图标，选择「设置...」（或按 `Cmd+,`）
-2. 点击「+」按钮添加新命令
-3. 填写命令信息：
-   - **名称**：显示在命令面板中的名称
-   - **命令**：要执行的 Shell 命令
-   - **工作目录**：命令执行的目录（默认 `~`）
-   - **显示通知**：执行完成后是否显示通知
-   - **自动执行**：打开命令面板时自动执行（结果在面板中内联显示）
+1. 右键菜单栏图标 → **设置...**（或 `⌘+,`）
+2. 点击 **+** 添加新命令
+3. 填写信息：
 
-### 导入导出配置
+| 字段 | 说明 |
+|------|------|
+| 名称 | 面板中显示的命令名 |
+| 命令 | 要执行的 Shell 命令 |
+| 工作目录 | 命令执行的目录（默认 `~`） |
+| 显示通知 | 执行完成后弹出系统通知 |
+| 自动执行 | 打开面板时自动运行，结果内联显示 |
+| 分组 | 归属的分组名称（可选） |
 
-在设置窗口中：
-- 点击「导出」按钮，将当前配置保存为 JSON 文件
-- 点击「导入」按钮，从 JSON 文件加载配置（会覆盖当前配置）
+### 导入导出
+
+在设置窗口中点击「导出」/「导入」按钮，JSON 格式备份和恢复配置。
 
 ## 配置文件
 
-配置路径：`~/.config/menu-bar-executor/settings.json`
+路径：`~/.config/menu-bar-executor/settings.json`
 
 ```json
 {
@@ -85,26 +131,39 @@ open ./build/Build/Products/Release/MenuBarExecutor.app
       "command": "ping -c 3 google.com",
       "workingDirectory": "~",
       "notification": true,
-      "autoExecute": false
+      "autoExecute": false,
+      "group": "网络工具"
     }
   ],
   "palettePosition": { "x": 100, "y": 200 },
   "paletteSize": { "width": 500, "height": 480 },
   "defaultInputSourceID": "com.apple.keylayout.ABC",
-  "launchAtLogin": false
+  "launchAtLogin": false,
+  "groupOrder": ["网络工具", "部署"]
 }
 ```
 
-### 字段说明
+### 命令字段
 
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `id` | String | 是 | UUID 格式的唯一标识符 |
-| `name` | String | 是 | 命令名称 |
-| `command` | String | 是 | 要执行的 Shell 命令 |
-| `workingDirectory` | String | 否 | 工作目录，默认 `~` |
-| `notification` | Bool | 否 | 是否显示通知，默认 `true` |
-| `autoExecute` | Bool | 否 | 打开面板时自动执行，默认 `false` |
+| 字段 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| `id` | String | 是 | 自动生成 | UUID 格式唯一标识 |
+| `name` | String | 是 | - | 命令名称 |
+| `command` | String | 是 | - | Shell 命令 |
+| `workingDirectory` | String | 否 | `~` | 工作目录 |
+| `notification` | Bool | 否 | `true` | 执行后是否显示系统通知 |
+| `autoExecute` | Bool | 否 | `false` | 打开面板时自动执行 |
+| `group` | String | 否 | `null` | 分组名称 |
+
+### 全局设置
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `palettePosition` | Object | 面板位置 `{x, y}` |
+| `paletteSize` | Object | 面板尺寸 `{width, height}` |
+| `defaultInputSourceID` | String | 打开面板时切换到的输入法 ID |
+| `launchAtLogin` | Bool | 开机自启 |
+| `groupOrder` | [String] | 分组显示顺序 |
 
 ## 许可证
 
