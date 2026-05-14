@@ -42,8 +42,6 @@ final class CommandsManager: ObservableObject {
         guard !searchText.isEmpty else { return commands }
         return commands.filter {
             $0.name.localizedCaseInsensitiveContains(searchText)
-            || $0.command.localizedCaseInsensitiveContains(searchText)
-            || ($0.group?.localizedCaseInsensitiveContains(searchText) ?? false)
         }
     }
 
