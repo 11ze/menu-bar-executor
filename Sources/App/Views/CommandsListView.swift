@@ -63,6 +63,12 @@ struct CommandsListView: View {
                             .foregroundColor(searchText.isEmpty ? .secondary : Color.gray.opacity(0.5))
                             .frame(width: 20)
 
+                        if command.autoExecute {
+                            Image(systemName: "bolt.fill")
+                                .foregroundColor(.orange)
+                                .font(.system(size: 9))
+                        }
+
                         VStack(alignment: .leading, spacing: 4) {
                             Text(command.name)
                                 .font(.body)

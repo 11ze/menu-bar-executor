@@ -400,27 +400,49 @@ struct CommandPaletteRow: View {
                         Text(command.name)
                             .font(.body)
                             .foregroundColor(.secondary)
+                        Text("执行中...")
+                            .font(.caption)
+                            .foregroundColor(.secondary.opacity(0.7))
                     }
                 case .success(let output):
-                    let displayText = output.isEmpty ? command.name : "\(command.name)：\(output)"
-                    HighlightedText(text: displayText, search: searchText)
-                        .font(.body)
-                        .foregroundColor(.primary)
-                        .lineLimit(2)
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.caption)
+                        HighlightedText(text: command.name, search: searchText)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        if !output.isEmpty {
+                            Text(output)
+                                .font(.system(.callout, design: .monospaced))
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                        }
+                    }
                 case .failure(let error):
-                    HStack(spacing: 6) {
+                    HStack(spacing: 4) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundColor(.orange)
                             .font(.caption)
+                        HighlightedText(text: command.name, search: searchText)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                         Text(error)
-                            .font(.body)
+                            .font(.callout)
                             .foregroundColor(.red)
-                            .lineLimit(2)
+                            .lineLimit(1)
                     }
                 case .none:
-                    HighlightedText(text: command.name, search: searchText)
-                        .font(.body)
-                        .foregroundColor(.primary)
+                    HStack(spacing: 4) {
+                        if command.autoExecute {
+                            Image(systemName: "bolt.fill")
+                                .foregroundColor(.orange)
+                                .font(.caption)
+                        }
+                        HighlightedText(text: command.name, search: searchText)
+                            .font(.body)
+                            .foregroundColor(.primary)
+                    }
                 }
                 if let wd = command.workingDirectory, !wd.isEmpty {
                     Text(wd)
