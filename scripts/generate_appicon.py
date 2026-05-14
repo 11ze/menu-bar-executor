@@ -1,13 +1,23 @@
 #!/usr/bin/env python3
 """
-Generate all required macOS app icon sizes from source image
+Generate all required macOS app icon sizes from source image,
+and create MenuBarIcon imageset for the menu bar template icon.
 """
 
 from PIL import Image
 import json
 import os
+import shutil
 
-# Icon sizes needed for macOS
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ICONS_DIR = os.path.join(PROJECT_DIR, "assets", "icons")
+APPICONSET_DIR = os.path.join(
+    PROJECT_DIR, "Resources", "Assets.xcassets", "AppIcon.appiconset"
+)
+MENUBAR_ICONSET_DIR = os.path.join(
+    PROJECT_DIR, "Resources", "Assets.xcassets", "MenuBarIcon.imageset"
+)
+
 ICON_SIZES = [
     ("icon_16x16.png", 16),
     ("icon_16x16@2x.png", 32),
@@ -22,11 +32,21 @@ ICON_SIZES = [
 ]
 
 
-def generate_contents_json():
-    """Generate Contents.json for macOS AppIcon"""
+def generate_appiconset():
+    source_path = os.path.join(ICONS_DIR, "AppIcon.png")
+    source_img = Image.open(source_path)
+    print(f"Source: {source_path} ({source_img.size[0]}x{source_img.size[1]})")
+
+    os.makedirs(APPICONSET_DIR, exist_ok=True)
+
+    for filename, size in ICON_SIZES:
+        resized = source_img.resize((size, size), Image.Resampling.LANCZOS)
+        output_path = os.path.join(APPICONSET_DIR, filename)
+        resized.save(output_path, "PNG")
+        print(f"  {filename} ({size}x{size})")
+
     sizes = ["16x16", "32x32", "128x128", "256x256", "512x512"]
     images = []
-
     for size in sizes:
         for scale in ["1x", "2x"]:
             filename = f"icon_{size}@2x.png" if scale == "2x" else f"icon_{size}.png"
@@ -34,36 +54,56 @@ def generate_contents_json():
                 "filename": filename,
                 "idiom": "mac",
                 "scale": scale,
-                "size": size
+                "size": size,
             })
 
-    return {"images": images, "info": {"author": "xcode", "version": 1}}
+    contents = {"images": images, "info": {"author": "xcode", "version": 1}}
+    with open(os.path.join(APPICONSET_DIR, "Contents.json"), "w") as f:
+        json.dump(contents, f, indent=2)
+    print("  Contents.json updated")
+
+
+def generate_menubar_imageset():
+    os.makedirs(MENUBAR_ICONSET_DIR, exist_ok=True)
+
+    for src_name, dst_name in [
+        ("menu-bar-icon-22.png", "menu-bar-icon-22.png"),
+        ("menu-bar-icon-44.png", "menu-bar-icon-44.png"),
+    ]:
+        src = os.path.join(ICONS_DIR, src_name)
+        dst = os.path.join(MENUBAR_ICONSET_DIR, dst_name)
+        shutil.copy2(src, dst)
+        print(f"  {dst_name}")
+
+    contents = {
+        "images": [
+            {
+                "filename": "menu-bar-icon-22.png",
+                "idiom": "mac",
+                "scale": "1x",
+                "size": "22x22",
+            },
+            {
+                "filename": "menu-bar-icon-44.png",
+                "idiom": "mac",
+                "scale": "2x",
+                "size": "22x22",
+            },
+        ],
+        "info": {"author": "xcode", "version": 1},
+        "properties": {"template-rendering-intent": "template"},
+    }
+    with open(os.path.join(MENUBAR_ICONSET_DIR, "Contents.json"), "w") as f:
+        json.dump(contents, f, indent=2)
+    print("  Contents.json updated")
 
 
 def main():
-    # Paths
-    source_path = "/Users/wangze/Library/CloudStorage/OneDrive-Personal/codes/menu-bar-exector/assets/icons/AppIcon-Option-B.png"
-    output_dir = "/Users/wangze/Library/CloudStorage/OneDrive-Personal/codes/menu-bar-exector/Resources/Assets.xcassets/AppIcon.appiconset"
-
-    # Load source image
-    source_img = Image.open(source_path)
-    print(f"Source image: {source_img.size[0]}x{source_img.size[1]}")
-
-    # Generate all sizes
-    for filename, size in ICON_SIZES:
-        resized = source_img.resize((size, size), Image.Resampling.LANCZOS)
-        output_path = os.path.join(output_dir, filename)
-        resized.save(output_path, "PNG")
-        print(f"✓ {filename} ({size}x{size})")
-
-    # Write Contents.json
-    contents = generate_contents_json()
-    contents_path = os.path.join(output_dir, "Contents.json")
-    with open(contents_path, "w") as f:
-        json.dump(contents, f, indent=2)
-    print(f"\n✓ Updated Contents.json")
-
-    print(f"\n所有图标已生成到: {output_dir}")
+    print("== AppIcon.appiconset ==")
+    generate_appiconset()
+    print("\n== MenuBarIcon.imageset ==")
+    generate_menubar_imageset()
+    print("\nDone")
 
 
 if __name__ == "__main__":

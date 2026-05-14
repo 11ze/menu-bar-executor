@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- 设计参考文档（实际 PNG 由 Pillow 生成） -->
+  <!-- 背景 #1a1a1a, 圆角 224, 正方形边界 400x400 居中 -->
+  <!-- > 箭头: (312,312)→(512,512)→(312,712), 线宽56 -->
+  <!-- _ 下划线: (520,692)→(780,692), 线宽56 -->
+  <defs>
+    <clipPath id="iconClip">
+      <rect width="1024" height="1024" rx="224"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#iconClip)">
+    <rect width="1024" height="1024" fill="#1a1a1a"/>
+    <path d="M312,312 L512,512 L312,712"
+          fill="none" stroke="#FFFFFF"
+          stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="520" y1="692" x2="780" y2="692"
+          stroke="#FFFFFF" stroke-width="56" stroke-linecap="round"/>
+  </g>
+</svg>

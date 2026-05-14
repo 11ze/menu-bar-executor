@@ -1,324 +1,143 @@
 #!/usr/bin/env python3
 """
-Create macOS App Icons for menu-bar-executor
-Following Linear Precisionism design philosophy
+Generate MenuBarExecutor app icon and menu bar icon.
+Style: white minimal >_ on dark background.
 """
 
 from PIL import Image, ImageDraw
+import os
 
-def create_rounded_rect_mask(size, radius):
-    """Create a rounded rectangle mask for macOS app icon style"""
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ICONS_DIR = os.path.join(PROJECT_DIR, "assets", "icons")
+
+
+def rounded_rect_mask(size, radius):
     mask = Image.new('L', size, 0)
     draw = ImageDraw.Draw(mask)
     draw.rounded_rectangle([(0, 0), size], radius=radius, fill=255)
     return mask
 
-def draw_cursor(draw, x, y, scale=1.0, color=(255, 255, 255, 255), line_width=2):
-    """Draw an arrow cursor with thin lines"""
-    # Cursor points (arrow shape)
-    points = [
-        (x, y),  # tip
-        (x, y + int(60 * scale)),  # bottom left of arrow head
-        (x + int(20 * scale), y + int(45 * scale)),  # inner corner
-        (x + int(35 * scale), y + int(70 * scale)),  # bottom of stem
-        (x + int(45 * scale), y + int(65 * scale)),  # top of stem
-        (x + int(30 * scale), y + int(40 * scale)),  # back to arrow
-        (x + int(55 * scale), y + int(40 * scale)),  # right of arrow head
-    ]
-    draw.polygon(points, outline=color[:3], width=line_width)
 
-
-def create_icon_option_a():
-    """
-    Option A: Minimal Menu Bar
-    Simple, clean lines - menu bar with cursor
-    """
+def create_app_icon():
+    """1024x1024 app icon: dark background + white >_ prompt."""
     size = 1024
-    radius = 220  # macOS icon corner radius (~22%)
+    radius = 224
 
-    # Create image with dark background
     img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # Dark gradient-like background
+    # 背景
     draw.rounded_rectangle(
         [(0, 0), (size, size)],
         radius=radius,
-        fill=(28, 28, 30, 255)  # Deep dark gray
+        fill=(26, 26, 26, 255)  # #1a1a1a
     )
 
-    # Menu bar - thin horizontal rectangle
-    bar_y = 280
-    bar_height = 100
-    bar_margin = 180
-    bar_color = (255, 255, 255, 255)
-    line_width = 3
+    # > 箭头（45度 V 形，外接正方形 400x400）
+    line_color = (255, 255, 255, 255)
+    line_width = 56
+    arrow_x = 312       # 正方形左边
+    arrow_top = 312     # 正方形顶部
+    arrow_mid = 512     # 画布中心（也是正方形中心）
+    arrow_bottom = 712  # 正方形底部
+    arrow_tip = 512     # 尖端 = 正方形左边 + 200
 
-    # Menu bar background (subtle)
-    draw.rounded_rectangle(
-        [(bar_margin, bar_y), (size - bar_margin, bar_y + bar_height)],
-        radius=16,
-        outline=bar_color[:3],
-        width=line_width
-    )
+    draw.line([(arrow_x, arrow_top), (arrow_tip, arrow_mid)],
+              fill=line_color, width=line_width)
+    draw.line([(arrow_tip, arrow_mid), (arrow_x, arrow_bottom)],
+              fill=line_color, width=line_width)
 
-    # Menu items (three small vertical lines representing menu items)
-    item_y = bar_y + bar_height // 2
-    item_spacing = 180
-    start_x = size // 2 - item_spacing
-
-    for i in range(3):
-        x = start_x + i * item_spacing
-        # Small horizontal lines for menu items
-        draw.line([(x - 30, item_y), (x + 30, item_y)], fill=bar_color[:3], width=line_width)
-
-    # Cursor pointing to menu bar
-    cursor_x = size // 2 - 100
-    cursor_y = bar_y + bar_height + 60
-    draw_cursor(draw, cursor_x, cursor_y, scale=2.5, color=bar_color, line_width=4)
-
-    # Subtle glow effect on cursor tip
-    glow_center = (cursor_x + 20, cursor_y + 30)
-    for r in range(40, 0, -5):
-        alpha = int(30 * (40 - r) / 40)
-        glow_color = (100, 150, 255, alpha)
+    # 圆角端点补充（line 不支持 linecap，手动画圆）
+    cap_r = line_width // 2
+    for pos in [(arrow_x, arrow_top), (arrow_tip, arrow_mid), (arrow_x, arrow_bottom)]:
         draw.ellipse(
-            [(glow_center[0] - r, glow_center[1] - r),
-             (glow_center[0] + r, glow_center[1] + r)],
-            fill=glow_color
+            [(pos[0] - cap_r, pos[1] - cap_r),
+             (pos[0] + cap_r, pos[1] + cap_r)],
+            fill=line_color
         )
 
-    # Apply rounded mask
-    mask = create_rounded_rect_mask((size, size), radius)
+    # _ 下划线（用 rounded_rectangle 代替 line+ellipse，避免凹凸）
+    underline_y = 692
+    underline_start = 520
+    underline_end = 780     # 长度 260 = 箭头宽度 * 1.3
+    draw.rounded_rectangle(
+        [(underline_start, underline_y - cap_r),
+         (underline_end, underline_y + cap_r)],
+        radius=cap_r,
+        fill=line_color
+    )
+
+    # 应用圆角蒙版
+    mask = rounded_rect_mask((size, size), radius)
     img.putalpha(mask)
 
     return img
 
 
-def create_icon_option_b():
-    """
-    Option B: Terminal Fusion
-    Menu bar combined with terminal/command prompt elements
-    """
-    size = 1024
-    radius = 220
-
-    img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+def create_menu_bar_icon(canvas_size=44):
+    """Menu bar icon: black >_ prompt, transparent background, for template image.
+    Proportions match the app icon exactly (正方形 400x400, 线条 56)."""
+    img = Image.new('RGBA', (canvas_size, canvas_size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # Darker background with subtle blue tint
+    line_color = (0, 0, 0, 255)  # 纯黑
+
+    # 与 app icon 同比例：正方形边长 S = canvas_size * 0.5
+    S = canvas_size * 0.5
+    margin = (canvas_size - S) / 2  # 居中偏移
+    line_width = max(2, round(S * 0.14))  # 同比例线条宽度
+
+    # 坐标（按 app icon 比例）
+    arrow_x = margin
+    arrow_top = margin
+    arrow_mid = canvas_size / 2
+    arrow_bottom = margin + S
+    arrow_tip = margin + S * 0.5
+
+    draw.line([(arrow_x, arrow_top), (arrow_tip, arrow_mid)],
+              fill=line_color, width=line_width)
+    draw.line([(arrow_tip, arrow_mid), (arrow_x, arrow_bottom)],
+              fill=line_color, width=line_width)
+
+    cap_r = line_width // 2
+    for pos in [(arrow_x, arrow_top), (arrow_tip, arrow_mid), (arrow_x, arrow_bottom)]:
+        draw.ellipse(
+            [(pos[0] - cap_r, pos[1] - cap_r),
+             (pos[0] + cap_r, pos[1] + cap_r)],
+            fill=line_color
+        )
+
+    # 下划线（同比例：起点 52%，终点 100%，y 95%）
+    underline_y = margin + S * 0.95
+    underline_start = margin + S * 0.52
+    underline_end = underline_start + S * 0.65  # 下划线比箭头宽度更长
     draw.rounded_rectangle(
-        [(0, 0), (size, size)],
-        radius=radius,
-        fill=(20, 22, 30, 255)
+        [(underline_start, underline_y - cap_r),
+         (underline_end, underline_y + cap_r)],
+        radius=cap_r,
+        fill=line_color
     )
-
-    line_color = (200, 205, 220, 255)
-    accent_color = (90, 140, 255, 255)  # Blue accent
-    line_width = 3
-
-    # Terminal window frame
-    term_margin = 200
-    term_top = 280
-    term_bottom = 700
-    term_corner = 24
-
-    draw.rounded_rectangle(
-        [(term_margin, term_top), (size - term_margin, term_bottom)],
-        radius=term_corner,
-        outline=line_color[:3],
-        width=line_width
-    )
-
-    # Title bar line
-    draw.line(
-        [(term_margin, term_top + 60), (size - term_margin, term_top + 60)],
-        fill=line_color[:3],
-        width=line_width
-    )
-
-    # Window buttons (subtle circles)
-    button_y = term_top + 30
-    button_x = term_margin + 40
-    button_radius = 12
-    for i, color in enumerate([(255, 90, 90), (255, 190, 90), (90, 255, 90)]):
-        x = button_x + i * 40
-        draw.ellipse(
-            [(x - button_radius, button_y - button_radius),
-             (x + button_radius, button_y + button_radius)],
-            outline=color,
-            width=2
-        )
-
-    # Command prompt ($) with cursor
-    prompt_x = term_margin + 60
-    prompt_y = term_top + 140
-    prompt_color = accent_color[:3]
-
-    # Dollar sign represented as simple lines
-    draw.line([(prompt_x, prompt_y - 30), (prompt_x, prompt_y + 30)], fill=prompt_color, width=line_width)
-    draw.line([(prompt_x - 15, prompt_y - 10), (prompt_x + 15, prompt_y - 10)], fill=prompt_color, width=line_width)
-    draw.line([(prompt_x - 15, prompt_y + 10), (prompt_x + 15, prompt_y + 10)], fill=prompt_color, width=line_width)
-
-    # Cursor line after prompt
-    cursor_line_x = prompt_x + 60
-    draw.line(
-        [(cursor_line_x, prompt_y - 20), (cursor_line_x + 200, prompt_y - 20)],
-        fill=line_color[:3],
-        width=line_width
-    )
-
-    # Blinking cursor (vertical line)
-    blink_x = cursor_line_x + 220
-    draw.line(
-        [(blink_x, prompt_y - 25), (blink_x, prompt_y + 5)],
-        fill=accent_color[:3],
-        width=line_width + 1
-    )
-
-    # Arrow cursor (pointer) at bottom right
-    cursor_x = size - 350
-    cursor_y = 520
-    draw_cursor(draw, cursor_x, cursor_y, scale=3.0, color=line_color, line_width=4)
-
-    # Subtle blue glow under cursor
-    glow_center = (cursor_x + 50, cursor_y + 100)
-    for r in range(60, 0, -8):
-        alpha = int(25 * (60 - r) / 60)
-        draw.ellipse(
-            [(glow_center[0] - r, glow_center[1] - r),
-             (glow_center[0] + r, glow_center[1] + r)],
-            fill=(90, 140, 255, alpha)
-        )
-
-    mask = create_rounded_rect_mask((size, size), radius)
-    img.putalpha(mask)
-
-    return img
-
-
-def create_icon_option_c():
-    """
-    Option C: Dynamic Execute
-    Menu bar with lightning bolt / execute symbol
-    Emphasizes the "execution" action
-    """
-    size = 1024
-    radius = 220
-
-    img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-
-    # Very dark background
-    draw.rounded_rectangle(
-        [(0, 0), (size, size)],
-        radius=radius,
-        fill=(18, 18, 20, 255)
-    )
-
-    line_color = (240, 240, 245, 255)
-    accent_color = (255, 180, 50, 255)  # Orange/amber accent
-    line_width = 3
-
-    # Circular background element (subtle)
-    center = (size // 2, size // 2)
-    for r in range(300, 200, -20):
-        alpha = int(15 * (300 - r) / 100)
-        draw.ellipse(
-            [(center[0] - r, center[1] - r), (center[0] + r, center[1] + r)],
-            outline=(255, 255, 255, alpha),
-            width=1
-        )
-
-    # Lightning bolt / execute symbol
-    bolt_points = [
-        (center[0] - 40, center[1] - 200),
-        (center[0] + 60, center[1] - 50),
-        (center[0] - 10, center[1] - 50),
-        (center[0] + 80, center[1] + 180),
-        (center[0] - 20, center[1] + 20),
-        (center[0] + 30, center[1] + 20),
-    ]
-
-    # Draw lightning with glow effect
-    for offset in range(3, 0, -1):
-        for i in range(len(bolt_points) - 1):
-            draw.line(
-                [bolt_points[i], bolt_points[i + 1]],
-                fill=accent_color[:3],
-                width=line_width + offset * 2
-            )
-
-    # Main lightning bolt
-    for i in range(len(bolt_points) - 1):
-        draw.line(
-            [bolt_points[i], bolt_points[i + 1]],
-            fill=(255, 255, 255),
-            width=line_width
-        )
-
-    # Menu bar at top (minimal)
-    bar_y = 220
-    bar_height = 60
-    bar_margin = 250
-
-    draw.rounded_rectangle(
-        [(bar_margin, bar_y), (size - bar_margin, bar_y + bar_height)],
-        radius=12,
-        outline=line_color[:3],
-        width=line_width
-    )
-
-    # Three menu dots
-    dot_y = bar_y + bar_height // 2
-    for i in range(3):
-        dot_x = bar_margin + 60 + i * 150
-        draw.ellipse(
-            [(dot_x - 6, dot_y - 6), (dot_x + 6, dot_y + 6)],
-            fill=line_color[:3]
-        )
-
-    # Cursor pointing to execute button
-    cursor_x = center[0] + 150
-    cursor_y = center[1] + 80
-    draw_cursor(draw, cursor_x, cursor_y, scale=2.5, color=line_color, line_width=4)
-
-    # Glow at cursor tip
-    glow_x = cursor_x + 30
-    glow_y = cursor_y + 40
-    for r in range(35, 0, -5):
-        alpha = int(40 * (35 - r) / 35)
-        draw.ellipse(
-            [(glow_x - r, glow_y - r), (glow_x + r, glow_y + r)],
-            fill=(*accent_color[:3], alpha)
-        )
-
-    mask = create_rounded_rect_mask((size, size), radius)
-    img.putalpha(mask)
 
     return img
 
 
 def main():
-    import os
+    os.makedirs(ICONS_DIR, exist_ok=True)
 
-    output_dir = "/Users/wangze/Library/CloudStorage/OneDrive-Personal/codes/menu-bar-exector/assets/icons"
-    os.makedirs(output_dir, exist_ok=True)
+    # 应用图标
+    app_icon = create_app_icon()
+    app_path = os.path.join(ICONS_DIR, "AppIcon.png")
+    app_icon.save(app_path, "PNG")
+    print(f"App icon -> {app_path}")
 
-    # Create all three options
-    icons = [
-        ("AppIcon-Option-A.png", create_icon_option_a, "简约菜单栏"),
-        ("AppIcon-Option-B.png", create_icon_option_b, "终端融合"),
-        ("AppIcon-Option-C.png", create_icon_option_c, "动态执行"),
-    ]
+    # 菜单栏图标 @1x (22px) 和 @2x (44px)
+    for scale, size in [("1x", 22), ("2x", 44)]:
+        icon = create_menu_bar_icon(canvas_size=size)
+        path = os.path.join(ICONS_DIR, f"menu-bar-icon-{size}.png")
+        icon.save(path, "PNG")
+        print(f"Menu bar icon @ {scale} ({size}px) -> {path}")
 
-    for filename, creator, name in icons:
-        img = creator()
-        filepath = os.path.join(output_dir, filename)
-        img.save(filepath, "PNG")
-        print(f"✓ Created {filename} ({name})")
-
-    print(f"\n所有图标已保存到: {output_dir}")
+    print("\n所有图标已生成")
 
 
 if __name__ == "__main__":
