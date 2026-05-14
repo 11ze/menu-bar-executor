@@ -91,10 +91,7 @@ zip -r ${APP_NAME}-${VERSION}.zip ${APP_NAME}.app
 cd ..
 
 # 生成并保存发布说明
-echo ""
-echo "📝 生成发布说明..."
 RELEASE_NOTES=$(generate_release_notes)
-echo "${RELEASE_NOTES}"
 echo "${RELEASE_NOTES}" > "./${RELEASE_DIR}/RELEASE_NOTES.md"
 
 echo ""
@@ -108,4 +105,8 @@ echo "1. 一键发布："
 echo "   git add Resources/Info.plist && git commit -m \"chore: bump version to ${VERSION}\" && git tag -a v${VERSION} -m \"version ${VERSION}\" && git push --follow-tags"
 echo "2. 访问 GitHub Releases 创建新 Release"
 echo "3. 上传 Release/${APP_NAME}-${VERSION}.zip"
-echo "4. 复制 Release/RELEASE_NOTES.md 内容到 Release Description"
+echo "4. 复制以下内容到 Release Description:"
+echo ""
+echo "────────────────────────────────────────"
+echo "${RELEASE_NOTES}"
+echo "────────────────────────────────────────"
