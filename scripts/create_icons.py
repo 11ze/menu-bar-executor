@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Generate MenuBarExecutor app icon and menu bar icon.
-Style: white minimal >_ on dark background.
+Style: white chubby >_ on dark background (rounded balloon font).
 """
 
 from PIL import Image, ImageDraw
@@ -35,7 +35,7 @@ def create_app_icon():
 
     # > 箭头（45度 V 形，外接正方形 400x400）
     line_color = (255, 255, 255, 255)
-    line_width = 56
+    line_width = 104
     arrow_x = 312       # 正方形左边
     arrow_top = 312     # 正方形顶部
     arrow_mid = 512     # 画布中心（也是正方形中心）
@@ -85,7 +85,7 @@ def create_menu_bar_icon(canvas_size=44):
     # 与 app icon 同比例：正方形边长 S = canvas_size * 0.5
     S = canvas_size * 0.5
     margin = (canvas_size - S) / 2  # 居中偏移
-    line_width = max(2, round(S * 0.14))  # 同比例线条宽度
+    line_width = max(4, round(S * 0.32))  # 胖乎乎风格：更粗更圆
 
     # 坐标（按 app icon 比例）
     arrow_x = margin
