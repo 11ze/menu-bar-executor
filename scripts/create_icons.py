@@ -6,6 +6,7 @@ Style: white chubby >_ on dark background (rounded balloon font).
 
 from PIL import Image, ImageDraw
 import os
+import subprocess
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ICONS_DIR = os.path.join(PROJECT_DIR, "assets", "icons")
@@ -75,50 +76,26 @@ def create_app_icon():
 
 
 def create_menu_bar_icon(canvas_size=44):
-    """Menu bar icon: black >_ prompt, transparent background, for template image.
-    Proportions match the app icon exactly (正方形 400x400, 线条 56)."""
-    img = Image.new('RGBA', (canvas_size, canvas_size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
+    """Menu bar icon: render SVG via rsvg-convert for proper stroke-linecap support."""
+    svg_path = os.path.join(ICONS_DIR, "menu-bar-icon.svg")
+    output_path = os.path.join(ICONS_DIR, f"menu-bar-icon-{canvas_size}.png")
 
-    line_color = (0, 0, 0, 255)  # 纯黑
-
-    # 与 app icon 同比例：正方形边长 S = canvas_size * 0.5
-    S = canvas_size * 0.5
-    margin = (canvas_size - S) / 2  # 居中偏移
-    line_width = max(4, round(S * 0.32))  # 胖乎乎风格：更粗更圆
-
-    # 坐标（按 app icon 比例）
-    arrow_x = margin
-    arrow_top = margin
-    arrow_mid = canvas_size / 2
-    arrow_bottom = margin + S
-    arrow_tip = margin + S * 0.5
-
-    draw.line([(arrow_x, arrow_top), (arrow_tip, arrow_mid)],
-              fill=line_color, width=line_width)
-    draw.line([(arrow_tip, arrow_mid), (arrow_x, arrow_bottom)],
-              fill=line_color, width=line_width)
-
-    cap_r = line_width // 2
-    for pos in [(arrow_x, arrow_top), (arrow_tip, arrow_mid), (arrow_x, arrow_bottom)]:
-        draw.ellipse(
-            [(pos[0] - cap_r, pos[1] - cap_r),
-             (pos[0] + cap_r, pos[1] + cap_r)],
-            fill=line_color
-        )
-
-    # 下划线（同比例：起点 52%，终点 100%，y 95%）
-    underline_y = margin + S * 0.95
-    underline_start = margin + S * 0.52
-    underline_end = underline_start + S * 0.65  # 下划线比箭头宽度更长
-    draw.rounded_rectangle(
-        [(underline_start, underline_y - cap_r),
-         (underline_end, underline_y + cap_r)],
-        radius=cap_r,
-        fill=line_color
+    result = subprocess.run(
+        [
+            "/opt/homebrew/bin/rsvg-convert",
+            "--width", str(canvas_size),
+            "--height", str(canvas_size),
+            "--output", output_path,
+            svg_path,
+        ],
+        capture_output=True,
+        text=True,
     )
 
-    return img
+    if result.returncode != 0:
+        raise RuntimeError(f"rsvg-convert failed: {result.stderr}")
+
+    return output_path
 
 
 def main():
@@ -132,9 +109,7 @@ def main():
 
     # 菜单栏图标 @1x (22px) 和 @2x (44px)
     for scale, size in [("1x", 22), ("2x", 44)]:
-        icon = create_menu_bar_icon(canvas_size=size)
-        path = os.path.join(ICONS_DIR, f"menu-bar-icon-{size}.png")
-        icon.save(path, "PNG")
+        path = create_menu_bar_icon(canvas_size=size)
         print(f"Menu bar icon @ {scale} ({size}px) -> {path}")
 
     print("\n所有图标已生成")
