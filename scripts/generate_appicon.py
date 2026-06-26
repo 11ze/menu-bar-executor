@@ -1,21 +1,16 @@
 #!/usr/bin/env python3
 """
-Generate all required macOS app icon sizes from source image,
-and create MenuBarIcon imageset for the menu bar template icon.
+Generate all required macOS app icon sizes from source image.
 """
 
 from PIL import Image
 import json
 import os
-import shutil
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ICONS_DIR = os.path.join(PROJECT_DIR, "assets", "icons")
 APPICONSET_DIR = os.path.join(
     PROJECT_DIR, "Resources", "Assets.xcassets", "AppIcon.appiconset"
-)
-MENUBAR_ICONSET_DIR = os.path.join(
-    PROJECT_DIR, "Resources", "Assets.xcassets", "MenuBarIcon.imageset"
 )
 
 ICON_SIZES = [
@@ -63,46 +58,9 @@ def generate_appiconset():
     print("  Contents.json updated")
 
 
-def generate_menubar_imageset():
-    os.makedirs(MENUBAR_ICONSET_DIR, exist_ok=True)
-
-    for src_name, dst_name in [
-        ("menu-bar-icon-22.png", "menu-bar-icon-22.png"),
-        ("menu-bar-icon-44.png", "menu-bar-icon-44.png"),
-    ]:
-        src = os.path.join(ICONS_DIR, src_name)
-        dst = os.path.join(MENUBAR_ICONSET_DIR, dst_name)
-        shutil.copy2(src, dst)
-        print(f"  {dst_name}")
-
-    contents = {
-        "images": [
-            {
-                "filename": "menu-bar-icon-22.png",
-                "idiom": "mac",
-                "scale": "1x",
-                "size": "22x22",
-            },
-            {
-                "filename": "menu-bar-icon-44.png",
-                "idiom": "mac",
-                "scale": "2x",
-                "size": "22x22",
-            },
-        ],
-        "info": {"author": "xcode", "version": 1},
-        "properties": {"template-rendering-intent": "template"},
-    }
-    with open(os.path.join(MENUBAR_ICONSET_DIR, "Contents.json"), "w") as f:
-        json.dump(contents, f, indent=2)
-    print("  Contents.json updated")
-
-
 def main():
     print("== AppIcon.appiconset ==")
     generate_appiconset()
-    print("\n== MenuBarIcon.imageset ==")
-    generate_menubar_imageset()
     print("\nDone")
 
 
