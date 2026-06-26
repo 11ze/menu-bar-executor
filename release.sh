@@ -12,6 +12,10 @@ SCHEME="MenuBarExecutor"
 APP_NAME="MenuBarExecutor"
 CONFIG="Release"
 PLIST="Resources/Info.plist"
+# 构建到 /tmp 而非项目目录：项目位于 iCloud 同步路径下，
+# iCloud 会给构建产物注入扩展属性（com.apple.FinderInfo 等），
+# 导致 codesign 报 "resource fork, Finder information ... not allowed" 失败。
+BUILD_PATH="/tmp/${PROJECT_NAME}-build"
 
 # 检查版本号参数
 if [ -z "$VERSION" ]; then
@@ -58,16 +62,16 @@ generate_release_notes() {
 
 echo "📦 开始构建 ${PROJECT_NAME} v${VERSION} ..."
 
-# 清理并构建（指定构建目录到项目目录）
+# 清理并构建（构建到 /tmp，规避 iCloud 扩展属性导致签名失败）
 echo "🔨 构建中..."
 xcodebuild -project ${PROJECT_NAME}.xcodeproj \
     -scheme ${SCHEME} \
     -configuration ${CONFIG} \
-    -derivedDataPath ./build \
+    -derivedDataPath ${BUILD_PATH} \
     clean build
 
-# 获取构建产物路径（使用指定的 derivedDataPath）
-BUILD_DIR="${PROJECT_NAME}.xcodeproj/../build/Build/Products/${CONFIG}"
+# 获取构建产物路径（与上面的 derivedDataPath 对应）
+BUILD_DIR="${BUILD_PATH}/Build/Products/${CONFIG}"
 APP_PATH="${BUILD_DIR}/${APP_NAME}.app"
 
 if [ ! -d "${APP_PATH}" ]; then
@@ -92,7 +96,7 @@ cd ..
 
 # 生成并保存发布说明
 RELEASE_NOTES=$(generate_release_notes)
-echo "${RELEASE_NOTES}" > "./${RELEASE_DIR}/RELEASE_NOTES.md"
+echo "${RELEASE_NOTES}" | tee "./${RELEASE_DIR}/RELEASE_NOTES.md"
 
 echo ""
 echo "✅ 完成！"
