@@ -66,8 +66,8 @@ xcodegen generate
 xcodebuild -project menu-bar-executor.xcodeproj \
   -scheme MenuBarExecutor \
   -configuration Release \
-  -derivedDataPath ./build build
-open ./build/Build/Products/Release/MenuBarExecutor.app
+  -derivedDataPath /tmp/menu-bar-executor-build build
+open /tmp/menu-bar-executor-build/Build/Products/Release/MenuBarExecutor.app
 ```
 
 ## 使用方法

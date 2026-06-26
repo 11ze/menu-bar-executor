@@ -193,10 +193,12 @@ settings.json 完整字段见 README.md。
 xcodegen generate
 
 # Debug 构建
+# 注意：构建到 /tmp 而非 ./build，因为项目位于 iCloud 同步路径下，
+# iCloud 注入的扩展属性会导致 codesign 失败（见 release.sh 同理）。
 xcodebuild -project menu-bar-executor.xcodeproj \
   -scheme MenuBarExecutor \
   -configuration Debug \
-  -derivedDataPath ./build build
+  -derivedDataPath /tmp/menu-bar-executor-build build
 
 # 运行测试
 xcodebuild test -project menu-bar-executor.xcodeproj \
@@ -204,8 +206,9 @@ xcodebuild test -project menu-bar-executor.xcodeproj \
   -destination 'platform=macOS'
 
 # 快速重建+重启（日常开发）
-pkill -f MenuBarExecutor && \
+pkill -f MenuBarExecutor; \
 xcodebuild -project menu-bar-executor.xcodeproj \
-  -scheme MenuBarExecutor build && \
-open ./build/Build/Products/Debug/MenuBarExecutor.app
+  -scheme MenuBarExecutor \
+  -derivedDataPath /tmp/menu-bar-executor-build build && \
+open /tmp/menu-bar-executor-build/Build/Products/Debug/MenuBarExecutor.app
 ```
