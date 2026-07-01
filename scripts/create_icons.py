@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-Generate MenuBarExecutor app icon.
+Generate MenuBarExecutor app icon and menu bar icon.
 Style: white chubby >_ on dark background (rounded balloon font).
 """
 
 from PIL import Image, ImageDraw
 import os
+import subprocess
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ICONS_DIR = os.path.join(PROJECT_DIR, "assets", "icons")
@@ -74,6 +75,29 @@ def create_app_icon():
     return img
 
 
+def create_menu_bar_icon(canvas_size=44):
+    """Menu bar icon: render SVG via rsvg-convert for proper stroke-linecap support."""
+    svg_path = os.path.join(ICONS_DIR, "menu-bar-icon.svg")
+    output_path = os.path.join(ICONS_DIR, f"menu-bar-icon-{canvas_size}.png")
+
+    result = subprocess.run(
+        [
+            "/opt/homebrew/bin/rsvg-convert",
+            "--width", str(canvas_size),
+            "--height", str(canvas_size),
+            "--output", output_path,
+            svg_path,
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode != 0:
+        raise RuntimeError(f"rsvg-convert failed: {result.stderr}")
+
+    return output_path
+
+
 def main():
     os.makedirs(ICONS_DIR, exist_ok=True)
 
@@ -82,6 +106,11 @@ def main():
     app_path = os.path.join(ICONS_DIR, "AppIcon.png")
     app_icon.save(app_path, "PNG")
     print(f"App icon -> {app_path}")
+
+    # 菜单栏图标 @1x (22px) 和 @2x (44px)
+    for scale, size in [("1x", 22), ("2x", 44)]:
+        path = create_menu_bar_icon(canvas_size=size)
+        print(f"Menu bar icon @ {scale} ({size}px) -> {path}")
 
     print("\n所有图标已生成")
 

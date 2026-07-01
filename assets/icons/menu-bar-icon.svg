@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44" width="44" height="44">
+  <!-- PNG 由 rsvg-convert 直接渲染此 SVG -->
+  <!-- 正方形边界 S=22 居中, 线宽=max(4,round(S*0.32))=7 (胖乎乎风格) -->
+  <!-- > 箭头: (11,11)→(22,22)→(11,33) -->
+  <!-- _ 下划线: (22.4,31.9)→(36.7,31.9) -->
+  <path d="M11,11 L22,22 L11,33"
+        fill="none" stroke="#000000"
+        stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="22.4" y1="31.9" x2="36.7" y2="31.9"
+        stroke="#000000" stroke-width="7" stroke-linecap="round"/>
+</svg>
