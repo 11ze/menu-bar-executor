@@ -352,6 +352,23 @@ final class AppSettingsManager: ObservableObject {
 
     // MARK: - 设置项写入（intent 方法：改字段 + 保存一体）
 
+    /// 设置开机自启：写配置 + 保存 + 同步系统登录项
+    func setLaunchAtLogin(_ enabled: Bool) {
+        guard settings.launchAtLogin != enabled else { return }
+        settings.launchAtLogin = enabled
+        save()
+        LaunchAtLoginManager.shared.isEnabled = enabled
+    }
+
+    /// 启动时对齐开机自启状态：配置与系统不一致时以系统为准（用户可能在系统设置里改过）
+    func reconcileLaunchAtLogin() {
+        let systemState = LaunchAtLoginManager.shared.isEnabled
+        if settings.launchAtLogin != systemState {
+            settings.launchAtLogin = systemState
+            save()
+        }
+    }
+
     func setDefaultInputSource(_ sourceID: String?) {
         settings.defaultInputSourceID = sourceID
         save()

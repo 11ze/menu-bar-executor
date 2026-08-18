@@ -34,16 +34,4 @@ final class LaunchAtLoginManager {
             isSupported = false
         }
     }
-
-    /// 同步配置与系统实际状态
-    /// 当配置与系统状态不一致时，以系统状态为准
-    func sync(withSettings enabled: Bool) {
-        let systemState = isEnabled
-        if enabled != systemState {
-            // 以系统状态为准，更新配置
-            AppSettingsManager.shared.settings.launchAtLogin = systemState
-            AppSettingsManager.shared.save()
-            CommandsManager.shared.launchAtLogin = systemState
-        }
-    }
 }

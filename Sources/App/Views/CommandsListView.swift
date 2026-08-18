@@ -211,10 +211,10 @@ struct CommandsListView: View {
                             Text("开机自启")
                                 .font(.headline)
                             Spacer()
-                            Toggle("", isOn: $manager.launchAtLogin)
-                                .onChange(of: manager.launchAtLogin) { newValue in
-                                    manager.updateLaunchAtLogin(newValue)
-                                }
+                            Toggle("", isOn: Binding(
+                                get: { AppSettingsManager.shared.settings.launchAtLogin },
+                                set: { AppSettingsManager.shared.setLaunchAtLogin($0) }
+                            ))
                         }
                     }
 
