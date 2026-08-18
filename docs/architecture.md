@@ -46,12 +46,12 @@
           │  NotificationCenter (.settingsDidReload)
           ▼
   ┌─────────────────────────────────────────────────────────┐
-  │  AppSettingsManager ──publish──▶ CommandsManager         │
-  │                                         │               │
-  │          CommandsManager ──▶ CommandExecutor ──▶ Process │
-  │                                    │                    │
-  │                                    ├─▶ NotificationMgr  │
-  │                                    └─▶ ExecutionHistory │
+  │  AppSettingsManager ──publish──▶ CommandsManager (CRUD) │
+  │                                                         │
+  │  PaletteCoordinator ──▶ CommandExecutor ──▶ Process      │
+  │                              │                          │
+  │                              ├─▶ ExecutionHistory       │
+  │                              └─▶ NotificationManager    │
   └─────────────────────────────────────────────────────────┘
           │
           ▼
@@ -63,25 +63,24 @@
 ## 命令执行流程
 
 ```
-  用户按 Enter / ⌘+N
-          │
-          ▼
-  PaletteCoordinator.execute(command)
-          │
-          ▼
-  CommandExecutor.shared.execute(command)
-          │
-          ▼
+  用户按 Enter / ⌘+N               打开面板 ⚡ 自动执行
+          │                                  │
+          ▼                                  ▼
+  PaletteCoordinator.execute     PaletteCoordinator.executeAutoCommands
+          │ (面板隐藏 0.1s 后)                 │
+          └─────────────┬────────────────────┘
+                        ▼
+  CommandExecutor.shared.execute(command, mode:)
+                        │
+                        ▼
   Process(/bin/zsh -i -l -c "<cmd>")  ← 30s 超时自动终止
-          │
-          ▼
-  completion(success, output)
-      │           │
-      ▼           ▼
-  面板内联     ExecutionHistory.add(record)
-  显示结果          │
-                    ▼
-              NotificationManager (可选, 系统通知)
+                        │
+                        ▼
+  ExecutionResult（成功 / 非零退出 / 没跑起来）
+       │                          │
+       ▼                          ▼
+  completion 回调              副作用（仅 userInitiated）：
+  （auto 结果内联面板显示）     ExecutionHistory 落账 + 通知（按 command.notification）
 ```
 
 ## 单例关系
@@ -89,12 +88,12 @@
 ```
 AppSettingsManager.shared ──── 核心配置
     │
-    ├── CommandsManager.shared ──── 命令列表
+    ├── CommandsManager.shared ──── 命令列表 CRUD
+    │
+    ├── CommandExecutor.shared ──── 命令执行 (Process + 超时 + 历史/通知副作用)
     │       │
-    │       └── CommandExecutor.shared ── 命令执行
-    │               │
-    │               ├── NotificationManager.shared
-    │               └── ExecutionHistory.shared
+    │       ├── NotificationManager.shared
+    │       └── ExecutionHistory.shared
     │
     ├── PaletteCoordinator.shared ── 面板状态
     ├── LaunchAtLoginManager.shared ── 开机自启
@@ -114,8 +113,8 @@ Sources/App/
 │
 ├── Command.swift                         # 命令模型 (UUID, Codable)
 ├── AppSettings.swift                     # 配置结构 + AppSettingsManager 单例
-├── CommandsManager.swift                 # 命令列表管理 (CRUD + 执行调度)
-├── CommandExecutor.swift                 # Shell 执行器 (Process + 超时)
+├── CommandsManager.swift                 # 命令列表管理 (CRUD)
+├── CommandExecutor.swift                 # Shell 执行器 (Process + 超时 + ExecutionMode/ExecutionResult + 历史/通知副作用)
 ├── ExecutionHistory.swift                # 执行历史 (最近 100 条)
 ├── NotificationManager.swift             # 系统通知
 │
