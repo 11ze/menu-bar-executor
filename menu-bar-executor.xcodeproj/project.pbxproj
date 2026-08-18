@@ -21,6 +21,7 @@
 		4EEAA1CAA1CA16BC9BBF3162 /* AppSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AE8ECCB3862E2750844530F /* AppSettingsTests.swift */; };
 		4FA76398E7543DC8C7A378F3 /* HighlightedText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68D4E51EE67D0C67807855CA /* HighlightedText.swift */; };
 		52C1561C6863C55D7B5328C5 /* InputSourceHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62F367700CD9756382417EE8 /* InputSourceHelper.swift */; };
+		5EB73BCBBAF6A42BC149CAF3 /* CommandExecutorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0273E4B92C6E63DC1F19704E /* CommandExecutorTests.swift */; };
 		717BA7E5B8D4F59A31016E23 /* UpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5E50BB1BA86D963A0CD98BC /* UpdateManager.swift */; };
 		7AF95E66E1C2749EFCBE5551 /* CommandEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE107B13A523C46A2B7B779 /* CommandEditorView.swift */; };
 		81EA2202F22F926C4EB31B25 /* CommandTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B0A1B3CD55B63263017DFD5 /* CommandTests.swift */; };
@@ -52,6 +53,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0273E4B92C6E63DC1F19704E /* CommandExecutorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandExecutorTests.swift; sourceTree = "<group>"; };
 		0ACB75E92D607A4CB1C6BD53 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		14B1163230FFB666809580CC /* ExecutionRecordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecutionRecordTests.swift; sourceTree = "<group>"; };
 		1F375BA81AAC5D1C6B2CC03D /* CommandsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandsManager.swift; sourceTree = "<group>"; };
@@ -122,6 +124,7 @@
 			children = (
 				2F783E56BB95AC1D984491C4 /* AppErrorTests.swift */,
 				2AE8ECCB3862E2750844530F /* AppSettingsTests.swift */,
+				0273E4B92C6E63DC1F19704E /* CommandExecutorTests.swift */,
 				3B0A1B3CD55B63263017DFD5 /* CommandTests.swift */,
 				14B1163230FFB666809580CC /* ExecutionRecordTests.swift */,
 				F37E8861C5434EC7DE13D7B3 /* HighlightedTextRangeTests.swift */,
@@ -315,6 +318,7 @@
 			files = (
 				BF06435E3725DE00E3F21E08 /* AppErrorTests.swift in Sources */,
 				4EEAA1CAA1CA16BC9BBF3162 /* AppSettingsTests.swift in Sources */,
+				5EB73BCBBAF6A42BC149CAF3 /* CommandExecutorTests.swift in Sources */,
 				81EA2202F22F926C4EB31B25 /* CommandTests.swift in Sources */,
 				1A9796A4DF21921B067A5A3B /* ExecutionRecordTests.swift in Sources */,
 				1078BEA8AA3A0FA6F4E93858 /* HighlightedTextRangeTests.swift in Sources */,

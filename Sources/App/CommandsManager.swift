@@ -10,9 +10,6 @@ final class CommandsManager: ObservableObject {
     @Published var launchAtLogin: Bool = false
 
     private let settingsManager = AppSettingsManager.shared
-    private let executor = CommandExecutor.shared
-    private let notificationManager = NotificationManager.shared
-    private let history = ExecutionHistory.shared
     private var cancellables = Set<AnyCancellable>()
 
     private init() {
@@ -58,24 +55,6 @@ final class CommandsManager: ObservableObject {
         }
 
         return appearanceOrder
-    }
-
-    func execute(_ command: Command) {
-        executor.execute(command: command) { [weak self] success, output in
-            guard let self = self else { return }
-
-            let record = ExecutionRecord(command: command, success: success, output: output)
-            self.history.addRecord(record)
-
-            if command.notification {
-                if success {
-                    self.notificationManager.showSuccess(commandName: command.name, output: output)
-                } else {
-                    let errorMsg = output ?? "未知错误"
-                    self.notificationManager.showFailure(commandName: command.name, error: errorMsg, output: output)
-                }
-            }
-        }
     }
 
     func addCommand(_ command: Command) {

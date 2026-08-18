@@ -157,8 +157,9 @@ final class PaletteCoordinator: ObservableObject {
 
     func execute(_ command: Command) {
         CommandPaletteWindowController.shared.hide()
-        DispatchQueue.main.asyncAfter(deadline: .now() + PaletteConfig.executionDelay) {
-            CommandsManager.shared.execute(command)
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(PaletteConfig.executionDelay * 1_000_000_000))
+            CommandExecutor.shared.execute(command: command, mode: .userInitiated)
         }
     }
 
@@ -185,13 +186,17 @@ final class PaletteCoordinator: ObservableObject {
         for command in autoCommands {
             autoExecuteResults[command.id] = .loading
 
-            CommandExecutor.shared.execute(command: command) { [weak self] success, output in
+            CommandExecutor.shared.execute(command: command, mode: .auto) { [weak self] result in
                 guard let self else { return }
-                let trimmed = output?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                if success {
+                switch result {
+                case .success(let output):
+                    let trimmed = output?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                     self.autoExecuteResults[command.id] = .success(trimmed)
-                } else {
+                case .exitedAbnormally(_, let output):
+                    let trimmed = output?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                     self.autoExecuteResults[command.id] = .failure(trimmed.isEmpty ? "执行失败" : trimmed)
+                case .failed(let error):
+                    self.autoExecuteResults[command.id] = .failure(error.localizedDescription)
                 }
             }
         }
