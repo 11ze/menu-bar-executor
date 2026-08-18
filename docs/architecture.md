@@ -40,7 +40,7 @@
 
 ```
   ~/.config/menu-bar-executor/
-  ├── settings.json  ←→  AppSettingsManager (CRUD + 原子写入 + 文件监听)
+  ├── settings.json  ←→  AppSettingsManager (intent 写入 + 原子写入 + 文件监听)
   └── history.json   ←→  ExecutionHistory   (追加读写, 最近 100 条)
           │
           │  NotificationCenter (.settingsDidReload)
@@ -112,7 +112,7 @@ Sources/App/
 ├── AppDelegate.swift                     # 菜单栏 + 快捷键 + 辅助功能权限
 │
 ├── Command.swift                         # 命令模型 (UUID, Codable)
-├── AppSettings.swift                     # 配置结构 + AppSettingsManager 单例
+├── AppSettings.swift                     # 配置结构 + AppSettingsManager 单例 (intent 写入收口)
 ├── CommandsManager.swift                 # 命令列表管理 (CRUD)
 ├── CommandExecutor.swift                 # Shell 执行器 (Process + 超时 + ExecutionMode/ExecutionResult + 历史/通知副作用)
 ├── ExecutionHistory.swift                # 执行历史 (最近 100 条)
@@ -130,7 +130,7 @@ Sources/App/
 ├── SettingsWindowController.swift        # 设置窗口控制器
 ├── HistoryWindowController.swift         # 历史窗口控制器
 ├── InputSourceHelper.swift               # 输入法切换 (Carbon TIS)
-├── LaunchAtLoginManager.swift            # 开机自启 (macOS 13+ SMAppService)
+├── LaunchAtLoginManager.swift            # 开机自启适配 (macOS 13+ SMAppService 纯系统状态)
 ├── UpdateManager.swift                   # GitHub Release 更新检查
 ├── UpdateInfo.swift                      # 版本信息模型
 │
