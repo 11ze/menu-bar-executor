@@ -108,7 +108,8 @@ extension Notification.Name {
 final class AppSettingsManager: ObservableObject {
     static let shared = AppSettingsManager()
 
-    @Published var settings: AppSettings = AppSettings()
+    /// 对外只读：写入必须走 intent 方法，编译器强制收口
+    @Published private(set) var settings: AppSettings = AppSettings()
 
     /// 配置是否已成功从磁盘加载（防止加载失败时空默认值覆盖真实配置）
     private var isLoaded = false
@@ -229,7 +230,8 @@ final class AppSettingsManager: ObservableObject {
 
     // MARK: - 保存
 
-    func save() {
+    /// 保存策略（isLoaded 守卫 + skipNextFileChange + 原子写入 + 重建监听）是内部事务，不对外暴露
+    private func save() {
         // 配置未加载成功时拒绝写入，防止空默认值覆盖真实配置
         guard isLoaded else { return }
         // 标记自身写入，防止文件监听误触发自动重载
