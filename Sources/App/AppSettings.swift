@@ -350,6 +350,23 @@ final class AppSettingsManager: ObservableObject {
         }
     }
 
+    // MARK: - 设置项写入（intent 方法：改字段 + 保存一体）
+
+    func setDefaultInputSource(_ sourceID: String?) {
+        settings.defaultInputSourceID = sourceID
+        save()
+    }
+
+    func touchUpdateCheckDate() {
+        settings.lastUpdateCheckDate = Date()
+        save()
+    }
+
+    func setSkippedVersion(_ version: String?) {
+        settings.skippedVersion = version
+        save()
+    }
+
     // MARK: - 命令管理
 
     func saveCommands(_ commands: [Command]) throws {

@@ -192,8 +192,7 @@ struct CommandsListView: View {
                         Picker("", selection: Binding(
                             get: { AppSettingsManager.shared.settings.defaultInputSourceID ?? "" },
                             set: { newValue in
-                                AppSettingsManager.shared.settings.defaultInputSourceID = newValue.isEmpty ? nil : newValue
-                                AppSettingsManager.shared.save()
+                                AppSettingsManager.shared.setDefaultInputSource(newValue.isEmpty ? nil : newValue)
                             }
                         )) {
                             Text("不切换").tag("")

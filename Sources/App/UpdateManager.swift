@@ -93,8 +93,7 @@ final class UpdateManager: ObservableObject {
             )
 
             // 更新检查时间（只在成功时保存）
-            settingsManager.settings.lastUpdateCheckDate = Date()
-            settingsManager.save()
+            settingsManager.touchUpdateCheckDate()
 
             // 检查是否跳过该版本
             if let skipped = settingsManager.settings.skippedVersion,
@@ -124,14 +123,12 @@ final class UpdateManager: ObservableObject {
     /// 跳过指定版本
     /// - Parameter version: 要跳过的版本号
     func skipVersion(_ version: String) {
-        settingsManager.settings.skippedVersion = version
-        settingsManager.save()
+        settingsManager.setSkippedVersion(version)
     }
 
     /// 清除跳过的版本
     func clearSkippedVersion() {
-        settingsManager.settings.skippedVersion = nil
-        settingsManager.save()
+        settingsManager.setSkippedVersion(nil)
     }
 
     // MARK: - 私有方法
