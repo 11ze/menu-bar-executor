@@ -37,6 +37,8 @@ final class PaletteCoordinator: ObservableObject {
     @Published var searchText: String = "" { didSet { rebuild(with: CommandsManager.shared.commands) } }
     @Published private(set) var listModel: PaletteListModel
     @Published var autoExecuteResults: [UUID: AutoExecuteState] = [:]
+    /// 键盘导航请求滚动的目标索引；hover 只改选中不发请求，避免滚动与 hover 互相触发
+    @Published var scrollRequest: Int?
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -66,7 +68,12 @@ final class PaletteCoordinator: ObservableObject {
             previousFirstVisibleIndex: listModel.firstVisibleIndex
         )
         guard next != listModel else { return }
+        let selectedIndexChanged = next.selectedIndex != listModel.selectedIndex
         listModel = next
+        // derive 类的选中变化（搜索收缩 / 外部重载）请求滚回可视区；hover 不走 rebuild，保持静默
+        if selectedIndexChanged {
+            scrollRequest = next.selectedIndex
+        }
     }
 
     func refreshCommands() {
@@ -81,15 +88,32 @@ final class PaletteCoordinator: ObservableObject {
     /// 搜索文本变化后由视图调用：重置到第一个命令项
     func selectFirstCommand() {
         guard let index = listModel.items.firstIndex(where: { $0.isCommand }) else { return }
+        if index != listModel.selectedIndex {
+            listModel = listModel.updatingSelectedIndex(index)
+            scrollRequest = index
+        }
+    }
+
+    /// 鼠标 hover 选中：只移动选中，不请求滚动
+    func selectOnHover(_ index: Int) {
+        guard index != listModel.selectedIndex,
+              listModel.items.indices.contains(index),
+              listModel.items[index].isCommand else { return }
         listModel = listModel.updatingSelectedIndex(index)
     }
 
     func moveUp() {
-        if let next = listModel.movedUp() { listModel = next }
+        if let next = listModel.movedUp() {
+            listModel = next
+            scrollRequest = next.selectedIndex
+        }
     }
 
     func moveDown() {
-        if let next = listModel.movedDown() { listModel = next }
+        if let next = listModel.movedDown() {
+            listModel = next
+            scrollRequest = next.selectedIndex
+        }
     }
 
     func execute(_ command: Command) {
@@ -111,6 +135,7 @@ final class PaletteCoordinator: ObservableObject {
         listModel = PaletteListModel(items: listModel.items, selectedIndex: 0, firstVisibleIndex: 0)
         searchText = ""
         autoExecuteResults.removeAll()
+        scrollRequest = nil
     }
 
     func executeAutoCommands() {

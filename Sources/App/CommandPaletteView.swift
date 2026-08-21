@@ -42,11 +42,22 @@ struct CommandPaletteView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(12)
-            .background(Color(nsColor: .textBackgroundColor))
+            .padding(8)
+            .background(Color(nsColor: .controlBackgroundColor))
 
             Divider()
 
+            // 空状态：无命令或搜索无结果
+            if coordinator.listModel.items.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: coordinator.searchText.isEmpty ? "terminal" : "magnifyingglass")
+                        .font(.system(size: 36))
+                        .foregroundColor(.secondary)
+                    Text(coordinator.searchText.isEmpty ? "暂无命令，打开设置添加" : "未找到匹配命令")
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
             // 命令列表
             ScrollViewReader { proxy in
                 ScrollView {
@@ -69,6 +80,9 @@ struct CommandPaletteView: View {
                                 .onTapGesture {
                                     coordinator.execute(command)
                                 }
+                                .onHover { hovering in
+                                    if hovering { coordinator.selectOnHover(index) }
+                                }
                                 .background(
                                     GeometryReader { geo in
                                         Color.clear.preference(
@@ -89,13 +103,15 @@ struct CommandPaletteView: View {
                         coordinator.updateFirstVisibleIndex(first.index)
                     }
                 }
-                .onChange(of: coordinator.listModel.selectedIndex) { newIndex in
-                    guard newIndex < coordinator.listModel.items.count else { return }
-                    let targetId = coordinator.listModel.items[newIndex].id
+                .onChange(of: coordinator.scrollRequest) { target in
+                    guard let target, target < coordinator.listModel.items.count else { return }
+                    let targetId = coordinator.listModel.items[target].id
                     withAnimation(.easeInOut(duration: 0.15)) {
                         proxy.scrollTo(targetId, anchor: .center)
                     }
+                    coordinator.scrollRequest = nil
                 }
+            }
             }
 
             // 底部提示
@@ -159,16 +175,8 @@ struct CommandPaletteRow: View {
     let searchText: String
     let autoExecuteState: AutoExecuteState?
 
-    @State private var isHovered = false
-
     private var rowBackground: Color {
-        if isSelected {
-            Color.accentColor.opacity(0.15)
-        } else if isHovered {
-            Color.primary.opacity(0.05)
-        } else {
-            Color.clear
-        }
+        isSelected ? Color.accentColor.opacity(0.15) : .clear
     }
 
     var body: some View {
@@ -194,6 +202,7 @@ struct CommandPaletteRow: View {
                         Text(command.name)
                             .font(.body)
                             .foregroundColor(.secondary)
+                            .lineLimit(1)
                         Text("执行中...")
                             .font(.caption)
                             .foregroundColor(.secondary.opacity(0.7))
@@ -206,21 +215,25 @@ struct CommandPaletteRow: View {
                         HighlightedText(text: command.name, search: searchText)
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .lineLimit(1)
+                            .layoutPriority(1)
                         if !output.isEmpty {
                             Text(output)
-                                .font(.system(.callout, design: .monospaced))
+                                .font(.system(.body, design: .monospaced))
                                 .foregroundColor(.primary)
                                 .lineLimit(1)
                         }
                     }
                 case .failure(let error):
                     HStack(spacing: 4) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.orange)
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.red)
                             .font(.caption)
                         HighlightedText(text: command.name, search: searchText)
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .lineLimit(1)
+                            .layoutPriority(1)
                         Text(error)
                             .font(.callout)
                             .foregroundColor(.red)
@@ -236,6 +249,7 @@ struct CommandPaletteRow: View {
                         HighlightedText(text: command.name, search: searchText)
                             .font(.body)
                             .foregroundColor(.primary)
+                            .lineLimit(1)
                     }
                 }
                 if let wd = command.workingDirectory, !wd.isEmpty {
@@ -256,7 +270,6 @@ struct CommandPaletteRow: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(rowBackground)
-        .onHover { isHovered = $0 }
         .contentShape(Rectangle())
     }
 }

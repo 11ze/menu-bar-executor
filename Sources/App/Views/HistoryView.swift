@@ -3,6 +3,7 @@ import SwiftUI
 struct HistoryView: View {
     @ObservedObject private var history = ExecutionHistory.shared
     @State private var selectedRecord: ExecutionRecord?
+    @State private var showingClearConfirmation = false
     @Environment(\.dismiss) private var dismiss
 
     // 使用静态常量避免每次渲染重新创建 DateFormatter
@@ -22,7 +23,7 @@ struct HistoryView: View {
                 Spacer()
                 if !history.records.isEmpty {
                     Button("清空历史") {
-                        history.clearHistory()
+                        showingClearConfirmation = true
                     }
                 }
             }
@@ -34,7 +35,7 @@ struct HistoryView: View {
             if history.records.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 48))
+                        .font(.system(size: 36))
                         .foregroundColor(.secondary)
                     Text("暂无执行记录")
                         .foregroundColor(.secondary)
@@ -49,6 +50,7 @@ struct HistoryView: View {
                                     .foregroundColor(record.success ? .green : .red)
                                 Text(record.commandName)
                                     .font(.body)
+                                    .lineLimit(1)
                                 Spacer()
                                 Text(Self.dateFormatter.string(from: record.executedAt))
                                     .font(.caption)
@@ -84,6 +86,14 @@ struct HistoryView: View {
             }
         }
         .frame(minWidth: 600, minHeight: 450)
+        .alert("确认清空", isPresented: $showingClearConfirmation) {
+            Button("清空", role: .destructive) {
+                history.clearHistory()
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("确定要清空所有执行记录吗？")
+        }
     }
 }
 

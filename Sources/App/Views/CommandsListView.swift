@@ -66,12 +66,13 @@ struct CommandsListView: View {
                         if command.autoExecute {
                             Image(systemName: "bolt.fill")
                                 .foregroundColor(.orange)
-                                .font(.system(size: 9))
+                                .font(.caption)
                         }
 
                         VStack(alignment: .leading, spacing: 4) {
                             Text(command.name)
                                 .font(.body)
+                                .lineLimit(1)
                             HStack(spacing: 6) {
                                 Text(command.command)
                                     .font(.caption)
@@ -80,10 +81,10 @@ struct CommandsListView: View {
                                 if let group = command.group, !group.isEmpty {
                                     Text(group)
                                         .font(.caption2)
-                                        .foregroundColor(.blue)
+                                        .foregroundColor(.secondary)
                                         .padding(.horizontal, 4)
                                         .padding(.vertical, 1)
-                                        .background(Color.blue.opacity(0.1))
+                                        .background(Color.primary.opacity(0.08))
                                         .cornerRadius(3)
                                 }
                             }
