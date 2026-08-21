@@ -156,12 +156,15 @@ final class CommandPaletteWindowController: NSWindowController {
     }
 
     func show() {
-        // 从磁盘重新加载配置，确保显示最新的命令（解决外部编辑文件后的刷新问题）
+        // 已可见时不再重置透明度，避免打断正在进行的淡入造成闪烁
+        let isFreshShow = !isPanelVisible
+
+        // 触发后台刷新配置（外部修改由监听兜底，读盘不阻塞本次显示）
         settings.reloadSilent()
         PaletteCoordinator.shared.reset()
 
         // 保存当前输入法（防止 show() 被重复调用时覆盖原始输入法记录）
-        if !isPanelVisible {
+        if isFreshShow {
             previousInputSourceID = InputSourceHelper.currentInputSourceID()
         }
 
@@ -177,12 +180,20 @@ final class CommandPaletteWindowController: NSWindowController {
         } else {
             panel.center()
         }
+        // 先置透明再显示，避免 orderFront 以全不透明闪现一帧
+        if isFreshShow { panel.alphaValue = 0 }
         panel.makeKeyAndOrderFront(nil)
         keyMonitor.start()
+        if isFreshShow {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = PaletteConfig.fadeDuration
+                panel.animator().alphaValue = 1
+            }
+        }
 
-        // 延迟执行自动命令，确保面板先渲染出来
+        // 下一 runloop 执行自动命令，让面板先开始渲染
         // 不能依赖 SwiftUI .onAppear，因为 NSPanel show/hide 循环不会重复触发 .onAppear
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        DispatchQueue.main.async {
             PaletteCoordinator.shared.executeAutoCommands()
         }
     }
@@ -195,12 +206,14 @@ final class CommandPaletteWindowController: NSWindowController {
         let restoreID = previousInputSourceID
         previousInputSourceID = nil
 
-        // 保存位置和尺寸（updatePaletteFrame 内部先从磁盘加载最新配置，防止覆盖外部修改）
         let frame = panel.frame
-        if isPositionValid(at: frame.origin) {
+        let frameIsValid = isPositionValid(at: frame.origin)
+
+        // 瞬间隐藏；位置保存在窗口消失后执行，磁盘写不阻塞关闭
+        panel.orderOut(nil)
+        if frameIsValid {
             settings.updatePaletteFrame(origin: frame.origin, size: frame.size)
         }
-        panel.orderOut(nil)
 
         // 在面板完全隐藏、系统窗口管理完成后，再恢复输入法。
         // 必须在 orderOut 之后执行：.nonactivatingPanel 的 orderOut 会触发系统

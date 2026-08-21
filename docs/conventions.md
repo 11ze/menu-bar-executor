@@ -3,7 +3,7 @@
 - **单例**: `@MainActor` + `static let shared`，视图用 `@ObservedObject`（非 `@StateObject`）
 - **Command 主键**: UUID（非 name），内部 `internal(set)` 允许修复重复 ID
 - **配置写入**: 外部只读 `settings`，写入走 intent 方法（`setLaunchAtLogin` / `setDefaultInputSource` / `touchUpdateCheckDate` / `setSkippedVersion` / `saveCommands` / `updatePaletteFrame`），`save()` 私有；原子写入（`.tmp` 中转 + `replaceItem`）+ 回滚保护（`isLoaded` 标志防止空值覆盖）
-- **文件监听**: `DispatchSource.makeFileSystemObjectSource` 监听 `.write`；自身写入走原子替换（rename）不产生 `.write` 事件，无需跳过标志，0.3s 防抖；`AppSettingsManager` 可注入文件路径测试（`init(filePath:enableFileMonitoring:notifyLoadError:)`，测试关通知防泄漏系统弹窗），`shared` 走 `AppPaths`
+- **文件监听**: `DispatchSource.makeFileSystemObjectSource` 监听 `[.write, .delete, .rename]`（外部就地写与原子替换都触发重载）；自身写入也会经旧 fd 绕一圈触发重载，读回相同内容后自然吸收，无需跳过标志，0.3s 防抖；外部修改靠监听同步进内存，intent 方法（含 `updatePaletteFrame`）不读盘，内存即真相；`reloadSilent` 读盘+解码在后台线程，主线程只应用结果，token 守卫防乱序覆盖；`AppSettingsManager` 可注入文件路径测试（`init(filePath:enableFileMonitoring:notifyLoadError:)`，测试关通知防泄漏系统弹窗），`shared` 走 `AppPaths`
 - **配置迁移**: 旧格式迁移（echo 分隔符假分组、重复 UUID）收口在 `AppSettings.migrateIfNeeded(_:)` 纯函数，`load()` / `importSettings(from:)` 统一调用
 - **命令镜像**: `CommandsManager.commands` 唯一来源是 `$settings.map(\.commands).removeDuplicates()` 直连；外部修改/导入/重载都走这条链，勿新增同步链或通知中转（settingsDidReload 通知已删除）
 - **面板**: `NSPanel`（无标题栏，透明背景）+ SwiftUI `windowBackgroundColor` 实色圆角背景 + `PaletteContainerView` 拦截键盘事件

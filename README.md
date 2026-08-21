@@ -1,6 +1,6 @@
 # MenuBarExecutor
 
-macOS 菜单栏命令执行器 —— 像 Spotlight 一样轻量，像终端一样强大。
+macOS 菜单栏命令执行器，让你快速执行自定义 Shell 命令。
 
 ```
   全局快捷键 → 弹出面板 → 搜索/选择 → 执行 → 搞定

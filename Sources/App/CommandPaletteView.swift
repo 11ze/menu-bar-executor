@@ -94,6 +94,8 @@ struct CommandPaletteView: View {
                             }
                         }
                     }
+                    // 自动执行结果切换（loading → 成功/失败）时，行内图标/字号/行高变化平滑过渡
+                    .animation(.easeInOut(duration: PaletteConfig.rowTransitionDuration), value: coordinator.autoExecuteResults)
                 }
                 .coordinateSpace(name: "scroll")
                 .onPreferenceChange(RowPositionsPreferenceKey.self) { positions in
@@ -106,7 +108,7 @@ struct CommandPaletteView: View {
                 .onChange(of: coordinator.scrollRequest) { target in
                     guard let target, target < coordinator.listModel.items.count else { return }
                     let targetId = coordinator.listModel.items[target].id
-                    withAnimation(.easeInOut(duration: 0.15)) {
+                    withAnimation(.easeInOut(duration: PaletteConfig.rowTransitionDuration)) {
                         proxy.scrollTo(targetId, anchor: .center)
                     }
                     coordinator.scrollRequest = nil

@@ -20,6 +20,13 @@ final class AppSettingsManagerTests: XCTestCase {
         tempDirectory.appendingPathComponent("settings.json")
     }
 
+    /// 模拟外部编辑器的原子替换写（.tmp 中转 + rename 覆盖，与自身 save() 同款）
+    private func atomicallyReplace(fileURL: URL, with data: Data) throws {
+        let tempURL = fileURL.appendingPathExtension("tmp")
+        try data.write(to: tempURL)
+        try FileManager.default.replaceItem(at: fileURL, withItemAt: tempURL, backupItemName: nil, resultingItemURL: nil)
+    }
+
     // MARK: - 迁移纯函数
 
     func testMigrateIfNeeded_FakeGroupSeparator() {
@@ -176,6 +183,21 @@ final class AppSettingsManagerTests: XCTestCase {
         }
     }
 
+    /// 外部原子替换（写 .tmp + rename 覆盖，编辑器常见写法）也要触发重载
+    @MainActor
+    func testExternalAtomicReplace_TriggersReload() async throws {
+        let fileURL = makeFileURL()
+        try Data(#"{"commands": []}"#.utf8).write(to: fileURL)
+
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: true)
+
+        try atomicallyReplace(fileURL: fileURL, with: Data(#"{"commands": [], "skippedVersion": "7.7.7"}"#.utf8))
+
+        try await waitUntil(timeout: 3) {
+            manager.settings.skippedVersion == "7.7.7"
+        }
+    }
+
     /// 自身 save 后紧跟外部写：save 不得干扰下一次外部修改触发的重载
     /// （原「自身 save 不触发重载通知」的观察面随 settingsDidReload 通知删除，
     ///   回环语义由本测试覆盖：若 save 误触发重载，外部写的时序窗口会被扰动）
@@ -196,9 +218,9 @@ final class AppSettingsManagerTests: XCTestCase {
         }
     }
 
-    /// 写帧前必须从磁盘重载：内存落后于磁盘时写帧，磁盘上外部修改的字段不丢
+    /// 内存即真相：监听关闭（内存与磁盘脱节）时写帧，不再读盘兜底，磁盘上的外部修改会被内存覆盖
     @MainActor
-    func testUpdatePaletteFrame_KeepsExternalChangesOnDisk() throws {
+    func testUpdatePaletteFrame_MemoryWinsWhenMemoryStale() throws {
         let fileURL = makeFileURL()
         try Data(#"{"commands": []}"#.utf8).write(to: fileURL)
 
@@ -212,7 +234,66 @@ final class AppSettingsManagerTests: XCTestCase {
         let reader = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
         XCTAssertEqual(reader.settings.palettePosition, CGPoint(x: 10, y: 20))
         XCTAssertEqual(reader.settings.paletteSize, NSSize(width: 300, height: 500))
+        XCTAssertNotEqual(reader.settings.skippedVersion, "5.0.0")
+    }
+
+    /// 守护新机制：监听开着时外部原子替换被重载进内存，写帧不丢外部字段
+    @MainActor
+    func testUpdatePaletteFrame_AfterMonitorSync_KeepsExternalChanges() async throws {
+        let fileURL = makeFileURL()
+        try Data(#"{"commands": []}"#.utf8).write(to: fileURL)
+
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: true)
+
+        try atomicallyReplace(fileURL: fileURL, with: Data(#"{"commands": [], "skippedVersion": "5.0.0"}"#.utf8))
+
+        try await waitUntil(timeout: 3) {
+            manager.settings.skippedVersion == "5.0.0"
+        }
+
+        manager.updatePaletteFrame(origin: CGPoint(x: 10, y: 20), size: NSSize(width: 300, height: 500))
+
+        let reader = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        XCTAssertEqual(reader.settings.palettePosition, CGPoint(x: 10, y: 20))
+        XCTAssertEqual(reader.settings.paletteSize, NSSize(width: 300, height: 500))
         XCTAssertEqual(reader.settings.skippedVersion, "5.0.0")
+    }
+
+    /// reloadSilent 后台执行：磁盘内容最终被应用到内存
+    @MainActor
+    func testReloadSilent_EventuallyAppliesDiskContent() async throws {
+        let fileURL = makeFileURL()
+        try Data(#"{"commands": []}"#.utf8).write(to: fileURL)
+
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false, notifyLoadError: false)
+
+        try Data(#"{"commands": [], "skippedVersion": "4.2.0"}"#.utf8).write(to: fileURL)
+        manager.reloadSilent()
+
+        try await waitUntil(timeout: 3) {
+            manager.settings.skippedVersion == "4.2.0"
+        }
+    }
+
+    /// 外部原子替换写入坏 JSON 后，监听不得死寂：随后外部就地修复文件仍要触发重载
+    /// （解码失败的 reloadSilent 也要对齐监听到新 inode，否则坏文件期间外部修改全部丢失）
+    @MainActor
+    func testBrokenJSONThenExternalFix_StillReloads() async throws {
+        let fileURL = makeFileURL()
+        try Data(#"{"commands": []}"#.utf8).write(to: fileURL)
+
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: true)
+
+        try atomicallyReplace(fileURL: fileURL, with: Data("not json at all".utf8))
+        // 等防抖 0.3s + 后台读盘跑完，失败路径对监听的影响已定型
+        try await Task.sleep(nanoseconds: 1_000_000_000)
+
+        // 就地修复（同 inode，只产生 .write 事件）
+        try Data(#"{"commands": [], "skippedVersion": "6.6.6"}"#.utf8).write(to: fileURL)
+
+        try await waitUntil(timeout: 3) {
+            manager.settings.skippedVersion == "6.6.6"
+        }
     }
 
     // MARK: - 轮询等待

@@ -207,6 +207,8 @@ final class AppSettingsManager: ObservableObject {
     private var fileMonitorSource: DispatchSourceFileSystemObject?
     private var monitorFileDescriptor: Int32 = -1
     private var debounceTask: Task<Void, Never>?
+    /// reloadSilent 乱序守卫：并发发起多次后台重载时，只应用最新一次的结果
+    private var reloadToken = 0
 
     /// 注入文件路径与监听、错误通知开关；shared 走默认配置，测试走临时目录
     init(filePath: URL, enableFileMonitoring: Bool = true, notifyLoadError: Bool = true) {
@@ -241,7 +243,8 @@ final class AppSettingsManager: ObservableObject {
 
         fileMonitorSource = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fd,
-            eventMask: .write,
+            // .delete/.rename 覆盖外部编辑器的原子替换写（rename 覆盖不产生 .write）
+            eventMask: [.write, .delete, .rename],
             queue: DispatchQueue(label: "com.menu-bar-executor.settings-monitor")
         )
 
@@ -269,7 +272,8 @@ final class AppSettingsManager: ObservableObject {
     }
 
     private func handleFileChange() {
-        // 到达这里的都是外部就地写：自身 save() 走原子替换（rename），不产生 .write 事件
+        // 到达这里的有外部就地写（.write）和外部原子替换（.rename/.delete）；
+        // 自身 save() 的原子替换也会经旧 fd 绕一圈到达，读回相同内容后自然吸收，无需跳过标志
         // 防抖：0.3 秒内多次变化只重载一次
         debounceTask?.cancel()
         debounceTask = Task { [weak self] in
@@ -279,10 +283,42 @@ final class AppSettingsManager: ObservableObject {
         }
     }
 
-    /// 自动重载（不弹通知，不弹错误）
+    /// 统一解码入口：iso8601 日期策略是所有读盘路径（load / reloadSilent / importSettings）的共同契约
+    private static func decodeSettings(from data: Data) throws -> AppSettings {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try decoder.decode(AppSettings.self, from: data)
+    }
+
+    /// 自动重载（不弹通知，不弹错误）：读盘+解码在后台，主线程只应用结果，
+    /// 调用方（面板 show / 文件监听防抖）不承担磁盘 IO 的主线程阻塞
     func reloadSilent() {
-        load(notifyError: false)
-        restartFileMonitoring()
+        reloadToken += 1
+        let token = reloadToken
+        let path = filePath.path
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            // 读盘或解码失败也要回主线程重建监听：外部原子替换写坏文件后旧 fd 已失效，
+            // 不重建则坏文件期间的后续外部修改全部丢失（restart 幂等，文件不存在时自动 no-op）
+            guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
+                  let decoded = try? Self.decodeSettings(from: data) else {
+                Task { @MainActor [weak self] in
+                    self?.restartFileMonitoring()
+                }
+                return
+            }
+
+            Task { @MainActor [weak self] in
+                guard let self, token == self.reloadToken else { return }
+                self.settings = decoded
+                self.isLoaded = true
+                if AppSettings.migrateIfNeeded(&self.settings) {
+                    self.save()
+                } else {
+                    self.restartFileMonitoring()
+                }
+            }
+        }
     }
 
     // MARK: - 加载
@@ -295,10 +331,10 @@ final class AppSettingsManager: ObservableObject {
         }
         do {
             let data = try Data(contentsOf: filePath)
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            settings = try decoder.decode(AppSettings.self, from: data)
+            settings = try Self.decodeSettings(from: data)
             isLoaded = true
+            // 使在飞的后台 reloadSilent 结果失效，防止旧快照覆盖本次同步结果
+            reloadToken += 1
             if AppSettings.migrateIfNeeded(&settings) {
                 save()
             }
@@ -340,9 +376,8 @@ final class AppSettingsManager: ObservableObject {
         }
     }
 
-    /// 更新面板帧（位置和尺寸）：写帧前先从磁盘加载最新配置，防止用旧内存数据覆盖外部修改
+    /// 更新面板帧（位置和尺寸）：内存即真相，外部修改由增强后的文件监听同步进内存
     func updatePaletteFrame(origin: CGPoint?, size: NSSize?) {
-        load(notifyError: false)
         var changed = false
         if let origin = origin, settings.palettePosition != origin {
             settings.palettePosition = origin
@@ -418,9 +453,7 @@ final class AppSettingsManager: ObservableObject {
 
     func importSettings(from url: URL) throws {
         let data = try Data(contentsOf: url)
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        settings = try decoder.decode(AppSettings.self, from: data)
+        settings = try Self.decodeSettings(from: data)
         _ = AppSettings.migrateIfNeeded(&settings)
         save()
     }

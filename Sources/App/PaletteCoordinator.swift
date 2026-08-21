@@ -19,10 +19,14 @@ enum PaletteConfig {
     static let maxQuickSelectCount = 9
     /// 滚动位置容差（像素）
     static let scrollPositionTolerance: CGFloat = 10
+    /// 面板淡入时长
+    static let fadeDuration: TimeInterval = 0.1
+    /// 列表行内布局过渡时长（自动执行结果切换、导航滚动）
+    static let rowTransitionDuration: TimeInterval = 0.15
 }
 
 // MARK: - 自动执行状态
-enum AutoExecuteState {
+enum AutoExecuteState: Equatable {
     case loading
     case success(String)
     case failure(String)
