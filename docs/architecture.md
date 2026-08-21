@@ -112,7 +112,7 @@ Sources/App/
 ├── AppDelegate.swift                     # 菜单栏 + 快捷键 + 辅助功能权限
 │
 ├── Command.swift                         # 命令模型 (UUID, Codable)
-├── AppSettings.swift                     # 配置结构 + AppSettingsManager 单例 (intent 写入收口)
+├── AppSettings.swift                     # 配置结构 + 迁移纯函数 + AppSettingsManager 单例 (intent 写入收口, 可注入路径测试)
 ├── CommandsManager.swift                 # 命令列表管理 (CRUD)
 ├── CommandExecutor.swift                 # Shell 执行器 (Process + 超时 + ExecutionMode/ExecutionResult + 历史/通知副作用)
 ├── ExecutionHistory.swift                # 执行历史 (最近 100 条)
@@ -141,6 +141,7 @@ Sources/App/
 Tests/
 ├── AppErrorTests.swift
 ├── AppSettingsTests.swift
+├── AppSettingsManagerTests.swift
 ├── CommandTests.swift
 ├── ExecutionRecordTests.swift
 ├── HighlightedTextRangeTests.swift

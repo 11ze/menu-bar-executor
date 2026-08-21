@@ -39,6 +39,7 @@
 		CD6A6BD24AB0C55D28CD9779 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9FB859C1EEB745C249C5457E /* Assets.xcassets */; };
 		D469D296671EB4CE39A95B82 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BEF0C2CBF810F2B83BDF275 /* AppSettings.swift */; };
 		D8B8CDDCF471BD4691C5B774 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBB51205F4901BA6B86D689A /* NotificationManager.swift */; };
+		EDF123FBD298F11BFBFD25FA /* AppSettingsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1469E7C1B9EBDE5E18C8E5CD /* AppSettingsManagerTests.swift */; };
 		F08E0469B2C6301EEBB84F9B /* StringExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED99260826BDCB59EAABC110 /* StringExtensions.swift */; };
 /* End PBXBuildFile section */
 
@@ -55,6 +56,7 @@
 /* Begin PBXFileReference section */
 		0273E4B92C6E63DC1F19704E /* CommandExecutorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandExecutorTests.swift; sourceTree = "<group>"; };
 		0ACB75E92D607A4CB1C6BD53 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		1469E7C1B9EBDE5E18C8E5CD /* AppSettingsManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsManagerTests.swift; sourceTree = "<group>"; };
 		14B1163230FFB666809580CC /* ExecutionRecordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecutionRecordTests.swift; sourceTree = "<group>"; };
 		1F375BA81AAC5D1C6B2CC03D /* CommandsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandsManager.swift; sourceTree = "<group>"; };
 		2AE8ECCB3862E2750844530F /* AppSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsTests.swift; sourceTree = "<group>"; };
@@ -123,6 +125,7 @@
 			isa = PBXGroup;
 			children = (
 				2F783E56BB95AC1D984491C4 /* AppErrorTests.swift */,
+				1469E7C1B9EBDE5E18C8E5CD /* AppSettingsManagerTests.swift */,
 				2AE8ECCB3862E2750844530F /* AppSettingsTests.swift */,
 				0273E4B92C6E63DC1F19704E /* CommandExecutorTests.swift */,
 				3B0A1B3CD55B63263017DFD5 /* CommandTests.swift */,
@@ -317,6 +320,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BF06435E3725DE00E3F21E08 /* AppErrorTests.swift in Sources */,
+				EDF123FBD298F11BFBFD25FA /* AppSettingsManagerTests.swift in Sources */,
 				4EEAA1CAA1CA16BC9BBF3162 /* AppSettingsTests.swift in Sources */,
 				5EB73BCBBAF6A42BC149CAF3 /* CommandExecutorTests.swift in Sources */,
 				81EA2202F22F926C4EB31B25 /* CommandTests.swift in Sources */,

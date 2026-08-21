@@ -169,11 +169,9 @@ final class CommandPaletteWindowController: NSWindowController {
         let restoreID = previousInputSourceID
         previousInputSourceID = nil
 
-        // 保存位置和尺寸
+        // 保存位置和尺寸（updatePaletteFrame 内部先从磁盘加载最新配置，防止覆盖外部修改）
         let frame = panel.frame
         if isPositionValid(at: frame.origin) {
-            // 先从磁盘加载最新配置，防止用旧数据覆盖外部修改
-            settings.load(notifyError: false)
             settings.updatePaletteFrame(origin: frame.origin, size: frame.size)
         }
         panel.orderOut(nil)
