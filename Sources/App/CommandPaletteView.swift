@@ -1,25 +1,4 @@
-import Combine
 import SwiftUI
-
-// MARK: - 面板配置常量
-enum PaletteConfig {
-    /// 面板关闭动画完成后执行命令的延迟
-    static let executionDelay: TimeInterval = 0.1
-    /// 焦点设置延迟（确保窗口完全显示）
-    static let focusDelay: TimeInterval = 0.05
-    /// 默认尺寸
-    static let defaultWidth: CGFloat = 500
-    static let defaultHeight: CGFloat = 480
-    /// 尺寸范围
-    static let minWidth: CGFloat = 300
-    static let minHeight: CGFloat = 250
-    static let maxWidth: CGFloat = 800
-    static let maxHeight: CGFloat = 1000
-    /// 快捷键最大数量（⌘+1 到 ⌘+9）
-    static let maxQuickSelectCount = 9
-    /// 滚动位置容差（像素）
-    static let scrollPositionTolerance: CGFloat = 10
-}
 
 // MARK: - 行位置 PreferenceKey
 private struct RowPosition: Equatable {
@@ -31,182 +10,6 @@ private struct RowPositionsPreferenceKey: PreferenceKey {
     static var defaultValue: [RowPosition] = []
     static func reduce(value: inout [RowPosition], nextValue: () -> [RowPosition]) {
         value.append(contentsOf: nextValue())
-    }
-}
-
-// MARK: - 自动执行状态
-enum AutoExecuteState {
-    case loading
-    case success(String)
-    case failure(String)
-}
-
-// MARK: - 面板列表项
-enum PaletteItem: Identifiable, Equatable {
-    case groupHeader(String)
-    case command(Command, displayIndex: Int)
-
-    var id: String {
-        switch self {
-        case .groupHeader(let name): return "header-\(name)"
-        case .command(let cmd, _): return "cmd-\(cmd.id.uuidString)"
-        }
-    }
-
-    var isCommand: Bool {
-        if case .command = self { return true }
-        return false
-    }
-
-    var command: Command? {
-        if case .command(let cmd, _) = self { return cmd }
-        return nil
-    }
-}
-
-// MARK: - PaletteCoordinator
-// 协调器：连接 NSView 键盘事件和 SwiftUI 状态，统一管理搜索和选中状态
-@MainActor
-final class PaletteCoordinator: ObservableObject {
-    static let shared = PaletteCoordinator()
-
-    @Published var selectedIndex: Int = 0
-    @Published var searchText: String = "" { didSet { updatePaletteItems() } }
-    @Published private(set) var paletteItems: [PaletteItem] = []
-    @Published var firstVisibleIndex: Int = 0  // 第一个可见行的索引（用于相对编号）
-    @Published var autoExecuteResults: [UUID: AutoExecuteState] = [:]
-
-    private var cancellables = Set<AnyCancellable>()
-
-    init() {
-        paletteItems = buildPaletteItems(from: CommandsManager.shared.commands)
-
-        // 监听命令列表变化，自动更新
-        CommandsManager.shared.$commands
-            .sink { [weak self] _ in
-                self?.updatePaletteItems()
-            }
-            .store(in: &cancellables)
-    }
-
-    private func buildPaletteItems(from commands: [Command]) -> [PaletteItem] {
-        let grouped = Dictionary(grouping: commands, by: { $0.group?.isEmpty == true ? nil : $0.group })
-        let sortedGroups = CommandsManager.sortedGroupNames(
-            from: commands,
-            groupOrder: AppSettingsManager.shared.settings.groupOrder
-        )
-
-        var items: [PaletteItem] = []
-        var displayIndex = 1
-
-        for group in sortedGroups {
-            guard let groupCommands = grouped[group] else { continue }
-
-            if let groupName = group {
-                items.append(.groupHeader(groupName))
-            }
-
-            for cmd in groupCommands {
-                items.append(.command(cmd, displayIndex: displayIndex))
-                displayIndex += 1
-            }
-        }
-
-        return items
-    }
-
-    private func updatePaletteItems() {
-        let filtered = CommandsManager.filteredCommands(from: CommandsManager.shared.commands, by: searchText)
-        let newItems = buildPaletteItems(from: filtered)
-        guard newItems != paletteItems else { return }
-        paletteItems = newItems
-        adjustSelectedIndex()
-    }
-
-    private func adjustSelectedIndex() {
-        if paletteItems.isEmpty {
-            selectedIndex = 0
-            return
-        }
-        if selectedIndex >= paletteItems.count {
-            selectedIndex = 0
-        }
-        // 向后找最近的 command 项
-        for i in selectedIndex..<paletteItems.count {
-            if paletteItems[i].isCommand { selectedIndex = i; return }
-        }
-        // 从头找
-        for i in 0..<selectedIndex {
-            if paletteItems[i].isCommand { selectedIndex = i; return }
-        }
-        selectedIndex = 0
-    }
-
-    func refreshCommands() {
-        updatePaletteItems()
-    }
-
-    func moveUp() {
-        var idx = selectedIndex - 1
-        while idx >= 0 && !paletteItems[idx].isCommand { idx -= 1 }
-        if idx >= 0 { selectedIndex = idx }
-    }
-
-    func moveDown() {
-        var idx = selectedIndex + 1
-        while idx < paletteItems.count && !paletteItems[idx].isCommand { idx += 1 }
-        if idx < paletteItems.count { selectedIndex = idx }
-    }
-
-    func execute(_ command: Command) {
-        CommandPaletteWindowController.shared.hide()
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: UInt64(PaletteConfig.executionDelay * 1_000_000_000))
-            CommandExecutor.shared.execute(command: command, mode: .userInitiated)
-        }
-    }
-
-    func executeSelected() {
-        guard selectedIndex < paletteItems.count,
-              let cmd = paletteItems[selectedIndex].command else { return }
-        execute(cmd)
-    }
-
-    func reset() {
-        selectedIndex = 0
-        searchText = ""  // didSet 会调用 updatePaletteItems()
-        firstVisibleIndex = 0
-        autoExecuteResults.removeAll()
-    }
-
-    func executeAutoCommands() {
-        let autoCommands = paletteItems.compactMap { item -> Command? in
-            guard case .command(let cmd, _) = item, cmd.autoExecute else { return nil }
-            return cmd
-        }
-        guard !autoCommands.isEmpty else { return }
-
-        for command in autoCommands {
-            autoExecuteResults[command.id] = .loading
-
-            CommandExecutor.shared.execute(command: command, mode: .auto) { [weak self] result in
-                guard let self else { return }
-                switch result {
-                case .success(let output):
-                    let trimmed = output?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                    self.autoExecuteResults[command.id] = .success(trimmed)
-                case .exitedAbnormally(_, let output):
-                    let trimmed = output?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                    self.autoExecuteResults[command.id] = .failure(trimmed.isEmpty ? "执行失败" : trimmed)
-                case .failed(let error):
-                    self.autoExecuteResults[command.id] = .failure(error.localizedDescription)
-                }
-            }
-        }
-    }
-
-    func clearSearch() {
-        searchText = ""
     }
 }
 
@@ -227,7 +30,7 @@ struct CommandPaletteView: View {
                     .focused($isSearchFocused)
                     .onChange(of: coordinator.searchText) { _ in
                         // 重置到第一个可执行命令项（跳过 groupHeader）
-                        coordinator.selectedIndex = coordinator.paletteItems.firstIndex(where: { $0.isCommand }) ?? 0
+                        coordinator.selectFirstCommand()
                     }
                 if !coordinator.searchText.isEmpty {
                     Button(action: {
@@ -248,17 +51,16 @@ struct CommandPaletteView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        ForEach(Array(coordinator.paletteItems.enumerated()), id: \.element.id) { index, item in
+                        ForEach(Array(coordinator.listModel.items.enumerated()), id: \.element.id) { index, item in
                             switch item {
                             case .groupHeader(let groupName):
                                 GroupHeaderRow(title: groupName)
                                     .id(item.id)
                             case .command(let command, let absoluteIndex):
-                                let displayIndex = relativeDisplayIndex(for: absoluteIndex, at: coordinator.firstVisibleIndex)
                                 CommandPaletteRow(
                                     command: command,
-                                    displayIndex: displayIndex,
-                                    isSelected: index == coordinator.selectedIndex,
+                                    displayIndex: coordinator.listModel.relativeDisplayIndex(forAbsolute: absoluteIndex),
+                                    isSelected: index == coordinator.listModel.selectedIndex,
                                     searchText: coordinator.searchText,
                                     autoExecuteState: coordinator.autoExecuteResults[command.id]
                                 )
@@ -283,14 +85,13 @@ struct CommandPaletteView: View {
                 .onPreferenceChange(RowPositionsPreferenceKey.self) { positions in
                     // 找到 minY 最接近 0 且在容差范围内的行作为第一个可见行
                     let tolerance = PaletteConfig.scrollPositionTolerance
-                    if let first = positions.filter({ $0.minY >= -tolerance }).min(by: { abs($0.minY) < abs($1.minY) }),
-                       coordinator.firstVisibleIndex != first.index {
-                        coordinator.firstVisibleIndex = first.index
+                    if let first = positions.filter({ $0.minY >= -tolerance }).min(by: { abs($0.minY) < abs($1.minY) }) {
+                        coordinator.updateFirstVisibleIndex(first.index)
                     }
                 }
-                .onChange(of: coordinator.selectedIndex) { newIndex in
-                    guard newIndex < coordinator.paletteItems.count else { return }
-                    let targetId = coordinator.paletteItems[newIndex].id
+                .onChange(of: coordinator.listModel.selectedIndex) { newIndex in
+                    guard newIndex < coordinator.listModel.items.count else { return }
+                    let targetId = coordinator.listModel.items[newIndex].id
                     withAnimation(.easeInOut(duration: 0.15)) {
                         proxy.scrollTo(targetId, anchor: .center)
                     }
@@ -329,20 +130,6 @@ struct CommandPaletteView: View {
         .onDisappear {
             coordinator.reset()
         }
-    }
-
-    /// 根据绝对 displayIndex 和 firstVisibleIndex 计算相对快捷键编号
-    private func relativeDisplayIndex(for absoluteIndex: Int, at firstVisiblePaletteIndex: Int) -> Int {
-        let items = coordinator.paletteItems
-        // 找到 firstVisibleIndex 处或之后的第一个 command 项的绝对编号
-        var firstVisibleAbsoluteIndex = 1
-        for i in max(0, firstVisiblePaletteIndex)..<items.count {
-            if case .command(_, let idx) = items[i] {
-                firstVisibleAbsoluteIndex = idx
-                break
-            }
-        }
-        return max(1, absoluteIndex - firstVisibleAbsoluteIndex + 1)
     }
 }
 

@@ -95,7 +95,7 @@ AppSettingsManager.shared ──── 核心配置
     │       ├── NotificationManager.shared
     │       └── ExecutionHistory.shared
     │
-    ├── PaletteCoordinator.shared ── 面板状态
+    ├── PaletteCoordinator.shared ── 面板执行协调 (列表派生在 PaletteListModel 纯函数)
     ├── LaunchAtLoginManager.shared ── 开机自启
     ├── UpdateManager.shared ── 版本更新
     │
@@ -118,8 +118,10 @@ Sources/App/
 ├── ExecutionHistory.swift                # 执行历史 (最近 100 条)
 ├── NotificationManager.swift             # 系统通知
 │
-├── CommandPaletteView.swift              # 命令面板 SwiftUI 视图 + PaletteCoordinator
-├── CommandPaletteWindowController.swift  # 面板窗口 (NSPanel + 毛玻璃)
+├── PaletteListModel.swift                 # 面板列表快照 (纯值类型, derive/导航/相对编号可测)
+├── PaletteCoordinator.swift               # 面板协调器 (列表派生在 PaletteListModel, 只留执行副作用)
+├── CommandPaletteView.swift               # 命令面板 SwiftUI 视图 + 行视图
+├── CommandPaletteWindowController.swift   # 面板窗口 (NSPanel + 毛玻璃)
 ├── HighlightedText.swift                 # 搜索高亮组件
 │
 ├── Views/
@@ -142,9 +144,12 @@ Tests/
 ├── AppErrorTests.swift
 ├── AppSettingsTests.swift
 ├── AppSettingsManagerTests.swift
+├── CommandExecutorTests.swift
 ├── CommandTests.swift
+├── CommandsManagerTests.swift
 ├── ExecutionRecordTests.swift
 ├── HighlightedTextRangeTests.swift
+├── PaletteListModelTests.swift
 ├── StringExtensionsTests.swift
 └── UpdateInfoTests.swift
 

@@ -39,10 +39,10 @@ final class PaletteContainerView: NSView {
            (1...9).contains(num) {
             Task { @MainActor in
                 let coordinator = PaletteCoordinator.shared
-                let items = coordinator.paletteItems
+                let items = coordinator.listModel.items
                 // 从 firstVisibleIndex 开始，找第 N 个 command 项
                 let visibleCommands = items.enumerated()
-                    .filter { $0.offset >= coordinator.firstVisibleIndex && $0.element.isCommand }
+                    .filter { $0.offset >= coordinator.listModel.firstVisibleIndex && $0.element.isCommand }
                 if let target = visibleCommands.dropFirst(num - 1).first,
                    let cmd = target.element.command {
                     coordinator.execute(cmd)
