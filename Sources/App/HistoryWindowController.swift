@@ -6,8 +6,21 @@ final class HistoryWindowController: NSObject {
     static let shared = HistoryWindowController()
 
     private var window: NSWindow?
-    private var eventMonitor: Any?
     private var hasWindowObserver = false
+
+    private lazy var keyMonitor = KeyDownMonitor { [weak self] event in
+        guard let self = self, let window = self.window, window.isKeyWindow else { return event }
+
+        // Cmd+, 打开设置
+        if event.modifierFlags.contains(.command),
+           let chars = event.charactersIgnoringModifiers,
+           chars == KeyCode.settingsShortcut {
+            SettingsWindowController.shared.showWindow()
+            return nil
+        }
+
+        return event
+    }
 
     private override init() {
         super.init()
@@ -15,15 +28,14 @@ final class HistoryWindowController: NSObject {
 
     deinit {
         NotificationCenter.default.removeObserver(self)
-        if let monitor = eventMonitor {
-            NSEvent.removeMonitor(monitor)
-        }
     }
 
     func showWindow() {
         if let window = window {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
+            // 窗口关闭过一次后监听已被移除，幂等 start 恢复
+            keyMonitor.start()
             return
         }
 
@@ -54,34 +66,10 @@ final class HistoryWindowController: NSObject {
 
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        setupEventMonitor()
-    }
-
-    private func setupEventMonitor() {
-        guard eventMonitor == nil else { return }
-        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self = self, let window = self.window, window.isKeyWindow else { return event }
-
-            // Cmd+, 打开设置
-            if event.modifierFlags.contains(.command),
-               let chars = event.charactersIgnoringModifiers,
-               chars == KeyCode.settingsShortcut {
-                SettingsWindowController.shared.showWindow()
-                return nil
-            }
-
-            return event
-        }
-    }
-
-    private func removeEventMonitor() {
-        if let monitor = eventMonitor {
-            NSEvent.removeMonitor(monitor)
-            eventMonitor = nil
-        }
+        keyMonitor.start()
     }
 
     @objc private func windowWillClose() {
-        removeEventMonitor()
+        keyMonitor.stop()
     }
 }

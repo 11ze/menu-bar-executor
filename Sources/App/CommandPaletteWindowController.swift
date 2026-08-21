@@ -61,8 +61,38 @@ final class CommandPaletteWindowController: NSWindowController {
     private var panel: KeyPanel!
     private var paletteView: PaletteContainerView!
     private let settings = AppSettingsManager.shared
-    private var eventMonitor: Any?
     private var previousInputSourceID: String?
+
+    private lazy var keyMonitor = KeyDownMonitor { [weak self] event in
+        guard let self, self.panel.isKeyWindow else { return event }
+
+        let keyCode = event.keyCode
+
+        // 拦截导航键
+        if keyCode == KeyCode.upArrow {
+            PaletteCoordinator.shared.moveUp()
+            return nil
+        }
+        if keyCode == KeyCode.downArrow {
+            PaletteCoordinator.shared.moveDown()
+            return nil
+        }
+        if keyCode == KeyCode.escape {
+            if PaletteCoordinator.shared.searchText.isEmpty {
+                self.hide()
+            } else {
+                PaletteCoordinator.shared.clearSearch()
+            }
+            return nil
+        }
+        if keyCode == KeyCode.returnKey {
+            PaletteCoordinator.shared.executeSelected()
+            return nil
+        }
+
+        // 其他键正常传递
+        return event
+    }
     private init() {
         // 获取保存的尺寸或使用默认值
         let savedSize = settings.settings.paletteSize ?? NSSize(width: PaletteConfig.defaultWidth, height: PaletteConfig.defaultHeight)
@@ -107,10 +137,6 @@ final class CommandPaletteWindowController: NSWindowController {
 
     deinit {
         NotificationCenter.default.removeObserver(self)
-        // eventMonitor 的移除可以在任何线程进行
-        if let monitor = eventMonitor {
-            NSEvent.removeMonitor(monitor)
-        }
     }
 
     required init?(coder: NSCoder) {
@@ -152,7 +178,7 @@ final class CommandPaletteWindowController: NSWindowController {
             panel.center()
         }
         panel.makeKeyAndOrderFront(nil)
-        setupEventMonitor()
+        keyMonitor.start()
 
         // 延迟执行自动命令，确保面板先渲染出来
         // 不能依赖 SwiftUI .onAppear，因为 NSPanel show/hide 循环不会重复触发 .onAppear
@@ -163,7 +189,7 @@ final class CommandPaletteWindowController: NSWindowController {
 
     func hide() {
         guard isPanelVisible else { return }
-        removeEventMonitor()
+        keyMonitor.stop()
 
         // 捕获并立即清空，防止 windowDidResignKey → hide() 重复恢复
         let restoreID = previousInputSourceID
@@ -184,47 +210,6 @@ final class CommandPaletteWindowController: NSWindowController {
                 guard InputSourceHelper.currentInputSourceID() != restoreID else { return }
                 _ = InputSourceHelper.switchToInputSource(id: restoreID)
             }
-        }
-    }
-
-    private func setupEventMonitor() {
-        guard eventMonitor == nil else { return }
-        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self, self.panel.isKeyWindow else { return event }
-
-            let keyCode = event.keyCode
-
-            // 拦截导航键
-            if keyCode == KeyCode.upArrow {
-                PaletteCoordinator.shared.moveUp()
-                return nil
-            }
-            if keyCode == KeyCode.downArrow {
-                PaletteCoordinator.shared.moveDown()
-                return nil
-            }
-            if keyCode == KeyCode.escape {
-                if PaletteCoordinator.shared.searchText.isEmpty {
-                    self.hide()
-                } else {
-                    PaletteCoordinator.shared.clearSearch()
-                }
-                return nil
-            }
-            if keyCode == KeyCode.returnKey {
-                PaletteCoordinator.shared.executeSelected()
-                return nil
-            }
-
-            // 其他键正常传递
-            return event
-        }
-    }
-
-    private func removeEventMonitor() {
-        if let monitor = eventMonitor {
-            NSEvent.removeMonitor(monitor)
-            eventMonitor = nil
         }
     }
 

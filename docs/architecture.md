@@ -131,6 +131,7 @@ Sources/App/
 │
 ├── SettingsWindowController.swift        # 设置窗口控制器
 ├── HistoryWindowController.swift         # 历史窗口控制器
+├── KeyDownMonitor.swift                  # 键盘事件监听生命周期 (start/stop 幂等, 三窗口共用)
 ├── InputSourceHelper.swift               # 输入法切换 (Carbon TIS)
 ├── LaunchAtLoginManager.swift            # 开机自启适配 (macOS 13+ SMAppService 纯系统状态)
 ├── UpdateManager.swift                   # GitHub Release 更新检查
@@ -149,6 +150,7 @@ Tests/
 ├── CommandsManagerTests.swift
 ├── ExecutionRecordTests.swift
 ├── HighlightedTextRangeTests.swift
+├── KeyDownMonitorTests.swift
 ├── PaletteListModelTests.swift
 ├── StringExtensionsTests.swift
 └── UpdateInfoTests.swift

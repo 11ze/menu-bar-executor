@@ -8,6 +8,7 @@
 - **命令镜像**: `CommandsManager.commands` 唯一来源是 `$settings.map(\.commands).removeDuplicates()` 直连；外部修改/导入/重载都走这条链，勿新增同步链或通知中转（settingsDidReload 通知已删除）
 - **面板**: `NSPanel`（无标题栏）+ `NSVisualEffectView` 毛玻璃 + `PaletteContainerView` 拦截键盘事件
 - **面板列表**: 列表派生（组装 / 选中调整 / 相对编号 / 导航）收在 `PaletteListModel` 纯值类型，`derive` 快照整体替换；`PaletteCoordinator` 只留执行副作用，勿在 coordinator 或视图里加列表组装逻辑
+- **键盘监听**: 本地 keyDown 监听一律用 `KeyDownMonitor`（start/stop 幂等，deinit 自动移除），勿手写 `addLocalMonitorForEvents` 四件套；窗口控制器在 show 时 start、willClose/hide 时 stop
 - **Dock 隐藏**: `LSUIElement = true`
 - **分组**: Command 的 `group` 字段，`groupOrder` 控制显示顺序；支持从旧版 "echo 分隔符" 自动迁移
 - **执行**: `CommandExecutor` 是唯一执行入口；`ExecutionMode` 决定副作用——userInitiated 落历史 + 按 `notification` 发通知，auto 两者皆无；结果三态 `ExecutionResult`（成功 / 非零退出 / 没跑起来）

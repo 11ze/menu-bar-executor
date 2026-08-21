@@ -39,6 +39,8 @@
 		C2DEC26C4ACFBA909E239F2E /* CommandPaletteWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D8F92FA63F5937750E9C003 /* CommandPaletteWindowController.swift */; };
 		C864C0D2A80F7C24295438DC /* ExecutionHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2AD11CD9100101B40D6639E /* ExecutionHistory.swift */; };
 		C8A01FDEC4ADE8CCC3C28302 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8BCC47786F8B40FFC7101D4 /* AppDelegate.swift */; };
+		CB77F76B4C677478690B94D5 /* KeyDownMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 301924BA85B0523E14F73241 /* KeyDownMonitorTests.swift */; };
+		CCCE11F1C1D117B09C1C7B75 /* KeyDownMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBF83F18A6C239C4D4EA821C /* KeyDownMonitor.swift */; };
 		CD6A6BD24AB0C55D28CD9779 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9FB859C1EEB745C249C5457E /* Assets.xcassets */; };
 		D469D296671EB4CE39A95B82 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BEF0C2CBF810F2B83BDF275 /* AppSettings.swift */; };
 		D8B8CDDCF471BD4691C5B774 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBB51205F4901BA6B86D689A /* NotificationManager.swift */; };
@@ -66,6 +68,7 @@
 		1F375BA81AAC5D1C6B2CC03D /* CommandsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandsManager.swift; sourceTree = "<group>"; };
 		2AE8ECCB3862E2750844530F /* AppSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsTests.swift; sourceTree = "<group>"; };
 		2F783E56BB95AC1D984491C4 /* AppErrorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppErrorTests.swift; sourceTree = "<group>"; };
+		301924BA85B0523E14F73241 /* KeyDownMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyDownMonitorTests.swift; sourceTree = "<group>"; };
 		376A98A5A89A0ADF45CB6F30 /* MenuBarExecutorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarExecutorApp.swift; sourceTree = "<group>"; };
 		39F0D8A8D516E13134948E24 /* PaletteCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletteCoordinator.swift; sourceTree = "<group>"; };
 		3B0A1B3CD55B63263017DFD5 /* CommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandTests.swift; sourceTree = "<group>"; };
@@ -85,6 +88,7 @@
 		9D936954E3895BD37AB2FE75 /* CommandPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPaletteView.swift; sourceTree = "<group>"; };
 		9FB859C1EEB745C249C5457E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B5E50BB1BA86D963A0CD98BC /* UpdateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateManager.swift; sourceTree = "<group>"; };
+		BBF83F18A6C239C4D4EA821C /* KeyDownMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyDownMonitor.swift; sourceTree = "<group>"; };
 		C2AD11CD9100101B40D6639E /* ExecutionHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecutionHistory.swift; sourceTree = "<group>"; };
 		CBB51205F4901BA6B86D689A /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		CBC6C4FAB6EA65A46AA471A0 /* CommandExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandExecutor.swift; sourceTree = "<group>"; };
@@ -140,6 +144,7 @@
 				3B0A1B3CD55B63263017DFD5 /* CommandTests.swift */,
 				14B1163230FFB666809580CC /* ExecutionRecordTests.swift */,
 				F37E8861C5434EC7DE13D7B3 /* HighlightedTextRangeTests.swift */,
+				301924BA85B0523E14F73241 /* KeyDownMonitorTests.swift */,
 				78141A7BAF7328B1A24785E4 /* PaletteListModelTests.swift */,
 				EFE67FADCE6517B7F4A18DEF /* StringExtensionsTests.swift */,
 				3DB1F1562277B9BB0C98EE58 /* UpdateInfoTests.swift */,
@@ -172,6 +177,7 @@
 				68D4E51EE67D0C67807855CA /* HighlightedText.swift */,
 				F546DA52F75C953D3F36B768 /* HistoryWindowController.swift */,
 				62F367700CD9756382417EE8 /* InputSourceHelper.swift */,
+				BBF83F18A6C239C4D4EA821C /* KeyDownMonitor.swift */,
 				E41AFE255DFA7A6BF832B709 /* LaunchAtLoginManager.swift */,
 				376A98A5A89A0ADF45CB6F30 /* MenuBarExecutorApp.swift */,
 				CBB51205F4901BA6B86D689A /* NotificationManager.swift */,
@@ -317,6 +323,7 @@
 				34242EFEEF319491EA6847FF /* HistoryView.swift in Sources */,
 				1834D30127FF381FC28D53DC /* HistoryWindowController.swift in Sources */,
 				52C1561C6863C55D7B5328C5 /* InputSourceHelper.swift in Sources */,
+				CCCE11F1C1D117B09C1C7B75 /* KeyDownMonitor.swift in Sources */,
 				310EB660DE91CC7199218BE3 /* LaunchAtLoginManager.swift in Sources */,
 				B1FC38E32260E4789659A31D /* MenuBarExecutorApp.swift in Sources */,
 				D8B8CDDCF471BD4691C5B774 /* NotificationManager.swift in Sources */,
@@ -341,6 +348,7 @@
 				7BAEC0E75C096692361C64F8 /* CommandsManagerTests.swift in Sources */,
 				1A9796A4DF21921B067A5A3B /* ExecutionRecordTests.swift in Sources */,
 				1078BEA8AA3A0FA6F4E93858 /* HighlightedTextRangeTests.swift in Sources */,
+				CB77F76B4C677478690B94D5 /* KeyDownMonitorTests.swift in Sources */,
 				B534E99793748F21A9055F51 /* PaletteListModelTests.swift in Sources */,
 				0904FBD0369D9B90A2EC5192 /* StringExtensionsTests.swift in Sources */,
 				929E3B63F5561F76E0664FE5 /* UpdateInfoTests.swift in Sources */,
