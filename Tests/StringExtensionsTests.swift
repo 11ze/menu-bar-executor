@@ -35,23 +35,6 @@ final class StringExtensionsTests: XCTestCase {
         XCTAssertEqual(result, "12345...")
     }
 
-    // MARK: - nilIfEmpty
-
-    func testNilIfEmpty_NonEmpty() {
-        let result = "hello".nilIfEmpty
-        XCTAssertEqual(result, "hello")
-    }
-
-    func testNilIfEmpty_Empty() {
-        let result = "".nilIfEmpty
-        XCTAssertNil(result)
-    }
-
-    func testNilIfEmpty_Whitespace() {
-        let result = " ".nilIfEmpty
-        XCTAssertEqual(result, " ")
-    }
-
     // MARK: - cleanVersionString
 
     func testCleanVersionString_NoPrefix() {

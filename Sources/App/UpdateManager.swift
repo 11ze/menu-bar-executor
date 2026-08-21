@@ -126,11 +126,6 @@ final class UpdateManager: ObservableObject {
         settingsManager.setSkippedVersion(version)
     }
 
-    /// 清除跳过的版本
-    func clearSkippedVersion() {
-        settingsManager.setSkippedVersion(nil)
-    }
-
     // MARK: - 私有方法
 
     /// 获取最新 Release 信息
