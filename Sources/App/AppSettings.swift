@@ -208,8 +208,8 @@ final class AppSettingsManager: ObservableObject {
     private var monitorFileDescriptor: Int32 = -1
     private var debounceTask: Task<Void, Never>?
 
-    /// 注入文件路径与是否开启监听；shared 走默认配置，测试走临时目录
-    init(filePath: URL, enableFileMonitoring: Bool = true) {
+    /// 注入文件路径与监听、错误通知开关；shared 走默认配置，测试走临时目录
+    init(filePath: URL, enableFileMonitoring: Bool = true, notifyLoadError: Bool = true) {
         self.filePath = filePath
         // 初始化时一次性解析软链接
         if let resolved = try? FileManager.default.destinationOfSymbolicLink(atPath: filePath.path) {
@@ -217,7 +217,7 @@ final class AppSettingsManager: ObservableObject {
         } else {
             resolvedFilePath = filePath
         }
-        load()
+        load(notifyError: notifyLoadError)
         if enableFileMonitoring {
             startFileMonitoring()
         }

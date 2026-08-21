@@ -77,7 +77,8 @@ final class AppSettingsManagerTests: XCTestCase {
         let broken = Data("not json at all".utf8)
         try broken.write(to: fileURL)
 
-        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        // notifyLoadError 关闭：测试环境不向系统通知中心泄漏配置错误弹窗
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false, notifyLoadError: false)
         XCTAssertTrue(manager.settings.commands.isEmpty)
 
         manager.setDefaultInputSource("com.apple.keylayout.ABC")
