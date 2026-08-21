@@ -43,10 +43,10 @@
   ├── settings.json  ←→  AppSettingsManager (intent 写入 + 原子写入 + 文件监听)
   └── history.json   ←→  ExecutionHistory   (追加读写, 最近 100 条)
           │
-          │  NotificationCenter (.settingsDidReload)
+          │  Combine $settings 直连（无通知中转）
           ▼
   ┌─────────────────────────────────────────────────────────┐
-  │  AppSettingsManager ──publish──▶ CommandsManager (CRUD) │
+  │  AppSettingsManager ──publish──▶ CommandsManager (镜像) │
   │                                                         │
   │  PaletteCoordinator ──▶ CommandExecutor ──▶ Process      │
   │                              │                          │
@@ -88,7 +88,7 @@
 ```
 AppSettingsManager.shared ──── 核心配置
     │
-    ├── CommandsManager.shared ──── 命令列表 CRUD
+    ├── CommandsManager.shared ──── 命令视图适配层
     │
     ├── CommandExecutor.shared ──── 命令执行 (Process + 超时 + 历史/通知副作用)
     │       │
@@ -113,7 +113,7 @@ Sources/App/
 │
 ├── Command.swift                         # 命令模型 (UUID, Codable)
 ├── AppSettings.swift                     # 配置结构 + 迁移纯函数 + AppSettingsManager 单例 (intent 写入收口, 可注入路径测试)
-├── CommandsManager.swift                 # 命令列表管理 (CRUD)
+├── CommandsManager.swift                 # 命令视图适配层 (镜像从 $settings 直连派生, 写入直通)
 ├── CommandExecutor.swift                 # Shell 执行器 (Process + 超时 + ExecutionMode/ExecutionResult + 历史/通知副作用)
 ├── ExecutionHistory.swift                # 执行历史 (最近 100 条)
 ├── NotificationManager.swift             # 系统通知

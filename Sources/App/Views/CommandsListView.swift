@@ -18,7 +18,7 @@ struct CommandsListView: View {
     }()
 
     private var filteredCommands: [Command] {
-        manager.filteredCommands(by: searchText)
+        CommandsManager.filteredCommands(from: manager.commands, by: searchText)
     }
 
     var body: some View {

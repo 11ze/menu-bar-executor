@@ -97,11 +97,6 @@ struct AppSettings: Codable, Equatable {
     }
 }
 
-/// 配置重载通知
-extension Notification.Name {
-    static let settingsDidReload = Notification.Name("settingsDidReload")
-}
-
 // MARK: - 配置迁移
 
 extension AppSettings {
@@ -287,7 +282,6 @@ final class AppSettingsManager: ObservableObject {
     /// 自动重载（不弹通知，不弹错误）
     func reloadSilent() {
         load(notifyError: false)
-        NotificationCenter.default.post(name: .settingsDidReload, object: nil)
         restartFileMonitoring()
     }
 
@@ -399,7 +393,8 @@ final class AppSettingsManager: ObservableObject {
 
     // MARK: - 命令管理
 
-    func saveCommands(_ commands: [Command]) throws {
+    /// 命令列表写入（save 内部自吞错误，无失败路径对外暴露）
+    func saveCommands(_ commands: [Command]) {
         settings.commands = commands
         save()
     }
@@ -409,7 +404,6 @@ final class AppSettingsManager: ObservableObject {
     func reload() {
         load()
         notificationManager.showReloadSuccess()
-        NotificationCenter.default.post(name: .settingsDidReload, object: nil)
     }
 
     // MARK: - 导入导出
@@ -429,7 +423,5 @@ final class AppSettingsManager: ObservableObject {
         settings = try decoder.decode(AppSettings.self, from: data)
         _ = AppSettings.migrateIfNeeded(&settings)
         save()
-        // 通知下游（CommandsManager / PaletteCoordinator）命令已更新
-        NotificationCenter.default.post(name: .settingsDidReload, object: nil)
     }
 }

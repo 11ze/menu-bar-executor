@@ -91,7 +91,10 @@ final class PaletteCoordinator: ObservableObject {
 
     private func buildPaletteItems(from commands: [Command]) -> [PaletteItem] {
         let grouped = Dictionary(grouping: commands, by: { $0.group?.isEmpty == true ? nil : $0.group })
-        let sortedGroups = CommandsManager.shared.sortedGroupNames(from: commands)
+        let sortedGroups = CommandsManager.sortedGroupNames(
+            from: commands,
+            groupOrder: AppSettingsManager.shared.settings.groupOrder
+        )
 
         var items: [PaletteItem] = []
         var displayIndex = 1
@@ -113,7 +116,7 @@ final class PaletteCoordinator: ObservableObject {
     }
 
     private func updatePaletteItems() {
-        let filtered = CommandsManager.shared.filteredCommands(by: searchText)
+        let filtered = CommandsManager.filteredCommands(from: CommandsManager.shared.commands, by: searchText)
         let newItems = buildPaletteItems(from: filtered)
         guard newItems != paletteItems else { return }
         paletteItems = newItems
@@ -209,7 +212,6 @@ final class PaletteCoordinator: ObservableObject {
 
 // MARK: - CommandPaletteView
 struct CommandPaletteView: View {
-    @ObservedObject private var manager = CommandsManager.shared
     @ObservedObject private var coordinator = PaletteCoordinator.shared
 
     @FocusState private var isSearchFocused: Bool

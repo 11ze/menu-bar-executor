@@ -175,7 +175,9 @@ final class AppSettingsManagerTests: XCTestCase {
         }
     }
 
-    /// 判定实验：自身 save 后紧跟外部写。若 rename 不产生 .write 事件，save 残留的 skip 会吞掉这次外部修改
+    /// 自身 save 后紧跟外部写：save 不得干扰下一次外部修改触发的重载
+    /// （原「自身 save 不触发重载通知」的观察面随 settingsDidReload 通知删除，
+    ///   回环语义由本测试覆盖：若 save 误触发重载，外部写的时序窗口会被扰动）
     @MainActor
     func testOwnSaveThenExternalWrite_ExternalWins() async throws {
         let fileURL = makeFileURL()
@@ -191,28 +193,6 @@ final class AppSettingsManagerTests: XCTestCase {
         try await waitUntil(timeout: 3) {
             manager.settings.skippedVersion == "2.0.0"
         }
-    }
-
-    /// 自身 save 的文件变化不得触发重载通知（防自我回环）
-    @MainActor
-    func testOwnSave_DoesNotTriggerReload() async throws {
-        let fileURL = makeFileURL()
-
-        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: true)
-
-        var reloadCount = 0
-        let observer = NotificationCenter.default.addObserver(
-            forName: .settingsDidReload, object: nil, queue: .main
-        ) { _ in reloadCount += 1 }
-        defer { NotificationCenter.default.removeObserver(observer) }
-
-        manager.setSkippedVersion("1.2.3")
-        manager.setSkippedVersion("2.0.0")
-
-        try await Task.sleep(nanoseconds: 1_000_000_000)
-        XCTAssertEqual(reloadCount, 0)
-        XCTAssertEqual(manager.settings.skippedVersion, "2.0.0")
-        XCTAssertEqual(try String(contentsOf: fileURL, encoding: .utf8).contains("2.0.0"), true)
     }
 
     /// 写帧前必须从磁盘重载：内存落后于磁盘时写帧，磁盘上外部修改的字段不丢
