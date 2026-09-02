@@ -36,6 +36,13 @@ final class CommandExecutor {
         }
     }
 
+    /// 启动参数决策：默认加载完整 shell 配置（~/.zshrc + ~/.zprofile），
+    /// 保证终端里能跑的命令（含 zshrc 函数、alias、export）这里也能跑；
+    /// 直接执行跳过配置加载，换取 10ms 级启动，代价是函数/alias/zshrc 内环境变量不可用
+    nonisolated static func launchArguments(for command: Command) -> [String] {
+        command.directExecution ? ["-c", command.command] : ["-i", "-l", "-c", command.command]
+    }
+
     func execute(
         command: Command,
         mode: ExecutionMode = .userInitiated,
@@ -50,9 +57,8 @@ final class CommandExecutor {
         process.standardOutput = pipe
         process.standardError = pipe
 
-        // 使用 interactive + login shell，确保加载 ~/.zshrc 和 ~/.zprofile
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-i", "-l", "-c", command.command]
+        process.arguments = Self.launchArguments(for: command)
 
         // 设置工作目录
         if let workingDir = command.workingDirectory {

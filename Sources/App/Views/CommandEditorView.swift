@@ -10,6 +10,7 @@ struct CommandEditorView: View {
     @State private var notification: Bool
     @State private var autoExecute: Bool
     @State private var group: String
+    @State private var directExecution: Bool
 
     let onSave: (Command) -> Void
 
@@ -24,6 +25,7 @@ struct CommandEditorView: View {
             _notification = State(initialValue: command.notification)
             _autoExecute = State(initialValue: command.autoExecute)
             _group = State(initialValue: command.group ?? "")
+            _directExecution = State(initialValue: command.directExecution)
         } else {
             _name = State(initialValue: "")
             _commandText = State(initialValue: "")
@@ -31,6 +33,7 @@ struct CommandEditorView: View {
             _notification = State(initialValue: true)
             _autoExecute = State(initialValue: false)
             _group = State(initialValue: "")
+            _directExecution = State(initialValue: false)
         }
     }
 
@@ -45,7 +48,11 @@ struct CommandEditorView: View {
 
             Section("显示设置") {
                 Toggle("显示通知", isOn: $notification)
+            }
+
+            Section("执行设置") {
                 Toggle("打开面板时自动执行", isOn: $autoExecute)
+                Toggle("直接执行（跳过 shell 配置加载）", isOn: $directExecution)
             }
 
             Section {
@@ -77,7 +84,8 @@ struct CommandEditorView: View {
             workingDirectory: workingDirectory.isEmpty ? nil : workingDirectory,
             notification: notification,
             autoExecute: autoExecute,
-            group: group.isEmpty ? nil : group
+            group: group.isEmpty ? nil : group,
+            directExecution: directExecution
         )
         onSave(newCommand)
         dismiss()

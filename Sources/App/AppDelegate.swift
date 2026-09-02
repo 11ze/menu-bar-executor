@@ -37,6 +37,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             CommandPaletteWindowController.shared.toggle()
         }
 
+        // 预热面板窗口，首次呼出免付建窗成本；延一拍不拖启动
+        DispatchQueue.main.async {
+            CommandPaletteWindowController.prewarm()
+        }
+
         // 静默检查辅助功能权限
         let hasPermission = AXIsProcessTrusted()
         let hasShownPrompt = UserDefaults.standard.bool(forKey: hasShownAccessibilityPromptKey)

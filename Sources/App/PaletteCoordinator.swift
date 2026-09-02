@@ -3,8 +3,6 @@ import Foundation
 
 // MARK: - 面板配置常量
 enum PaletteConfig {
-    /// 面板关闭动画完成后执行命令的延迟
-    static let executionDelay: TimeInterval = 0.1
     /// 焦点设置延迟（确保窗口完全显示）
     static let focusDelay: TimeInterval = 0.05
     /// 默认尺寸
@@ -122,10 +120,8 @@ final class PaletteCoordinator: ObservableObject {
 
     func execute(_ command: Command) {
         CommandPaletteWindowController.shared.hide()
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: UInt64(PaletteConfig.executionDelay * 1_000_000_000))
-            CommandExecutor.shared.execute(command: command, mode: .userInitiated)
-        }
+        // hide() 同步返回无需等待；execute 内部 fork 后即返回，不阻塞主线程
+        CommandExecutor.shared.execute(command: command, mode: .userInitiated)
     }
 
     func executeSelected() {

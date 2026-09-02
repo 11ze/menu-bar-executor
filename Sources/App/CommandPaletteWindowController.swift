@@ -58,6 +58,12 @@ final class PaletteContainerView: NSView {
 final class CommandPaletteWindowController: NSWindowController {
     static let shared = CommandPaletteWindowController()
 
+    /// 预热：建窗（不显示）并强制一次离屏布局，首次呼出免付建窗与首布局成本
+    static func prewarm() {
+        _ = shared
+        shared.panel.contentView?.layoutSubtreeIfNeeded()
+    }
+
     private var panel: KeyPanel!
     private var paletteView: PaletteContainerView!
     private let settings = AppSettingsManager.shared
@@ -198,6 +204,7 @@ final class CommandPaletteWindowController: NSWindowController {
         }
     }
 
+    /// 同步 orderOut（无动画），返回后面板已从屏幕移除，调用方可立即继续后续动作
     func hide() {
         guard isPanelVisible else { return }
         keyMonitor.stop()
@@ -209,7 +216,7 @@ final class CommandPaletteWindowController: NSWindowController {
         let frame = panel.frame
         let frameIsValid = isPositionValid(at: frame.origin)
 
-        // 瞬间隐藏；位置保存在窗口消失后执行，磁盘写不阻塞关闭
+        // 位置保存在窗口消失后执行，磁盘写不阻塞关闭
         panel.orderOut(nil)
         if frameIsValid {
             settings.updatePaletteFrame(origin: frame.origin, size: frame.size)

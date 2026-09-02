@@ -67,13 +67,15 @@
           │                                  │
           ▼                                  ▼
   PaletteCoordinator.execute     PaletteCoordinator.executeAutoCommands
-          │ (面板隐藏 0.1s 后)                 │
+          │ (面板隐藏后立即)                  │
           └─────────────┬────────────────────┘
                         ▼
   CommandExecutor.shared.execute(command, mode:)
                         │
                         ▼
-  Process(/bin/zsh -i -l -c "<cmd>")  ← 30s 超时自动终止
+  launchArguments(for:) 按命令选择 shell 模式：
+    默认       Process(/bin/zsh -i -l -c "<cmd>")  ← 30s 超时自动终止
+    直接执行   Process(/bin/zsh -c "<cmd>")         ← 跳过 zshrc 加载, 10ms 级启动
                         │
                         ▼
   ExecutionResult（成功 / 非零退出 / 没跑起来）

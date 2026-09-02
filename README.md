@@ -132,7 +132,8 @@ open /tmp/menu-bar-executor-build/Build/Products/Release/MenuBarExecutor.app
       "workingDirectory": "~",
       "notification": true,
       "autoExecute": false,
-      "group": "网络工具"
+      "group": "网络工具",
+      "directExecution": false
     }
   ],
   "palettePosition": { "x": 100, "y": 200 },
@@ -154,6 +155,7 @@ open /tmp/menu-bar-executor-build/Build/Products/Release/MenuBarExecutor.app
 | `notification` | Bool | 否 | `true` | 执行后是否显示系统通知 |
 | `autoExecute` | Bool | 否 | `false` | 打开面板时自动执行 |
 | `group` | String | 否 | `null` | 分组名称 |
+| `directExecution` | Bool | 否 | `false` | 直接执行（`zsh -c` 跳过 shell 配置加载，启动 10ms 级；代价是 zshrc 里的函数/alias/环境变量不可用） |
 
 ### 全局设置
 

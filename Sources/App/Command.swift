@@ -8,6 +8,7 @@ struct Command: Identifiable, Codable, Equatable {
     var notification: Bool
     var autoExecute: Bool
     var group: String?
+    var directExecution: Bool
 
     init(
         id: UUID = UUID(),
@@ -16,7 +17,8 @@ struct Command: Identifiable, Codable, Equatable {
         workingDirectory: String? = nil,
         notification: Bool = true,
         autoExecute: Bool = false,
-        group: String? = nil
+        group: String? = nil,
+        directExecution: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -25,10 +27,11 @@ struct Command: Identifiable, Codable, Equatable {
         self.notification = notification
         self.autoExecute = autoExecute
         self.group = group
+        self.directExecution = directExecution
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, command, workingDirectory, notification, autoExecute, group
+        case id, name, command, workingDirectory, notification, autoExecute, group, directExecution
     }
 
     init(from decoder: Decoder) throws {
@@ -46,5 +49,6 @@ struct Command: Identifiable, Codable, Equatable {
         notification = try container.decodeIfPresent(Bool.self, forKey: .notification) ?? true
         autoExecute = try container.decodeIfPresent(Bool.self, forKey: .autoExecute) ?? false
         group = try container.decodeIfPresent(String.self, forKey: .group)
+        directExecution = try container.decodeIfPresent(Bool.self, forKey: .directExecution) ?? false
     }
 }

@@ -244,6 +244,45 @@ final class CommandTests: XCTestCase {
         XCTAssertTrue(decoded.autoExecute)
     }
 
+    // MARK: - directExecution
+
+    func testDefaultDirectExecution_IsFalse() {
+        let command = Command(name: "Test", command: "echo")
+        XCTAssertFalse(command.directExecution)
+    }
+
+    func testDecoding_MissingDirectExecution() throws {
+        let json = """
+        {
+            "name": "Test",
+            "command": "echo"
+        }
+        """.data(using: .utf8)!
+
+        let command = try JSONDecoder().decode(Command.self, from: json)
+        XCTAssertFalse(command.directExecution)
+    }
+
+    func testDecoding_ExplicitDirectExecution() throws {
+        let json = """
+        {
+            "name": "Test",
+            "command": "echo",
+            "directExecution": true
+        }
+        """.data(using: .utf8)!
+
+        let command = try JSONDecoder().decode(Command.self, from: json)
+        XCTAssertTrue(command.directExecution)
+    }
+
+    func testEncoding_DirectExecutionRoundTrip() throws {
+        let command = Command(name: "Fast", command: "echo hi", directExecution: true)
+        let data = try JSONEncoder().encode(command)
+        let decoded = try JSONDecoder().decode(Command.self, from: data)
+        XCTAssertTrue(decoded.directExecution)
+    }
+
     // MARK: - group
 
     func testDecoding_MissingGroup() throws {

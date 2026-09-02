@@ -37,6 +37,26 @@ final class CommandExecutorTests: XCTestCase {
         XCTAssertFalse(effects.notify)
     }
 
+    // MARK: - 启动参数
+
+    func testLaunchArguments_Default_UsesInteractiveLoginShell() {
+        let command = Command(name: "默认", command: "echo hi")
+        XCTAssertEqual(
+            CommandExecutor.launchArguments(for: command),
+            ["-i", "-l", "-c", "echo hi"],
+            "默认加载 ~/.zshrc 和 ~/.zprofile，保证终端里能跑的命令这里也能跑"
+        )
+    }
+
+    func testLaunchArguments_DirectExecution_UsesPlainShell() {
+        let command = Command(name: "直接执行", command: "echo hi", directExecution: true)
+        XCTAssertEqual(
+            CommandExecutor.launchArguments(for: command),
+            ["-c", "echo hi"],
+            "直接执行跳过 shell 配置加载"
+        )
+    }
+
     // MARK: - 集成：三态执行结果（真 Process，auto 模式不落账不发通知）
 
     @MainActor

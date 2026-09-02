@@ -20,6 +20,10 @@ _Avoid_: 弹窗、下拉
 打开面板时自动运行的 Command，结果只内联显示在面板行内。
 _Avoid_: 后台命令、定时任务
 
+**直接执行（directExecution）**:
+Command 的执行方式标记：开启后用 `zsh -c` 跳过 shell 配置加载（默认 `-i -l` 会加载 ~/.zshrc 与 ~/.zprofile）。换取 10ms 级启动，代价是 zshrc 里的函数、alias 与环境变量不可用。
+_Avoid_: 快速模式、裸 shell
+
 **执行历史（ExecutionHistory）**:
 用户主动执行留下的最近记录（上限 100 条）。⚡ 自动执行不计入。
 _Avoid_: 日志
