@@ -354,7 +354,7 @@ final class AppSettingsManager: ObservableObject {
         do {
             try AppPaths.ensureDirectoryExists()
             let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
             encoder.dateEncodingStrategy = .iso8601
             let data = try encoder.encode(settings)
 
@@ -445,7 +445,7 @@ final class AppSettingsManager: ObservableObject {
 
     func exportSettings(to url: URL) throws {
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         encoder.dateEncodingStrategy = .iso8601
         let data = try encoder.encode(settings)
         try data.write(to: url)
