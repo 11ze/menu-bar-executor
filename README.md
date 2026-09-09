@@ -36,6 +36,7 @@ macOS 菜单栏命令执行器，让你快速执行自定义 Shell 命令。
 | 命令面板 | 全局快捷键呼出、实时搜索高亮、键盘导航、`⌘+1~9` 快捷执行 |
 | 命令管理 | 图形界面增删改、拖拽排序、分组管理 |
 | 自动执行 | 标记命令在面板打开时自动运行，结果内联显示 |
+| 直接执行 | 命令级开关：`zsh -c` 跳过 shell 配置加载，10ms 级启动；代价是 zshrc 里的函数、alias、环境变量不可用 |
 | 导入/导出 | JSON 格式配置备份与恢复 |
 | 执行历史 | 最近 100 条记录，含执行时间、结果、成功/失败状态 |
 | 配置热重载 | 外部修改 `settings.json` 后自动重新加载 |
@@ -46,7 +47,6 @@ macOS 菜单栏命令执行器，让你快速执行自定义 Shell 命令。
 ## 系统要求
 
 - macOS 12.0+
-- 开发需要 Xcode 15.0+
 
 ## 安装
 
@@ -57,6 +57,8 @@ macOS 菜单栏命令执行器，让你快速执行自定义 Shell 命令。
 3. 首次运行需在 **系统设置 > 隐私与安全性** 中允许
 
 ### 从源码构建
+
+需要 Xcode 15.0+：
 
 ```bash
 git clone https://github.com/11ze/menu-bar-executor.git
@@ -72,100 +74,11 @@ open /tmp/menu-bar-executor-build/Build/Products/Release/MenuBarExecutor.app
 
 ## 使用方法
 
-### 快捷键
-
-| 快捷键 | 功能 |
-|--------|------|
-| 全局快捷键 | 呼出/关闭命令面板（可在设置中配置） |
-| `⌘+1` ~ `⌘+9` | 快捷执行第 N 条可见命令 |
-| `↑` `↓` | 上下选择命令 |
-| `Enter` | 执行选中命令 |
-| `Esc` | 清空搜索，再按关闭面板 |
-| `⌘+,` | 打开设置窗口 |
-| `⌘+H` | 打开执行历史 |
-| `⌘+R` | 重载设置文件 |
-
-### 菜单栏交互
-
-```
-  左键点击图标 ──▶ 呼出/关闭命令面板
-  右键点击图标 ──▶ 弹出菜单:
-                    ├── 设置...       ⌘,
-                    ├── 重载设置      ⌘R
-                    ├── 执行历史      ⌘H
-                    ├── ─────────────
-                    ├── 检查更新
-                    ├── ─────────────
-                    └── 退出          ⌘Q
-```
-
-### 添加命令
-
-1. 右键菜单栏图标 → **设置...**（或 `⌘+,`）
-2. 点击 **+** 添加新命令
-3. 填写信息：
-
-| 字段 | 说明 |
-|------|------|
-| 名称 | 面板中显示的命令名 |
-| 命令 | 要执行的 Shell 命令 |
-| 工作目录 | 命令执行的目录（默认 `~`） |
-| 显示通知 | 执行完成后弹出系统通知 |
-| 自动执行 | 打开面板时自动运行，结果内联显示 |
-| 分组 | 归属的分组名称（可选） |
-
-### 导入导出
-
-在设置窗口中点击「导出」/「导入」按钮，JSON 格式备份和恢复配置。
+全局快捷键默认未设置，首次使用请在 **设置** 中录制；左键点击菜单栏图标同样可以呼出/关闭面板。命令的增删改、分组与排序都在设置窗口完成（面板打开时按 `⌘+,`）。
 
 ## 配置文件
 
-路径：`~/.config/menu-bar-executor/settings.json`
-
-```json
-{
-  "commands": [
-    {
-      "id": "550e8400-e29b-41d4-a716-446655440000",
-      "name": "Ping Google",
-      "command": "ping -c 3 google.com",
-      "workingDirectory": "~",
-      "notification": true,
-      "autoExecute": false,
-      "group": "网络工具",
-      "directExecution": false
-    }
-  ],
-  "palettePosition": { "x": 100, "y": 200 },
-  "paletteSize": { "width": 500, "height": 480 },
-  "defaultInputSourceID": "com.apple.keylayout.ABC",
-  "launchAtLogin": false,
-  "groupOrder": ["网络工具", "部署"]
-}
-```
-
-### 命令字段
-
-| 字段 | 类型 | 必填 | 默认值 | 说明 |
-|------|------|------|--------|------|
-| `id` | String | 是 | 自动生成 | UUID 格式唯一标识 |
-| `name` | String | 是 | - | 命令名称 |
-| `command` | String | 是 | - | Shell 命令 |
-| `workingDirectory` | String | 否 | `~` | 工作目录 |
-| `notification` | Bool | 否 | `true` | 执行后是否显示系统通知 |
-| `autoExecute` | Bool | 否 | `false` | 打开面板时自动执行 |
-| `group` | String | 否 | `null` | 分组名称 |
-| `directExecution` | Bool | 否 | `false` | 直接执行（`zsh -c` 跳过 shell 配置加载，启动 10ms 级；代价是 zshrc 里的函数/alias/环境变量不可用） |
-
-### 全局设置
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `palettePosition` | Object | 面板位置 `{x, y}` |
-| `paletteSize` | Object | 面板尺寸 `{width, height}` |
-| `defaultInputSourceID` | String | 打开面板时切换到的输入法 ID |
-| `launchAtLogin` | Bool | 开机自启 |
-| `groupOrder` | [String] | 分组显示顺序 |
+路径：`~/.config/menu-bar-executor/settings.json`。可直接手改，保存后自动热重载；设置窗口中也提供 JSON 导入/导出。
 
 ## 许可证
 
