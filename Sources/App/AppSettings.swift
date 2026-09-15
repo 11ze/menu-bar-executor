@@ -351,6 +351,9 @@ final class AppSettingsManager: ObservableObject {
     private func save() {
         // 配置未加载成功时拒绝写入，防止空默认值覆盖真实配置
         guard isLoaded else { return }
+        // 内存已改（所有调用方先改后存）：统一失效在飞的 reloadSilent，
+        // 防其旧盘快照覆盖本次内存结果（isLoaded 拒绝路径除外，此时在飞读反而是自愈）
+        reloadToken += 1
         do {
             try AppPaths.ensureDirectoryExists()
             let encoder = JSONEncoder()

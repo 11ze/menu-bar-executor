@@ -275,6 +275,30 @@ final class AppSettingsManagerTests: XCTestCase {
         }
     }
 
+    /// import 期间在飞的 reloadSilent 不得把旧盘内容盖回刚导入的内存：
+    /// save() 统一失效在飞重载。在飞块的主线程应用必然排在测试方法（占着主线程）让出之后，
+    /// 因此 import 后的 sleep 结束时它已回来过，断言即钉住守卫
+    @MainActor
+    func testImportDuringInFlightReload_DoesNotOverwriteImportedSettings() async throws {
+        let fileURL = makeFileURL()
+        try Data(#"{"commands": [], "skippedVersion": "1.0.0"}"#.utf8).write(to: fileURL)
+
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false, notifyLoadError: false)
+
+        // 发起后台重载（在飞读到的是磁盘上的 1.0.0）
+        manager.reloadSilent()
+
+        // 立即导入 9.9.9（同步应用 + save 失效 token）
+        let importURL = tempDirectory.appendingPathComponent("import.json")
+        try Data(#"{"commands": [], "skippedVersion": "9.9.9"}"#.utf8).write(to: importURL)
+        try manager.importSettings(from: importURL)
+        XCTAssertEqual(manager.settings.skippedVersion, "9.9.9")
+
+        // 让在飞重载的主线程应用块回来：token 已失效，不得盖回 1.0.0
+        try await Task.sleep(nanoseconds: 500_000_000)
+        XCTAssertEqual(manager.settings.skippedVersion, "9.9.9")
+    }
+
     /// 外部原子替换写入坏 JSON 后，监听不得死寂：随后外部就地修复文件仍要触发重载
     /// （解码失败的 reloadSilent 也要对齐监听到新 inode，否则坏文件期间外部修改全部丢失）
     @MainActor
