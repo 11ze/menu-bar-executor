@@ -156,4 +156,36 @@ final class PaletteListModelTests: XCTestCase {
         XCTAssertEqual(updated.selectedIndex, 0)
         XCTAssertEqual(updated.items, model.items)
     }
+
+    // MARK: - ⌘N 快选反查
+
+    func testCommandAtVisiblePosition_FromWindowStart_SkipsGroupHeaders() {
+        let model = makeNumberedModel(firstVisibleIndex: 0)
+        XCTAssertEqual(model.command(atVisiblePosition: 1)?.name, "a")
+        XCTAssertEqual(model.command(atVisiblePosition: 3)?.name, "c")
+    }
+
+    func testCommandAtVisiblePosition_ScrolledWindow_CountsFromFirstVisible() {
+        let scrolled = makeNumberedModel(firstVisibleIndex: 2)
+        XCTAssertEqual(scrolled.command(atVisiblePosition: 1)?.name, "b")
+        XCTAssertEqual(scrolled.command(atVisiblePosition: 2)?.name, "c")
+        // 窗口之外的编号拿不到命令
+        XCTAssertNil(scrolled.command(atVisiblePosition: 3))
+    }
+
+    func testCommandAtVisiblePosition_WindowBeyondBounds_FallsBackToHead() {
+        // 与正向映射 testRelativeDisplayIndex_FirstVisibleBeyondBounds 对称：越界回退列表头
+        let model = makeNumberedModel(firstVisibleIndex: 9)
+        XCTAssertEqual(model.command(atVisiblePosition: 1)?.name, "a")
+        XCTAssertEqual(model.command(atVisiblePosition: 3)?.name, "c")
+        XCTAssertNil(model.command(atVisiblePosition: 4))
+    }
+
+    func testCommandAtVisiblePosition_NonPositiveOrEmpty_ReturnsNil() {
+        let model = makeNumberedModel(firstVisibleIndex: 0)
+        XCTAssertNil(model.command(atVisiblePosition: 0))
+
+        let empty = makeModel(items: [], selectedIndex: 0, firstVisibleIndex: 0)
+        XCTAssertNil(empty.command(atVisiblePosition: 1))
+    }
 }

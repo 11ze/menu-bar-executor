@@ -7,7 +7,7 @@
 - **配置迁移**: 旧格式迁移（echo 分隔符假分组、重复 UUID）收口在 `AppSettings.migrateIfNeeded(_:)` 纯函数，`load()` / `importSettings(from:)` 统一调用
 - **命令镜像**: `CommandsManager.commands` 唯一来源是 `$settings.map(\.commands).removeDuplicates()` 直连；外部修改/导入/重载都走这条链，勿新增同步链或通知中转
 - **面板**: `NSPanel`（无标题栏，透明背景）+ SwiftUI `windowBackgroundColor` 实色圆角背景 + `PaletteContainerView` 拦截键盘事件
-- **面板列表**: 列表派生（组装 / 选中调整 / 相对编号 / 导航）收在 `PaletteListModel` 纯值类型，`derive` 快照整体替换；`PaletteCoordinator` 只留执行副作用，勿在 coordinator 或视图里加列表组装逻辑
+- **面板列表**: 列表派生（组装 / 选中调整 / 相对编号与 ⌘N 快选反查 / 导航）收在 `PaletteListModel` 纯值类型，`derive` 快照整体替换；`PaletteCoordinator` 只留执行副作用，勿在 coordinator 或视图里加列表组装逻辑
 - **键盘监听**: 本地 keyDown 监听一律用 `KeyDownMonitor`（start/stop 幂等，deinit 自动移除），勿手写 `addLocalMonitorForEvents` 四件套；窗口控制器在 show 时 start、willClose/hide 时 stop
 - **Dock 隐藏**: `LSUIElement = true`
 - **分组**: Command 的 `group` 字段，`groupOrder` 控制显示顺序；支持从旧版 "echo 分隔符" 自动迁移

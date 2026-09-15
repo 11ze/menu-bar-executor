@@ -71,6 +71,22 @@ struct PaletteListModel: Equatable {
         return max(1, absolute - firstVisibleAbsoluteIndex + 1)
     }
 
+    /// ⌘N 快选反查：可见窗口内第 position 个命令项（1-based）；窗口内不足返回 nil
+    func command(atVisiblePosition position: Int) -> Command? {
+        guard position >= 1 else { return nil }
+        var windowStart = max(0, min(firstVisibleIndex, items.count))
+        // 窗口起点越界（空范围）时回退到列表头，与 relativeDisplayIndex 的默认起点一致
+        if windowStart == items.count {
+            windowStart = items.firstIndex(where: { $0.isCommand }) ?? windowStart
+        }
+        var remaining = position
+        for i in windowStart..<items.count where items[i].isCommand {
+            remaining -= 1
+            if remaining == 0 { return items[i].command }
+        }
+        return nil
+    }
+
     /// 向上导航：跳过组头，到顶返回 nil
     func movedUp() -> PaletteListModel? {
         var index = selectedIndex - 1
