@@ -11,4 +11,4 @@
 - **键盘监听**: 本地 keyDown 监听一律用 `KeyDownMonitor`（start/stop 幂等，deinit 自动移除），勿手写 `addLocalMonitorForEvents` 四件套；窗口控制器在 show 时 start、willClose/hide 时 stop
 - **Dock 隐藏**: `LSUIElement = true`
 - **分组**: Command 的 `group` 字段，`groupOrder` 控制显示顺序；支持从旧版 "echo 分隔符" 自动迁移
-- **执行**: `CommandExecutor` 是唯一执行入口；`ExecutionMode` 决定副作用——userInitiated 落历史 + 按 `notification` 发通知，auto 两者皆无；结果三态 `ExecutionResult`（成功 / 非零退出 / 没跑起来）
+- **执行**: `CommandExecutor` 是唯一执行入口；`ExecutionMode` 决定副作用——userInitiated 落历史 + 按 `notification` 发通知，auto 两者皆无；结果三态 `ExecutionResult`（成功 / 非零退出 / 没跑起来）；进程编排（排空管道 + 超时竞争）在 `ProcessRunner`，先读管道再等退出，勿改回先等后读（大输出会互等死锁）

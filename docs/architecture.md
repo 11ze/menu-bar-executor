@@ -30,11 +30,11 @@
           └─────────────┬────────────────────┘
                         ▼
   CommandExecutor.shared.execute(command, mode:)
-                        │
+                        │  Command → 进程翻译（launchArguments + 工作目录展开）
                         ▼
-  launchArguments(for:) 按命令选择 shell 模式：
-    默认       Process(/bin/zsh -i -l -c "<cmd>")  ← 30s 超时自动终止
-    直接执行   Process(/bin/zsh -c "<cmd>")         ← 跳过 zshrc 加载, 10ms 级启动
+  ProcessRunner.run ── 排空管道 + 超时竞争 + 一次性完成
+    默认       /bin/zsh -i -l -c "<cmd>"   ← 30s 超时自动终止
+    直接执行   /bin/zsh -c "<cmd>"          ← 跳过 zshrc 加载, 10ms 级启动
                         │
                         ▼
   ExecutionResult（成功 / 非零退出 / 没跑起来）
@@ -51,7 +51,8 @@ AppSettingsManager.shared ──── 核心配置
     │
     ├── CommandsManager.shared ──── 命令视图适配层
     │
-    ├── CommandExecutor.shared ──── 命令执行 (Process + 超时 + 历史/通知副作用)
+    ├── CommandExecutor.shared ──── 命令执行翻译 (Command → 进程) + 历史/通知副作用
+    │       （进程编排在 ProcessRunner 纯命名空间，非单例）
     │       │
     │       ├── NotificationManager.shared
     │       └── ExecutionHistory.shared

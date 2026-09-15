@@ -49,63 +49,15 @@ final class CommandExecutor {
         timeout customTimeout: TimeInterval? = nil,
         completion: (@MainActor (ExecutionResult) -> Void)? = nil
     ) {
-        let timeout = customTimeout ?? defaultTimeout
-
-        let process = Process()
-        let pipe = Pipe()
-
-        process.standardOutput = pipe
-        process.standardError = pipe
-
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = Self.launchArguments(for: command)
-
-        // 设置工作目录
-        if let workingDir = command.workingDirectory {
-            let expandedDir = NSString(string: workingDir).expandingTildeInPath
-            process.currentDirectoryURL = URL(fileURLWithPath: expandedDir)
-        }
-
-        // 超时和正常退出两个来源竞争，加锁保证回调与副作用只触发一次
-        let finishOnce = Once()
-
-        do {
-            try process.run()
-
-            DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + timeout) { [weak process] in
-                guard let process = process, process.isRunning else { return }
-                finishOnce.run {
-                    process.terminate()
-                    let result = ExecutionResult.failed(.commandTimeout(seconds: Int(timeout.rounded(.up))))
-                    Task { @MainActor in
-                        self.finish(command: command, mode: mode, result: result, completion: completion)
-                    }
-                }
-            }
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                process.waitUntilExit()
-
-                finishOnce.run {
-                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                    let output = String(data: data, encoding: .utf8)
-
-                    let result: ExecutionResult = process.terminationStatus == 0
-                        ? .success(output)
-                        : .exitedAbnormally(code: process.terminationStatus, output: output)
-
-                    Task { @MainActor in
-                        self.finish(command: command, mode: mode, result: result, completion: completion)
-                    }
-                }
-            }
-        } catch {
-            finishOnce.run {
-                let result = ExecutionResult.failed(.commandExecutionFailed(error.localizedDescription))
-                Task { @MainActor in
-                    self.finish(command: command, mode: mode, result: result, completion: completion)
-                }
-            }
+        ProcessRunner.run(
+            executableURL: URL(fileURLWithPath: "/bin/zsh"),
+            arguments: Self.launchArguments(for: command),
+            workingDirectory: command.workingDirectory.map {
+                URL(fileURLWithPath: NSString(string: $0).expandingTildeInPath)
+            },
+            timeout: customTimeout ?? defaultTimeout
+        ) { result in
+            self.finish(command: command, mode: mode, result: result, completion: completion)
         }
     }
 
@@ -155,20 +107,5 @@ final class CommandExecutor {
         case .failed(let error):
             return error.localizedDescription
         }
-    }
-}
-
-/// 一次性执行守卫
-private final class Once: @unchecked Sendable {
-    private let lock = NSLock()
-    private var done = false
-
-    func run(_ body: () -> Void) {
-        lock.lock()
-        let first = !done
-        done = true
-        lock.unlock()
-
-        if first { body() }
     }
 }
