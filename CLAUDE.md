@@ -27,3 +27,17 @@ xcodebuild test -project menu-bar-executor.xcodeproj \
 - [架构与数据流](docs/architecture.md) —— 数据流、命令执行流程、单例关系
 - [开发规范](docs/conventions.md) —— 单例、Command 主键、配置写入、文件监听、面板
 - [领域词汇表](CONTEXT.md) —— Command、分组、面板、执行模式、执行结果等术语定义
+
+## Agent skills
+
+### Issue tracker
+
+Issue 跟踪在 GitHub Issues，通过 gh CLI 读写。见 `docs/agents/issue-tracker.md`。
+
+### Triage labels
+
+使用五个默认 triage 标签。见 `docs/agents/triage-labels.md`。
+
+### Domain docs
+
+单上下文布局：根目录 `CONTEXT.md` + `docs/adr/`。见 `docs/agents/domain.md`。
