@@ -38,9 +38,11 @@ final class CommandExecutor {
 
     /// 启动参数决策：默认加载完整 shell 配置（~/.zshrc + ~/.zprofile），
     /// 保证终端里能跑的命令（含 zshrc 函数、alias、export）这里也能跑；
-    /// 直接执行跳过配置加载，换取 10ms 级启动，代价是函数/alias/zshrc 内环境变量不可用
+    /// 直接执行跳过 ~/.zshrc 换取 10ms 级启动，但保留 login（-l）——
+    /// /etc/zprofile 的 path_helper 会重建 PATH，否则登录项自启的 App 只继承
+    /// launchd 的系统默认 PATH，/usr/local/bin 等路径下的命令全部找不到
     nonisolated static func launchArguments(for command: Command) -> [String] {
-        command.directExecution ? ["-c", command.command] : ["-i", "-l", "-c", command.command]
+        command.directExecution ? ["-l", "-c", command.command] : ["-i", "-l", "-c", command.command]
     }
 
     func execute(

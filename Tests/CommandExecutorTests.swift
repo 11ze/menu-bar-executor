@@ -48,12 +48,12 @@ final class CommandExecutorTests: XCTestCase {
         )
     }
 
-    func testLaunchArguments_DirectExecution_UsesPlainShell() {
+    func testLaunchArguments_DirectExecution_UsesLoginShell() {
         let command = Command(name: "直接执行", command: "echo hi", directExecution: true)
         XCTAssertEqual(
             CommandExecutor.launchArguments(for: command),
-            ["-c", "echo hi"],
-            "直接执行跳过 shell 配置加载"
+            ["-l", "-c", "echo hi"],
+            "直接执行用 login shell：/etc/zprofile 的 path_helper 重建 PATH，登录项自启时也能找到 /usr/local/bin 等路径"
         )
     }
 

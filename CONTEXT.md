@@ -21,7 +21,7 @@ _Avoid_: 弹窗、下拉
 _Avoid_: 后台命令、定时任务
 
 **直接执行（directExecution）**:
-Command 的执行方式标记：开启后用 `zsh -c` 跳过 shell 配置加载（默认 `-i -l` 会加载 ~/.zshrc 与 ~/.zprofile）。换取 10ms 级启动，代价是 zshrc 里的函数、alias 与环境变量不可用。
+Command 的执行方式标记：开启后用 `zsh -l -c` 跳过 ~/.zshrc 加载（默认 `-i -l` 会加载 ~/.zshrc 与 ~/.zprofile）。换取 10ms 级启动，代价是 zshrc 里的函数、alias 与环境变量不可用。保留 `-l` 是因为登录项自启的 App 只继承 launchd 的默认 PATH，login shell 才能通过 /etc/zprofile 的 path_helper 重建出 /usr/local/bin 等路径。
 _Avoid_: 快速模式、裸 shell
 
 **执行历史（ExecutionHistory）**:

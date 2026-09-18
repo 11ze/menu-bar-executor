@@ -34,7 +34,7 @@
                         ▼
   ProcessRunner.run ── 排空管道 + 超时竞争 + 一次性完成
     默认       /bin/zsh -i -l -c "<cmd>"   ← 30s 超时自动终止
-    直接执行   /bin/zsh -c "<cmd>"          ← 跳过 zshrc 加载, 10ms 级启动
+    直接执行   /bin/zsh -l -c "<cmd>"        ← 跳过 zshrc 加载, 10ms 级启动; -l 保 path_helper 重建 PATH
                         │
                         ▼
   ExecutionResult（成功 / 非零退出 / 没跑起来）

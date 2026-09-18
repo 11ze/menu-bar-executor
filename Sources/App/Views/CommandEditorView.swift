@@ -52,7 +52,7 @@ struct CommandEditorView: View {
 
             Section("执行设置") {
                 Toggle("打开面板时自动执行", isOn: $autoExecute)
-                Toggle("直接执行（跳过 shell 配置加载）", isOn: $directExecution)
+                Toggle("直接执行（跳过 ~/.zshrc 加载）", isOn: $directExecution)
             }
 
             Section {
