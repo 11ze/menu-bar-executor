@@ -24,6 +24,5 @@ xcodebuild test -project menu-bar-executor.xcodeproj \
 
 ## 深入了解
 
-- [架构与数据流](docs/architecture.md) —— 数据流、命令执行流程、单例关系
-- [开发规范](docs/conventions.md) —— 单例、Command 主键、配置写入、文件监听、面板
+- [开发规范](docs/conventions.md) —— 配置写入、文件监听、命令镜像、面板、执行
 - [领域词汇表](CONTEXT.md) —— Command、分组、面板、执行模式、执行结果等术语定义
