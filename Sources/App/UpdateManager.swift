@@ -53,6 +53,10 @@ final class UpdateManager: ObservableObject {
     /// 上次检查的错误
     @Published private(set) var lastError: UpdateError?
 
+    /// 在飞的检查任务：后来的调用（典型：启动自动检查在飞时用户手动点「检查更新」）
+    /// 合流等它拿同一份网络结果，而不是早退 nil——早退会被调用方误读成「已是最新版本」
+    private var inFlightCheck: Task<UpdateInfo?, Never>?
+
     private let settingsManager = AppSettingsManager.shared
     private let notificationManager = NotificationManager.shared
 
@@ -63,9 +67,20 @@ final class UpdateManager: ObservableObject {
     /// 检查是否有新版本
     /// - Parameter force: 是否强制检查（忽略时间间隔）
     /// - Returns: 更新信息，如果没有新版本则返回 nil
+    ///
+    /// 手工验证合流（无测试注入点）：断网启动 → 2 秒内点「检查更新」→
+    /// 弹「检查更新失败」而非「已是最新版本」即通过
     func checkForUpdate(force: Bool = false) async -> UpdateInfo? {
-        guard !isChecking else { return nil }
+        if let inFlight = inFlightCheck {
+            return await inFlight.value
+        }
+        let task = Task { await performCheck(force: force) }
+        inFlightCheck = task
+        defer { inFlightCheck = nil }
+        return await task.value
+    }
 
+    private func performCheck(force: Bool) async -> UpdateInfo? {
         // 检查时间间隔
         if !force, let lastCheck = settingsManager.settings.lastUpdateCheckDate {
             let elapsed = Date().timeIntervalSince(lastCheck)
