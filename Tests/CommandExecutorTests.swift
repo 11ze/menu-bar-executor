@@ -115,4 +115,93 @@ final class CommandExecutorTests: XCTestCase {
 
         wait(for: [finished], timeout: 10)
     }
+
+    // MARK: - 集成：userInitiated 副作用链路（注入内存假件，不写真历史、不发系统通知）
+
+    @MainActor
+    private final class HistorySpy: ExecutionHistoryRecording {
+        var records: [ExecutionRecord] = []
+        func addRecord(_ record: ExecutionRecord) { records.append(record) }
+    }
+
+    @MainActor
+    private final class NotifierSpy: ExecutionNotifying {
+        var successes: [String] = []
+        var failures: [String] = []
+
+        func showSuccess(commandName: String, output: String?) {
+            successes.append(commandName)
+        }
+
+        func showFailure(commandName: String, error: String, output: String?) {
+            failures.append(commandName)
+        }
+    }
+
+    /// userInitiated 成功：落执行历史（success 标记 + 输出）且 notification 开启时发通知
+    @MainActor
+    func testExecute_UserInitiatedSuccess_RecordsAndNotifies() {
+        let history = HistorySpy()
+        let notifier = NotifierSpy()
+        let executor = CommandExecutor(history: history, notifier: notifier)
+        let command = Command(name: "回声", command: "echo side-effect", notification: true)
+        let finished = expectation(description: "执行完成")
+
+        executor.execute(command: command, mode: .userInitiated) { result in
+            guard case .success = result else {
+                return XCTFail("期望 .success，实际: \(result)")
+            }
+            XCTAssertEqual(history.records.count, 1, "userInitiated 落执行历史")
+            XCTAssertTrue(history.records[0].success)
+            XCTAssertEqual(history.records[0].output?.trimmingCharacters(in: .whitespacesAndNewlines), "side-effect")
+            XCTAssertEqual(notifier.successes, ["回声"], "notification 开启时发系统通知")
+            XCTAssertTrue(notifier.failures.isEmpty)
+            finished.fulfill()
+        }
+
+        wait(for: [finished], timeout: 10)
+    }
+
+    /// auto 模式：即使 notification 开启也不落账、不发通知（⚡ 结果只内联显示在面板）
+    @MainActor
+    func testExecute_AutoMode_HasNoSideEffects() {
+        let history = HistorySpy()
+        let notifier = NotifierSpy()
+        let executor = CommandExecutor(history: history, notifier: notifier)
+        let command = Command(name: "闪电", command: "echo auto", notification: true, autoExecute: true)
+        let finished = expectation(description: "执行完成")
+
+        executor.execute(command: command, mode: .auto) { _ in
+            XCTAssertTrue(history.records.isEmpty, "⚡ 自动执行不计入执行历史")
+            XCTAssertTrue(notifier.successes.isEmpty)
+            XCTAssertTrue(notifier.failures.isEmpty)
+            finished.fulfill()
+        }
+
+        wait(for: [finished], timeout: 10)
+    }
+
+    /// userInitiated 非零退出：落历史 success=false，通知走失败分支（命令输出即错误文案）
+    @MainActor
+    func testExecute_UserInitiatedNonZeroExit_RecordsFailureAndNotifies() {
+        let history = HistorySpy()
+        let notifier = NotifierSpy()
+        let executor = CommandExecutor(history: history, notifier: notifier)
+        let command = Command(name: "失败命令", command: "echo err-side; exit 1", notification: true)
+        let finished = expectation(description: "执行完成")
+
+        executor.execute(command: command, mode: .userInitiated) { result in
+            guard case .exitedAbnormally = result else {
+                return XCTFail("期望 .exitedAbnormally，实际: \(result)")
+            }
+            XCTAssertEqual(history.records.count, 1)
+            XCTAssertFalse(history.records[0].success)
+            XCTAssertEqual(history.records[0].output?.trimmingCharacters(in: .whitespacesAndNewlines), "err-side")
+            XCTAssertEqual(notifier.failures, ["失败命令"])
+            XCTAssertTrue(notifier.successes.isEmpty)
+            finished.fulfill()
+        }
+
+        wait(for: [finished], timeout: 10)
+    }
 }

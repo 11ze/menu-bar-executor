@@ -18,13 +18,37 @@ enum ExecutionResult {
     case failed(AppError)
 }
 
+/// 执行副作用 seam：CommandExecutor 只依赖这两个窄接口，
+/// 生产侧接 ExecutionHistory / NotificationManager，测试侧接内存假件
+@MainActor
+protocol ExecutionHistoryRecording: AnyObject {
+    func addRecord(_ record: ExecutionRecord)
+}
+
+@MainActor
+protocol ExecutionNotifying: AnyObject {
+    func showSuccess(commandName: String, output: String?)
+    func showFailure(commandName: String, error: String, output: String?)
+}
+
+extension ExecutionHistory: ExecutionHistoryRecording {}
+extension NotificationManager: ExecutionNotifying {}
+
 @MainActor
 final class CommandExecutor {
     static let shared = CommandExecutor()
 
     private let defaultTimeout: TimeInterval = 30
+    private let history: ExecutionHistoryRecording
+    private let notifier: ExecutionNotifying
 
-    private init() {}
+    init(
+        history: ExecutionHistoryRecording = ExecutionHistory.shared,
+        notifier: ExecutionNotifying = NotificationManager.shared
+    ) {
+        self.history = history
+        self.notifier = notifier
+    }
 
     /// 副作用决策：是否落账执行历史、是否发系统通知
     nonisolated static func sideEffects(command: Command, mode: ExecutionMode) -> (record: Bool, notify: Bool) {
@@ -73,7 +97,7 @@ final class CommandExecutor {
         let effects = Self.sideEffects(command: command, mode: mode)
 
         if effects.record {
-            ExecutionHistory.shared.addRecord(
+            history.addRecord(
                 ExecutionRecord(command: command, success: isSuccessful(result), output: historyOutput(result))
             )
         }
@@ -81,13 +105,13 @@ final class CommandExecutor {
         if effects.notify {
             switch result {
             case .success(let output):
-                NotificationManager.shared.showSuccess(commandName: command.name, output: output)
+                notifier.showSuccess(commandName: command.name, output: output)
             case .exitedAbnormally(_, let output):
-                NotificationManager.shared.showFailure(
+                notifier.showFailure(
                     commandName: command.name, error: output ?? "未知错误", output: output
                 )
             case .failed(let error):
-                NotificationManager.shared.showFailure(
+                notifier.showFailure(
                     commandName: command.name, error: error.localizedDescription, output: nil
                 )
             }

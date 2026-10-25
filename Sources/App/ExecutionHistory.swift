@@ -18,14 +18,18 @@ struct ExecutionRecord: Identifiable, Codable, Hashable {
     }
 }
 
+@MainActor
 final class ExecutionHistory: ObservableObject {
     static let shared = ExecutionHistory()
 
     @Published private(set) var records: [ExecutionRecord] = []
 
     private let maxRecords = 100
+    private let filePath: URL
 
-    private init() {
+    /// 注入文件路径：shared 走默认路径，测试走临时目录
+    init(filePath: URL = AppPaths.historyFile) {
+        self.filePath = filePath
         loadHistory()
     }
 
@@ -43,10 +47,10 @@ final class ExecutionHistory: ObservableObject {
     }
 
     private func loadHistory() {
-        guard FileManager.default.fileExists(atPath: AppPaths.historyFile.path) else { return }
+        guard FileManager.default.fileExists(atPath: filePath.path) else { return }
 
         do {
-            let data = try Data(contentsOf: AppPaths.historyFile)
+            let data = try Data(contentsOf: filePath)
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             records = try decoder.decode([ExecutionRecord].self, from: data)
@@ -66,7 +70,7 @@ final class ExecutionHistory: ObservableObject {
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
             encoder.dateEncodingStrategy = .iso8601
             let data = try encoder.encode(records)
-            try data.write(to: AppPaths.historyFile, options: .atomic)
+            try data.write(to: filePath, options: .atomic)
         } catch {
             // 保存失败
         }
