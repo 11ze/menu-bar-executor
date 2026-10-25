@@ -299,6 +299,24 @@ final class AppSettingsManagerTests: XCTestCase {
         XCTAssertEqual(manager.settings.skippedVersion, "9.9.9")
     }
 
+    /// 启动时 JSON 损坏（isLoaded 保持 false）后导入合法配置：导入即一次成功加载，
+    /// 必须落盘——新实例（模拟重启）读回导入内容，而不是磁盘上的旧坏 JSON
+    @MainActor
+    func testImportAfterBrokenStartup_PersistsAcrossRestart() throws {
+        let fileURL = makeFileURL()
+        try Data("not json at all".utf8).write(to: fileURL)
+
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false, notifyLoadError: false)
+
+        let importURL = tempDirectory.appendingPathComponent("import.json")
+        try Data(#"{"commands": [], "skippedVersion": "3.3.3"}"#.utf8).write(to: importURL)
+        try manager.importSettings(from: importURL)
+        XCTAssertEqual(manager.settings.skippedVersion, "3.3.3")
+
+        let restarted = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false, notifyLoadError: false)
+        XCTAssertEqual(restarted.settings.skippedVersion, "3.3.3")
+    }
+
     /// 外部原子替换写入坏 JSON 后，监听不得死寂：随后外部就地修复文件仍要触发重载
     /// （解码失败的 reloadSilent 也要对齐监听到新 inode，否则坏文件期间外部修改全部丢失）
     @MainActor

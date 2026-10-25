@@ -290,6 +290,14 @@ final class AppSettingsManager: ObservableObject {
         return try decoder.decode(AppSettings.self, from: data)
     }
 
+    /// 统一编码入口：所有写盘路径（save / exportSettings）共用同一格式契约，与 decodeSettings 对称
+    private static func encodeSettings(_ settings: AppSettings) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        encoder.dateEncodingStrategy = .iso8601
+        return try encoder.encode(settings)
+    }
+
     /// 自动重载（不弹通知，不弹错误）：读盘+解码在后台，主线程只应用结果，
     /// 调用方（面板 show / 文件监听防抖）不承担磁盘 IO 的主线程阻塞
     func reloadSilent() {
@@ -356,10 +364,7 @@ final class AppSettingsManager: ObservableObject {
         reloadToken += 1
         do {
             try AppPaths.ensureDirectoryExists()
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-            encoder.dateEncodingStrategy = .iso8601
-            let data = try encoder.encode(settings)
+            let data = try Self.encodeSettings(settings)
 
             // 原子写入
             let fileManager = FileManager.default
@@ -447,16 +452,16 @@ final class AppSettingsManager: ObservableObject {
     // MARK: - 导入导出
 
     func exportSettings(to url: URL) throws {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        encoder.dateEncodingStrategy = .iso8601
-        let data = try encoder.encode(settings)
+        let data = try Self.encodeSettings(settings)
         try data.write(to: url)
     }
 
     func importSettings(from url: URL) throws {
         let data = try Data(contentsOf: url)
         settings = try Self.decodeSettings(from: data)
+        // 导入即一次成功加载：isLoaded 置位，否则启动时坏 JSON（isLoaded=false）
+        // 会让 save() 静默拒写，导入内容重启即丢
+        isLoaded = true
         _ = AppSettings.migrateIfNeeded(&settings)
         save()
     }
