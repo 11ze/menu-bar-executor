@@ -49,15 +49,19 @@ final class CommandsManager: ObservableObject {
 
     // MARK: - 命令写入（直通后镜像经 $settings 自动回流）
 
-    func addCommand(_ command: Command) {
-        settingsManager.saveCommands(commands + [command])
+    /// 新建 / 编辑统一入口：按 id 判别身份（编辑器保存回调不再自行判别）
+    func upsert(_ command: Command) {
+        settingsManager.saveCommands(Self.upserted(command, in: commands))
     }
 
-    func updateCommand(_ command: Command) {
-        guard let index = commands.firstIndex(where: { $0.id == command.id }) else { return }
+    /// id 已知则原位替换，未知则追加
+    nonisolated static func upserted(_ command: Command, in commands: [Command]) -> [Command] {
+        guard let index = commands.firstIndex(where: { $0.id == command.id }) else {
+            return commands + [command]
+        }
         var updated = commands
         updated[index] = command
-        settingsManager.saveCommands(updated)
+        return updated
     }
 
     func deleteCommand(id: UUID) {

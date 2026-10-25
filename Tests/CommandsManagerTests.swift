@@ -35,6 +35,27 @@ final class CommandsManagerTests: XCTestCase {
         XCTAssertEqual(CommandsManager.sortedGroupNames(from: makeCommands(), groupOrder: nil), [nil, "B组", "A组"])
     }
 
+    // MARK: - upserted（新建 / 编辑的身份判别）
+
+    func testUpserted_UnknownIdAppends() {
+        let existing = Command(name: "a", command: "a")
+        let fresh = Command(name: "b", command: "b")
+
+        let result = CommandsManager.upserted(fresh, in: [existing])
+
+        XCTAssertEqual(result.map(\.name), ["a", "b"])
+    }
+
+    func testUpserted_KnownIdReplacesInPlace() {
+        let original = Command(name: "a", command: "a")
+        let edited = Command(id: original.id, name: "a2", command: "a2")
+        let other = Command(name: "z", command: "z")
+
+        let result = CommandsManager.upserted(edited, in: [original, other])
+
+        XCTAssertEqual(result.map(\.name), ["a2", "z"], "编辑保持原位置")
+    }
+
     // MARK: - filteredCommands
 
     func testFilteredCommands_EmptySearchReturnsAll() {

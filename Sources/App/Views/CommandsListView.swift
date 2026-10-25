@@ -125,11 +125,7 @@ struct CommandsListView: View {
         .frame(minWidth: 500, minHeight: 400)
         .sheet(item: $editingCommand) { command in
             CommandEditorView(command: command) { newCommand in
-                if manager.commands.contains(where: { $0.id == command.id }) {
-                    manager.updateCommand(newCommand)
-                } else {
-                    manager.addCommand(newCommand)
-                }
+                manager.upsert(newCommand)
             }
         }
         .alert("确认删除", isPresented: $showingDeleteConfirmation) {
