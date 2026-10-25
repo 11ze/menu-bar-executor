@@ -5,14 +5,6 @@ final class AppErrorTests: XCTestCase {
 
     // MARK: - AppError
 
-    func testAppError_ConfigLoadFailed() {
-        let error = AppError.configLoadFailed(NSError(domain: "test", code: 1, userInfo: nil))
-        XCTAssertNotNil(error.errorDescription)
-        XCTAssertTrue(error.errorDescription!.contains("配置加载失败"))
-        XCTAssertNotNil(error.recoverySuggestion)
-        XCTAssertTrue(error.recoverySuggestion!.contains("配置文件格式"))
-    }
-
     func testAppError_ConfigSaveFailed() {
         let error = AppError.configSaveFailed(NSError(domain: "test", code: 2, userInfo: nil))
         XCTAssertNotNil(error.errorDescription)
@@ -87,7 +79,6 @@ final class AppErrorTests: XCTestCase {
 
     func testAllAppErrorCases_HaveRecoverySuggestions() {
         let cases: [AppError] = [
-            .configLoadFailed(NSError(domain: "t", code: 0)),
             .configSaveFailed(NSError(domain: "t", code: 0)),
             .configExportFailed(NSError(domain: "t", code: 0)),
             .commandTimeout(seconds: 10),

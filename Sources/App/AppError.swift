@@ -1,7 +1,6 @@
 import Foundation
 
 enum AppError: LocalizedError {
-    case configLoadFailed(Error)
     case configSaveFailed(Error)
     case configExportFailed(Error)
     case commandTimeout(seconds: Int)
@@ -9,8 +8,6 @@ enum AppError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .configLoadFailed(let error):
-            return "配置加载失败: \(error.localizedDescription)"
         case .configSaveFailed(let error):
             return "配置保存失败: \(error.localizedDescription)"
         case .configExportFailed(let error):
@@ -24,8 +21,6 @@ enum AppError: LocalizedError {
 
     var recoverySuggestion: String? {
         switch self {
-        case .configLoadFailed:
-            return "请检查配置文件格式是否正确"
         case .configSaveFailed:
             return "请检查磁盘空间和文件权限"
         case .configExportFailed:
