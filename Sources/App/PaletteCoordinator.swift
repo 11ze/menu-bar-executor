@@ -34,38 +34,49 @@ enum AutoExecuteState: Equatable {
 // 协调器：连接 NSView 键盘事件和 SwiftUI 状态；列表派生在 PaletteListModel，此处只留执行副作用
 @MainActor
 final class PaletteCoordinator: ObservableObject {
-    static let shared = PaletteCoordinator()
+    static let shared = PaletteCoordinator(settingsManager: .shared)
 
-    @Published var searchText: String = "" { didSet { rebuild(with: CommandsManager.shared.commands) } }
+    @Published var searchText: String = "" { didSet { refreshCommands() } }
     @Published private(set) var listModel: PaletteListModel
     @Published var autoExecuteResults: [UUID: AutoExecuteState] = [:]
     /// 键盘导航请求滚动的目标索引；hover 只改选中不发请求，避免滚动与 hover 互相触发
     @Published var scrollRequest: Int?
 
     private var cancellables = Set<AnyCancellable>()
+    private let settingsManager: AppSettingsManager
+    private let runAutoCommand: @MainActor (Command, @escaping @MainActor (ExecutionResult) -> Void) -> Void
+    private var autoExecuteGeneration = 0
 
-    init() {
+    init(
+        settingsManager: AppSettingsManager,
+        runAutoCommand: @escaping @MainActor (Command, @escaping @MainActor (ExecutionResult) -> Void) -> Void = { command, completion in
+            CommandExecutor.shared.execute(command: command, mode: .auto, completion: completion)
+        }
+    ) {
+        self.settingsManager = settingsManager
+        self.runAutoCommand = runAutoCommand
         listModel = PaletteListModel.derive(
-            commands: CommandsManager.shared.commands,
+            commands: settingsManager.settings.commands,
             searchText: "",
-            groupOrder: AppSettingsManager.shared.settings.groupOrder,
+            groupOrder: settingsManager.settings.groupOrder,
             previousIndex: 0,
             previousFirstVisibleIndex: 0
         )
 
-        // 监听命令列表变化，自动更新
-        CommandsManager.shared.$commands
-            .sink { [weak self] commands in self?.rebuild(with: commands) }
+        // commands 和 groupOrder 必须取自同一次发布，避免 willSet 期间回读旧属性。
+        settingsManager.$settings
+            .removeDuplicates { $0.commands == $1.commands && $0.groupOrder == $1.groupOrder }
+            .sink { [weak self] settings in self?.rebuild(with: settings) }
             .store(in: &cancellables)
     }
 
     /// 触发收敛点：搜索变化 / 命令列表变化 / 面板呼出刷新都走这里；
-    /// commands 一律由调用方传入——$commands 的 sink 处于 willSet 阶段，回读属性会拿到旧值
-    private func rebuild(with commands: [Command]) {
+    /// 配置发布时直接使用传入快照，不回读 settingsManager.settings
+    private func rebuild(with settings: AppSettings) {
         let next = PaletteListModel.derive(
-            commands: commands,
+            commands: settings.commands,
             searchText: searchText,
-            groupOrder: AppSettingsManager.shared.settings.groupOrder,
+            groupOrder: settings.groupOrder,
             previousIndex: listModel.selectedIndex,
             previousFirstVisibleIndex: listModel.firstVisibleIndex
         )
@@ -79,7 +90,7 @@ final class PaletteCoordinator: ObservableObject {
     }
 
     func refreshCommands() {
-        rebuild(with: CommandsManager.shared.commands)
+        rebuild(with: settingsManager.settings)
     }
 
     func updateFirstVisibleIndex(_ index: Int) {
@@ -131,6 +142,8 @@ final class PaletteCoordinator: ObservableObject {
     }
 
     func reset() {
+        // 已发出的命令继续运行，旧轮次回调不得重新写入清空后的结果。
+        autoExecuteGeneration += 1
         // 复刻原顺序：先清选中与窗口，再清搜索（触发 rebuild）
         listModel = PaletteListModel(items: listModel.items, selectedIndex: 0, firstVisibleIndex: 0)
         searchText = ""
@@ -139,6 +152,8 @@ final class PaletteCoordinator: ObservableObject {
     }
 
     func executeAutoCommands() {
+        autoExecuteGeneration += 1
+        let generation = autoExecuteGeneration
         let autoCommands = listModel.items.compactMap { item -> Command? in
             guard case .command(let cmd, _) = item, cmd.autoExecute else { return nil }
             return cmd
@@ -148,8 +163,8 @@ final class PaletteCoordinator: ObservableObject {
         for command in autoCommands {
             autoExecuteResults[command.id] = .loading
 
-            CommandExecutor.shared.execute(command: command, mode: .auto) { [weak self] result in
-                guard let self else { return }
+            runAutoCommand(command) { [weak self] result in
+                guard let self, generation == self.autoExecuteGeneration else { return }
                 switch result {
                 case .success(let output):
                     let trimmed = output?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
