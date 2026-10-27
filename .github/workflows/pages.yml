@@ -1,0 +1,41 @@
+name: Deploy design preview
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/design/prototype.html
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/configure-pages@v5
+      - name: Prepare design preview
+        run: |
+          preview_dir="$RUNNER_TEMP/design-preview"
+          mkdir -p "$preview_dir"
+          cp docs/design/prototype.html "$preview_dir/index.html"
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: ${{ runner.temp }}/design-preview
+      - uses: actions/deploy-pages@v4
+        id: deployment

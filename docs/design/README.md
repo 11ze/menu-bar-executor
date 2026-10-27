@@ -4,6 +4,25 @@
 
 这是原生界面改造的 HTML 参照稿。SwiftUI 已按此稿实现命令面板、设置、命令编辑和历史布局；原生实现边界见下文。顶部导航、主题按钮和自动执行状态选择器属于设计稿查看工具，不属于软件界面。示例命令不会执行，编辑仅保存在当前页面内存中，刷新可恢复。
 
+## 在线预览与发布
+
+在线地址：<https://11ze.github.io/menu-bar-executor/>。
+
+[Pages 工作流](../../.github/workflows/pages.yml) 仅将 `docs/design/prototype.html` 复制为临时发布目录的 `index.html`，上传并部署。其他文档不进入站点，无需发布分支或仓库内的入口副本。
+
+首次发布时，将仓库 **Settings → Pages → Build and deployment → Source** 设为 **GitHub Actions**。设计稿或工作流推送到 `main` 后自动部署，也可在 Actions 中手动运行 **Deploy design preview**。
+
+预览使用示例数据，不执行 Shell，不读写本机配置，刷新恢复编辑内容。历史中的耗时、退出码和运行中状态属于设计示意，原生实现边界见下文。
+
+发布后检查 Actions 部署结果，按下文“可重复验证”操作。核对线上文件：
+
+```bash
+preview_file=$(mktemp /tmp/menu-bar-executor-preview.XXXXXX)
+curl --fail --silent --show-error \
+  https://11ze.github.io/menu-bar-executor/ -o "$preview_file"
+cmp docs/design/prototype.html "$preview_file"
+```
+
 ## 设计约定
 
 - 按 macOS 27 方向校准：系统字体、系统蓝、紧凑列表。工具栏和搜索面板使用浅色材质层次，命令与输出保持高可读性。命令与输出使用系统等宽字体。

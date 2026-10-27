@@ -1,69 +1,36 @@
 # MenuBarExecutor
 
-macOS 菜单栏命令执行器，让你快速执行自定义 Shell 命令。
+把常用 Shell 命令放进 macOS 菜单栏。按快捷键打开面板，输入名称，回车执行。
 
-```
-  全局快捷键 → 弹出面板 → 搜索/选择 → 执行 → 搞定
-```
+[下载](https://github.com/11ze/menu-bar-executor/releases/latest) · [交互预览](https://11ze.github.io/menu-bar-executor/)
 
-## 它能做什么？
+- 按名称搜索命令，支持键盘导航与 `⌘1` 至 `⌘9` 执行。
+- 打开面板时自动执行指定命令，行内查看与复制结果。
+- 命令分组、工作目录、执行历史与 JSON 配置导入导出。
+- 原生深浅色界面，可调整并保存面板尺寸。
 
-```
-  你的菜单栏多了一个小图标:
-  ┌─────────────────────────────────────────────┐
-  │  ████ ▸  ← 点击或按快捷键，弹出命令面板         │
-  └─────────────────────────────────────────────┘
-                     │
-                     ▼
-  ┌─────────────────────────────────────────────┐
-  │  🔍 搜索命令...                              │
-  ├─────────────────────────────────────────────┤
-  │  部署相关                                   │
-  │    部署到生产环境                     ⌘ 1    │
-  │    部署到预发布                       ⌘ 2    │
-  │  Docker                                     │
-  │    启动容器                           ⌘ 3    │
-  │    停止容器                           ⌘ 4    │
-  ├─────────────────────────────────────────────┤
-  │  ↑↓ 选择  ↵ 执行  Esc 关闭     历史   设置    │
-  └─────────────────────────────────────────────┘
-```
+macOS 12.0+ · SwiftUI + AppKit · [MIT](LICENSE)
 
-## 功能一览
+交互预览使用示例数据，不执行真实命令。
 
-| 功能 | 说明 |
-|------|------|
-| 命令面板 | 全局快捷键呼出、可调整并保存窗口宽高、实时搜索高亮、键盘导航、`⌘+1~9` 固定执行搜索结果前九条，结果浮层可查看与复制 |
-| 命令管理 | 图形界面增删改、组内上移、分组管理 |
-| 自动执行 | 标记命令在面板打开时自动运行，结果内联显示 |
-| 直接执行 | 命令级开关：`zsh -c` 跳过 shell 配置加载，10ms 级启动；代价是 zshrc 里的函数、alias、环境变量不可用 |
-| 导入/导出 | JSON 格式配置备份与恢复 |
-| 执行历史 | 最近 100 条记录，按名称搜索、筛选失败、复制输出（每条最多保存 500 字符） |
-| 配置热重载 | 外部修改 `settings.json` 后自动重新加载 |
-| 输入法切换 | 打开面板时自动切到指定输入法（可选） |
-| 开机自启 | macOS 13+ 原生支持 |
-| 版本更新 | 启动时检查 GitHub Release，可在通用设置中关闭自动检查，支持手动检查与跳过版本 |
+## 界面
 
-## 系统要求
-
-- macOS 12.0+
+![浅色命令面板](docs/screenshots/palette-light.png)
+![深色命令面板](docs/screenshots/palette-dark.png)
 
 ## 安装
 
-### 从 Release 下载
+1. 从 [Releases](https://github.com/11ze/menu-bar-executor/releases/latest) 下载并解压，将 `MenuBarExecutor.app` 拖入应用程序文件夹。
+2. 打开应用。若被系统拦截，在系统设置的“隐私与安全性”中允许打开。
 
-1. 前往 [Releases](../../releases) 页面下载最新版
-2. 解压，将 `MenuBarExecutor.app` 拖入「应用程序」
-3. 首次运行需在 **系统设置 > 隐私与安全性** 中允许
+## 从源码构建
 
-### 从源码构建
-
-需要 Xcode 15.0+：
+需要 Xcode 15.0+ 和 [XcodeGen](https://github.com/yonaskolb/XcodeGen)。
 
 ```bash
 git clone https://github.com/11ze/menu-bar-executor.git
 cd menu-bar-executor
-brew install xcodegen          # 首次需要
+brew install xcodegen
 xcodegen generate
 xcodebuild -project menu-bar-executor.xcodeproj \
   -scheme MenuBarExecutor \
@@ -72,19 +39,19 @@ xcodebuild -project menu-bar-executor.xcodeproj \
 open /tmp/menu-bar-executor-build/Build/Products/Release/MenuBarExecutor.app
 ```
 
-## 使用方法
+派生数据放在 `/tmp`，避免 iCloud 同步目录的扩展属性导致签名失败。修改 `project.yml` 后需重新运行 `xcodegen generate`。
 
-全局快捷键默认未设置，首次使用请在 **设置** 中录制；左键点击菜单栏图标同样可以呼出/关闭面板。命令的增删改、分组与组内上移都在设置的「命令」页完成（面板打开时按 `⌘+,`）。
+运行测试：
 
-## 配置文件
+```bash
+xcodebuild test -project menu-bar-executor.xcodeproj \
+  -scheme MenuBarExecutorTests \
+  -destination 'platform=macOS' \
+  -derivedDataPath /tmp/menu-bar-executor-build
+```
 
-路径：`~/.config/menu-bar-executor/settings.json`。可直接手改，保存后自动热重载；设置窗口中也提供 JSON 导入/导出。
+开发约定见 [开发规范](docs/conventions.md) 与 [领域词汇表](CONTEXT.md)。交互预览的发布方式见 [设计说明](docs/design/README.md#在线预览与发布)。
 
 ## 许可证
 
-MIT License
-
-
-设置分为「命令」和「通用」两页。快捷键、面板输入法、登录时启动、自动检查更新、配置导入导出位于「通用」页。自动检查更新默认开启，对应 `settings.json` 中的 `autoCheckUpdates`；旧配置无需手工补字段。
-
-界面参照与重复验收步骤见 [设计说明](docs/design/README.md)。
+[MIT](LICENSE)
