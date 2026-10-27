@@ -2,16 +2,16 @@
 
 把常用 Shell 命令放进 macOS 菜单栏。按快捷键打开面板，输入名称，回车执行。
 
-[下载](https://github.com/11ze/menu-bar-executor/releases/latest) · [交互预览](https://11ze.github.io/menu-bar-executor/)
+[下载](https://github.com/11ze/menu-bar-executor/releases/latest) · [在线预览](https://11ze.github.io/menu-bar-executor/)
 
 - 按名称搜索命令，支持键盘导航与 `⌘1` 至 `⌘9` 执行。
 - 打开面板时自动执行指定命令，行内查看与复制结果。
 - 命令分组、工作目录、执行历史与 JSON 配置导入导出。
 - 原生深浅色界面，可调整并保存面板尺寸。
 
-macOS 12.0+ · SwiftUI + AppKit · [MIT](LICENSE)
+macOS 12.0+ · SwiftUI + AppKit
 
-交互预览使用示例数据，不执行真实命令。
+在线预览使用示例数据，不执行真实命令。
 
 ## 界面
 
