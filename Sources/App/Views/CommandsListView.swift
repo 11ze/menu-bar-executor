@@ -19,7 +19,9 @@ struct CommandsListView: View {
                     Image(systemName: "magnifyingglass").foregroundColor(InterfaceStyle.muted)
                     TextField("搜索命令标题", text: $searchText).textFieldStyle(.plain)
                     if !searchText.isEmpty {
-                        Button { searchText = "" } label: { Image(systemName: "xmark.circle.fill") }
+                        Button { searchText = "" } label: {
+                            Image(systemName: "xmark.circle.fill").frame(width: 24, height: 24).contentShape(Rectangle())
+                        }
                             .buttonStyle(.plain).accessibilityLabel("清空搜索")
                     }
                 }
@@ -96,7 +98,9 @@ struct CommandsListView: View {
                 Text(command.command).font(.system(size: 11, design: .monospaced)).foregroundColor(InterfaceStyle.muted).lineLimit(1)
             }
             Spacer(minLength: 8)
-            Button("编辑") { editingCommand = command }.buttonStyle(.borderless)
+            Button { editingCommand = command } label: {
+                Text("编辑").padding(.horizontal, 8).frame(minHeight: 26).contentShape(Rectangle())
+            }.buttonStyle(.plain).foregroundColor(InterfaceStyle.muted)
             Button { manager.moveUp(command) } label: { Image(systemName: "arrow.up") }
                 .disabled(!searchText.isEmpty || !manager.canMoveUp(command))
                 .accessibilityLabel("在组内上移\(command.name)")

@@ -121,11 +121,11 @@ struct CommandEditorView: View {
         if panel.runModal() == .OK, let url = panel.url { workingDirectory = url.path }
     }
 
-    private func saveCommand() {
+    func saveCommand() {
         onSave(Command(
             id: command?.id ?? UUID(),
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-            command: commandText.trimmingCharacters(in: .whitespacesAndNewlines),
+            command: commandText,
             workingDirectory: workingDirectory.isEmpty ? nil : workingDirectory,
             notification: notification, autoExecute: autoExecute,
             group: group.isEmpty ? nil : group, directExecution: directExecution

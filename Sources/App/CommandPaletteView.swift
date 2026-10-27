@@ -15,7 +15,9 @@ struct CommandPaletteView: View {
                         .textFieldStyle(.plain).font(.system(size: 15)).focused($isSearchFocused)
                         .onChange(of: coordinator.searchText) { _ in coordinator.selectFirstCommand() }
                     if !coordinator.searchText.isEmpty {
-                        Button { coordinator.clearSearch() } label: { Image(systemName: "xmark.circle.fill") }
+                        Button { coordinator.clearSearch() } label: {
+                            Image(systemName: "xmark.circle.fill").frame(width: 24, height: 24).contentShape(Rectangle())
+                        }
                             .buttonStyle(.plain).foregroundColor(InterfaceStyle.muted).accessibilityLabel("清空搜索")
                     }
                     Keycap(text: "esc")
@@ -136,6 +138,7 @@ struct CommandPaletteRow: View {
                     HighlightedText(text: command.name, search: searchText)
                         .font(.system(size: 13, weight: .medium)).foregroundColor(isSelected ? InterfaceStyle.selectedText : InterfaceStyle.text)
                         .lineLimit(1).frame(maxWidth: result == nil ? .infinity : titleWidth, alignment: .leading)
+                        .frame(height: 36).padding(.leading, 20)
                         .contentShape(Rectangle())
                 }.buttonStyle(.plain).layoutPriority(1)
                 if let result {
@@ -143,7 +146,7 @@ struct CommandPaletteRow: View {
                         NativeResultButton(text: result.text, color: result.color, name: command.name, hovered: resultHovered) { button in
                             resultButton = button
                             openResult()
-                        }.frame(maxWidth: .infinity, maxHeight: 22)
+                        }.frame(maxWidth: .infinity).frame(height: 36)
                             .onHover { resultHovered = $0 }
                             .popover(isPresented: $showingResult, arrowEdge: .bottom) {
                                 VStack(alignment: .leading, spacing: 12) {
@@ -183,7 +186,7 @@ struct CommandPaletteRow: View {
                 }
                 if displayIndex <= PaletteConfig.maxQuickSelectCount { Keycap(text: "⌘ \(displayIndex)") }
             }
-            .padding(.leading, 20).padding(.trailing, 12).frame(height: 36)
+            .padding(.trailing, 12).frame(height: 36)
             .background(isSelected ? InterfaceStyle.selection : .clear)
             .cornerRadius(11)
         }.frame(height: 36)
