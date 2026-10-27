@@ -25,66 +25,38 @@ enum PaletteItem: Identifiable, Equatable {
 
 // MARK: - 面板列表快照
 /// 由 commands + searchText + groupOrder 派生的纯值类型；
-/// 选中索引与可见窗口随快照整体替换，视图只读
+/// 选中索引随快照整体替换，视图只读
 struct PaletteListModel: Equatable {
     let items: [PaletteItem]
     let selectedIndex: Int
-    let firstVisibleIndex: Int
 
     /// 搜索 / 命令变化时派生新快照，选中索引从 previousIndex 回绕调整
     static func derive(
         commands: [Command],
         searchText: String,
         groupOrder: [String]?,
-        previousIndex: Int,
-        previousFirstVisibleIndex: Int
+        previousIndex: Int
     ) -> PaletteListModel {
         let filtered = CommandsManager.filteredCommands(from: commands, by: searchText)
         let items = buildItems(from: filtered, groupOrder: groupOrder)
         return PaletteListModel(
             items: items,
-            selectedIndex: adjustedIndex(from: previousIndex, in: items),
-            // 列表收缩后旧窗口位置夹回界内，防后续 Range 越界
-            firstVisibleIndex: min(previousFirstVisibleIndex, max(items.count - 1, 0))
+            selectedIndex: adjustedIndex(from: previousIndex, in: items)
         )
-    }
-
-    /// 滚动回写：仅更新可见窗口起点
-    func updatingFirstVisibleIndex(_ index: Int) -> PaletteListModel {
-        PaletteListModel(items: items, selectedIndex: selectedIndex, firstVisibleIndex: index)
     }
 
     /// 选中重置（搜索文本变化时经 coordinator 调用）
     func updatingSelectedIndex(_ index: Int) -> PaletteListModel {
-        PaletteListModel(items: items, selectedIndex: index, firstVisibleIndex: firstVisibleIndex)
+        PaletteListModel(items: items, selectedIndex: index)
     }
 
-    /// 相对快捷键编号（1 = 可见窗口内第一个命令项；窗口之前的夹到 1）
-    func relativeDisplayIndex(forAbsolute absolute: Int) -> Int {
-        var firstVisibleAbsoluteIndex = 1
-        for i in max(0, min(firstVisibleIndex, items.count))..<items.count {
-            if case .command(_, let index) = items[i] {
-                firstVisibleAbsoluteIndex = index
-                break
-            }
-        }
-        return max(1, absolute - firstVisibleAbsoluteIndex + 1)
-    }
-
-    /// ⌘N 快选反查：可见窗口内第 position 个命令项（1-based）；窗口内不足返回 nil
-    func command(atVisiblePosition position: Int) -> Command? {
-        guard position >= 1 else { return nil }
-        var windowStart = max(0, min(firstVisibleIndex, items.count))
-        // 窗口起点越界（空范围）时回退到列表头，与 relativeDisplayIndex 的默认起点一致
-        if windowStart == items.count {
-            windowStart = items.firstIndex(where: { $0.isCommand }) ?? windowStart
-        }
-        var remaining = position
-        for i in windowStart..<items.count where items[i].isCommand {
-            remaining -= 1
-            if remaining == 0 { return items[i].command }
-        }
-        return nil
+    /// ⌘N 快选反查：当前搜索结果前九条，分组标题不占编号。
+    func command(atQuickSelectPosition position: Int) -> Command? {
+        guard (1...9).contains(position) else { return nil }
+        return items.first { item in
+            if case .command(_, let index) = item { return index == position }
+            return false
+        }?.command
     }
 
     /// 向上导航：跳过组头，到顶返回 nil

@@ -14,9 +14,19 @@ final class KeyDownMonitor {
 
     func start() {
         guard monitor == nil else { return }
-        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [handler] event in
-            handler(event)
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self else { return event }
+            return self.handle(event)
         }
+    }
+
+    func handle(_ event: NSEvent) -> NSEvent? {
+        guard !Self.hasMarkedText(in: (event.window ?? NSApp.keyWindow)?.firstResponder) else { return event }
+        return handler(event)
+    }
+
+    static func hasMarkedText(in responder: NSResponder?) -> Bool {
+        (responder as? NSTextInputClient)?.hasMarkedText() ?? false
     }
 
     func stop() {

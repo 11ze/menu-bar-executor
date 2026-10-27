@@ -56,6 +56,14 @@ final class CommandsManagerTests: XCTestCase {
         XCTAssertEqual(result.map(\.name), ["a2", "z"], "编辑保持原位置")
     }
 
+    func testMovingUp_OnlySwapsPreviousCommandInSameGroup() {
+        let commands = makeCommands()
+        let moved = CommandsManager.movingUp(commands[3], in: commands)
+        XCTAssertEqual(moved.map(\.name), ["u2", "b", "a", "u1"])
+        XCTAssertEqual(CommandsManager.movingUp(commands[1], in: commands), commands)
+        XCTAssertEqual(CommandsManager.movingUp(Command(name: "unknown", command: "true"), in: commands), commands)
+    }
+
     // MARK: - filteredCommands
 
     func testFilteredCommands_EmptySearchReturnsAll() {

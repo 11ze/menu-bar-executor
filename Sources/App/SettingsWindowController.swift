@@ -21,15 +21,19 @@ final class SettingsWindowController: NSWindowController {
     }
 
     private init() {
-        let contentView = CommandsListView()
+        let contentView = SettingsView()
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 600, height: 400),
+            contentRect: NSRect(x: 0, y: 0, width: 840, height: 620),
             styleMask: [.titled, .closable, .resizable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
+        window.minSize = NSSize(width: 640, height: 442)
+        window.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: 642)
         window.center()
         window.title = "设置"
+        window.titlebarAppearsTransparent = true
+        window.backgroundColor = NSColor(InterfaceStyle.material)
         window.contentView = NSHostingView(rootView: contentView)
         window.isReleasedWhenClosed = false
 
@@ -52,6 +56,12 @@ final class SettingsWindowController: NSWindowController {
     }
 
     func showWindow() {
+        if let screen = window?.screen ?? NSScreen.main, let window {
+            var frame = window.frame
+            frame.size.height = min(frame.height, screen.visibleFrame.height)
+            frame.origin.y = min(max(frame.origin.y, screen.visibleFrame.minY), screen.visibleFrame.maxY - frame.height)
+            window.setFrame(frame, display: false)
+        }
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         keyMonitor.start()

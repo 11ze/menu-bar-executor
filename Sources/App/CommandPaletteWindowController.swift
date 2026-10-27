@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Combine
 
 // MARK: - KeyCode 常量
 enum KeyCode {
@@ -7,6 +8,7 @@ enum KeyCode {
     static let returnKey: UInt16 = 36
     static let upArrow: UInt16 = 126
     static let downArrow: UInt16 = 125
+    static let tab: UInt16 = 48
     static let settingsShortcut = ","  // ⌘+, 打开设置
 }
 
@@ -21,6 +23,11 @@ final class PaletteContainerView: NSView {
     override var acceptsFirstResponder: Bool { true }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard !KeyDownMonitor.hasMarkedText(in: window?.firstResponder) else {
+            return super.performKeyEquivalent(with: event)
+        }
+        guard !CommandPaletteWindowController.shared.resultPopoverIsPresented,
+              window?.attachedSheet == nil else { return super.performKeyEquivalent(with: event) }
         // 处理 ⌘+, (打开设置)
         if event.modifierFlags.contains(.command),
            let chars = event.charactersIgnoringModifiers,
@@ -32,14 +39,14 @@ final class PaletteContainerView: NSView {
             return true
         }
 
-        // 拦截 ⌘+数字（执行相对于可见区域的命令）
+        // 拦截 ⌘+数字（执行当前搜索结果的前九条命令）
         if event.modifierFlags.contains(.command),
            let chars = event.charactersIgnoringModifiers,
            let num = Int(chars),
            (1...9).contains(num) {
             Task { @MainActor in
                 let coordinator = PaletteCoordinator.shared
-                if let cmd = coordinator.listModel.command(atVisiblePosition: num) {
+                if let cmd = coordinator.listModel.command(atQuickSelectPosition: num) {
                     coordinator.execute(cmd)
                 }
             }
@@ -63,11 +70,38 @@ final class CommandPaletteWindowController: NSWindowController {
     private var paletteView: PaletteContainerView!
     private let settings = AppSettingsManager.shared
     private var previousInputSourceID: String?
+    private var preferredHeight: CGFloat?
+    private var cancellables = Set<AnyCancellable>()
+    private let resultControls = NSHashTable<PaletteResultButton>.weakObjects()
+    var resultPopoverIsPresented = false
+    var isSearchFocused = true
+    var setSearchFocus: ((Bool) -> Void)?
+    var lastPointerLocation = NSEvent.mouseLocation
 
     private lazy var keyMonitor = KeyDownMonitor { [weak self] event in
-        guard let self, self.panel.isKeyWindow else { return event }
+        guard let self, self.panel.isKeyWindow,
+              self.panel.attachedSheet == nil, !self.resultPopoverIsPresented else { return event }
+        self.lastPointerLocation = NSEvent.mouseLocation
 
         let keyCode = event.keyCode
+
+        if keyCode == KeyCode.tab {
+            let buttons = self.resultControls.allObjects.filter { $0.window != nil && !$0.isHiddenOrHasHiddenAncestor }.sorted {
+                $0.convert($0.bounds, to: self.paletteView).minY > $1.convert($1.bounds, to: self.paletteView).minY
+            }
+            let backwards = event.modifierFlags.contains(.shift)
+            if let current = self.panel.firstResponder as? PaletteResultButton,
+               let index = buttons.firstIndex(of: current) {
+                let next = index + (backwards ? -1 : 1)
+                if buttons.indices.contains(next) { self.focusResultButton(buttons[next]) }
+                else if backwards { self.panel.selectPreviousKeyView(nil) }
+                else { self.panel.selectNextKeyView(nil) }
+            } else if self.isSearchFocused, let target = backwards ? buttons.last : buttons.first {
+                self.focusResultButton(target)
+            } else if backwards { self.panel.selectPreviousKeyView(nil) }
+            else { self.panel.selectNextKeyView(nil) }
+            return nil
+        }
 
         // 拦截导航键
         if keyCode == KeyCode.upArrow {
@@ -86,7 +120,7 @@ final class CommandPaletteWindowController: NSWindowController {
             }
             return nil
         }
-        if keyCode == KeyCode.returnKey {
+        if keyCode == KeyCode.returnKey && self.isSearchFocused && !(self.panel.firstResponder is PaletteResultButton) {
             PaletteCoordinator.shared.executeSelected()
             return nil
         }
@@ -97,6 +131,7 @@ final class CommandPaletteWindowController: NSWindowController {
     private init() {
         // 获取保存的尺寸或使用默认值
         let savedSize = settings.settings.paletteSize ?? NSSize(width: PaletteConfig.defaultWidth, height: PaletteConfig.defaultHeight)
+        preferredHeight = settings.settings.paletteSize?.height
 
         let contentView = CommandPaletteView()
         let hostingView = NSHostingView(rootView: contentView)
@@ -121,11 +156,26 @@ final class CommandPaletteWindowController: NSWindowController {
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = true
+        panel.acceptsMouseMovedEvents = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.minSize = NSSize(width: PaletteConfig.minWidth, height: PaletteConfig.minHeight)
         panel.maxSize = NSSize(width: PaletteConfig.maxWidth, height: PaletteConfig.maxHeight)
 
         super.init(window: panel)
+
+        PaletteCoordinator.shared.$listModel
+            .map(\.items)
+            .removeDuplicates()
+            .sink { [weak self] _ in
+                DispatchQueue.main.async { self?.fitContent() }
+            }.store(in: &cancellables)
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowDidEndLiveResize(_:)),
+            name: NSWindow.didEndLiveResizeNotification,
+            object: panel
+        )
 
         // 监听失焦关闭
         NotificationCenter.default.addObserver(
@@ -181,6 +231,8 @@ final class CommandPaletteWindowController: NSWindowController {
         } else {
             panel.center()
         }
+        fitContent()
+        lastPointerLocation = NSEvent.mouseLocation
         // 先置透明再显示，避免 orderFront 以全不透明闪现一帧
         if isFreshShow { panel.alphaValue = 0 }
         panel.makeKeyAndOrderFront(nil)
@@ -233,7 +285,56 @@ final class CommandPaletteWindowController: NSWindowController {
         return NSScreen.screens.contains { $0.frame.intersects(frame) }
     }
 
+    func focusResultButton(_ button: NSButton) {
+        setSearchFocus?(false)
+        DispatchQueue.main.async { button.window?.makeFirstResponder(button) }
+    }
+
+    func registerResultButton(_ button: PaletteResultButton) {
+        resultControls.add(button)
+    }
+
+    private func fitContent() {
+        guard !panel.inLiveResize else { return }
+        let items = PaletteCoordinator.shared.listModel.items
+        let screen = panel.screen ?? NSScreen.main
+        let available = screen?.visibleFrame ?? panel.frame
+        let listHeight = items.isEmpty ? CGFloat(160) : items.enumerated().reduce(CGFloat(8)) { height, entry in
+            switch entry.element {
+            case .groupHeader: return height + 25 + (entry.offset == 0 ? 0 : 4)
+            case .command: return height + 36
+            }
+        }
+        let fixedHeight: CGFloat = 52 + 32 + (items.isEmpty ? 0 : 65) + 2
+        let contentHeight = fixedHeight + min(listHeight, 460)
+        let height = min(max(preferredHeight ?? contentHeight, PaletteConfig.minHeight), PaletteConfig.maxHeight, available.height)
+        let width = min(max(panel.frame.width, PaletteConfig.minWidth), PaletteConfig.maxWidth, available.width)
+        var frame = panel.frame
+        frame.origin.y += frame.height - height
+        frame.size = NSSize(width: width, height: height)
+        frame.origin.x = min(max(frame.minX, available.minX), available.maxX - width)
+        frame.origin.y = min(max(frame.minY, available.minY), available.maxY - height)
+        panel.minSize = NSSize(width: min(PaletteConfig.minWidth, available.width), height: min(PaletteConfig.minHeight, available.height))
+        panel.maxSize = NSSize(width: min(PaletteConfig.maxWidth, available.width), height: min(PaletteConfig.maxHeight, available.height))
+        guard frame != panel.frame else { return }
+        panel.setFrame(frame, display: true)
+        panel.recalculateKeyViewLoop()
+    }
+
+    @objc private func windowDidEndLiveResize(_ notification: Notification) {
+        preferredHeight = panel.frame.height
+        fitContent()
+    }
+
+    func closeIfInactive() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, !self.panel.isKeyWindow, !self.resultPopoverIsPresented,
+                  self.panel.attachedSheet == nil else { return }
+            self.hide()
+        }
+    }
+
     @objc private func windowDidResignKey(_ notification: Notification) {
-        hide()
+        closeIfInactive()
     }
 }

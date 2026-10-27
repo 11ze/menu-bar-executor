@@ -1,172 +1,135 @@
 import SwiftUI
 
-// MARK: - 行位置 PreferenceKey
-private struct RowPosition: Equatable {
-    let index: Int
-    let minY: CGFloat
-}
-
-private struct RowPositionsPreferenceKey: PreferenceKey {
-    static var defaultValue: [RowPosition] = []
-    static func reduce(value: inout [RowPosition], nextValue: () -> [RowPosition]) {
-        value.append(contentsOf: nextValue())
-    }
-}
-
-// MARK: - CommandPaletteView
 struct CommandPaletteView: View {
     @ObservedObject private var coordinator = PaletteCoordinator.shared
-
+    @State private var editingCommand: Command?
     @FocusState private var isSearchFocused: Bool
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    private var selectedCommand: Command? {
+        guard coordinator.listModel.items.indices.contains(coordinator.listModel.selectedIndex) else { return nil }
+        return coordinator.listModel.items[coordinator.listModel.selectedIndex].command
+    }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // 搜索框
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-                TextField("搜索命令...", text: $coordinator.searchText)
-                    .textFieldStyle(.plain)
-                    .focused($isSearchFocused)
-                    .onChange(of: coordinator.searchText) { _ in
-                        // 重置到第一个可执行命令项（跳过 groupHeader）
-                        coordinator.selectFirstCommand()
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
+                HStack(spacing: 12) {
+                    Image(systemName: "magnifyingglass").font(.system(size: 19)).foregroundColor(InterfaceStyle.muted)
+                    TextField("搜索命令标题", text: $coordinator.searchText)
+                        .textFieldStyle(.plain).font(.system(size: 15)).focused($isSearchFocused)
+                        .onChange(of: coordinator.searchText) { _ in coordinator.selectFirstCommand() }
+                    if !coordinator.searchText.isEmpty {
+                        Button { coordinator.clearSearch() } label: { Image(systemName: "xmark.circle.fill") }
+                            .buttonStyle(.plain).foregroundColor(InterfaceStyle.muted).accessibilityLabel("清空搜索")
                     }
-                if !coordinator.searchText.isEmpty {
-                    Button(action: {
-                        coordinator.clearSearch()
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(8)
-            .background(Color(nsColor: .controlBackgroundColor))
-
-            Divider()
-
-            // 空状态：无命令或搜索无结果
-            if coordinator.listModel.items.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: coordinator.searchText.isEmpty ? "terminal" : "magnifyingglass")
-                        .font(.system(size: 36))
-                        .foregroundColor(.secondary)
-                    Text(coordinator.searchText.isEmpty ? "暂无命令，打开设置添加" : "未找到匹配命令")
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-            // 命令列表
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(Array(coordinator.listModel.items.enumerated()), id: \.element.id) { index, item in
-                            switch item {
-                            case .groupHeader(let groupName):
-                                GroupHeaderRow(title: groupName)
-                                    .id(item.id)
-                            case .command(let command, let absoluteIndex):
-                                CommandPaletteRow(
-                                    command: command,
-                                    displayIndex: coordinator.listModel.relativeDisplayIndex(forAbsolute: absoluteIndex),
-                                    isSelected: index == coordinator.listModel.selectedIndex,
-                                    searchText: coordinator.searchText,
-                                    autoExecuteState: coordinator.autoExecuteResults[command.id]
-                                )
-                                .id(item.id)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    coordinator.execute(command)
-                                }
-                                .onHover { hovering in
-                                    if hovering { coordinator.selectOnHover(index) }
-                                }
-                                .background(
-                                    GeometryReader { geo in
-                                        Color.clear.preference(
-                                            key: RowPositionsPreferenceKey.self,
-                                            value: [RowPosition(index: index, minY: geo.frame(in: .named("scroll")).minY)]
-                                        )
+                    Keycap(text: "esc")
+                }.padding(.horizontal, 22).frame(height: 52)
+                Divider()
+                if coordinator.listModel.items.isEmpty {
+                    VStack(spacing: 12) {
+                        Text(coordinator.searchText.isEmpty ? "暂无命令" : "未找到匹配命令").foregroundColor(InterfaceStyle.muted)
+                        Button(coordinator.searchText.isEmpty ? "添加命令" : "清空搜索") {
+                            if coordinator.searchText.isEmpty { editingCommand = Command(name: "", command: "") }
+                            else { coordinator.clearSearch(); isSearchFocused = true }
+                        }
+                    }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 0) {
+                                ForEach(Array(coordinator.listModel.items.enumerated()), id: \.element.id) { index, item in
+                                    switch item {
+                                    case .groupHeader(let name):
+                                        GroupHeaderRow(title: name)
+                                            .padding(.top, index == 0 ? 0 : 4)
+                                    case .command(let command, let displayIndex):
+                                        CommandPaletteRow(command: command, displayIndex: displayIndex,
+                                                          isSelected: index == coordinator.listModel.selectedIndex,
+                                                          searchText: coordinator.searchText,
+                                                          autoExecuteState: coordinator.autoExecuteResults[command.id])
+                                            .background(PalettePointerView { coordinator.selectOnHover(index) })
+                                            .id(item.id)
                                     }
-                                )
-                            }
+                                }
+                            }.padding(.horizontal, 8).padding(.vertical, 4)
+                        }
+                        .onChange(of: coordinator.scrollRequest) { target in
+                            guard let target, coordinator.listModel.items.indices.contains(target) else { return }
+                            isSearchFocused = true
+                            proxy.scrollTo(coordinator.listModel.items[target].id)
+                            coordinator.scrollRequest = nil
                         }
                     }
-                    // 自动执行结果切换（loading → 成功/失败）时，行内图标/字号/行高变化平滑过渡
-                    .animation(.easeInOut(duration: PaletteConfig.rowTransitionDuration), value: coordinator.autoExecuteResults)
-                }
-                .coordinateSpace(name: "scroll")
-                .onPreferenceChange(RowPositionsPreferenceKey.self) { positions in
-                    // 找到 minY 最接近 0 且在容差范围内的行作为第一个可见行
-                    let tolerance = PaletteConfig.scrollPositionTolerance
-                    if let first = positions.filter({ $0.minY >= -tolerance }).min(by: { abs($0.minY) < abs($1.minY) }) {
-                        coordinator.updateFirstVisibleIndex(first.index)
+                    if let command = selectedCommand {
+                        Divider()
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack(spacing: 10) {
+                                Text("执行内容").foregroundColor(InterfaceStyle.muted)
+                                Spacer(minLength: 4)
+                                Text(command.workingDirectory.flatMap { $0.isEmpty ? nil : $0 } ?? "默认工作目录")
+                                    .foregroundColor(InterfaceStyle.muted).lineLimit(1).truncationMode(.middle)
+                                    .help(command.workingDirectory ?? "默认工作目录")
+                                Button("编辑") { editingCommand = command }.buttonStyle(.borderless)
+                            }.font(.system(size: 11))
+                            ScrollView {
+                                Text(command.command).font(.system(size: 11, design: .monospaced))
+                                    .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }.padding(.horizontal, 20).padding(.vertical, 6).frame(height: 64)
+                            .background(InterfaceStyle.surface.opacity(0.65))
                     }
                 }
-                .onChange(of: coordinator.scrollRequest) { target in
-                    guard let target, target < coordinator.listModel.items.count else { return }
-                    let targetId = coordinator.listModel.items[target].id
-                    withAnimation(.easeInOut(duration: PaletteConfig.rowTransitionDuration)) {
-                        proxy.scrollTo(targetId, anchor: .center)
+                Divider()
+                HStack(spacing: geometry.size.width < 400 ? 4 : (geometry.size.width < 540 ? 8 : 12)) {
+                    HStack(spacing: 3) { Keycap(text: "↑"); Keycap(text: "↓"); Text("选择") }.fixedSize()
+                    HStack(spacing: 3) { Keycap(text: "↵"); Text("执行") }.fixedSize()
+                    HStack(spacing: 3) { Keycap(text: "esc"); Text(coordinator.searchText.isEmpty ? "关闭" : "清空") }.fixedSize()
+                    Spacer(minLength: 4)
+                    Button("历史") {
+                        CommandPaletteWindowController.shared.hide()
+                        HistoryWindowController.shared.showWindow()
                     }
-                    coordinator.scrollRequest = nil
-                }
+                    Button("设置 ⌘ ,") {
+                        CommandPaletteWindowController.shared.hide()
+                        SettingsWindowController.shared.showWindow()
+                    }
+                }.font(.system(size: 10)).foregroundColor(InterfaceStyle.muted)
+                    .buttonStyle(PaletteFooterButtonStyle())
+                    .padding(.horizontal, 16).frame(height: 32)
             }
-            }
-
-            // 底部提示
-            HStack {
-                Text("↵ 回车 / 点击 / ⌘+数字 执行")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text("↑↓ 导航")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text("Esc 关闭")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Color(nsColor: .controlBackgroundColor))
         }
-        .background(Color(nsColor: .windowBackgroundColor))
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.2), radius: 20, x: 0, y: 10)
+        .foregroundColor(InterfaceStyle.text)
+        .background(InterfaceStyle.material.opacity(reduceTransparency ? 1 : 0.94))
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .onReceive(coordinator.$searchText) { _ in
+            DispatchQueue.main.async { isSearchFocused = true }
+        }
+        .onChange(of: isSearchFocused) { CommandPaletteWindowController.shared.isSearchFocused = $0 }
         .onAppear {
             coordinator.refreshCommands()
-            coordinator.reset()
-            // 延迟设置焦点，确保窗口已完全显示
             DispatchQueue.main.asyncAfter(deadline: .now() + PaletteConfig.focusDelay) {
+                CommandPaletteWindowController.shared.setSearchFocus = { isSearchFocused = $0 }
                 isSearchFocused = true
             }
         }
-        .onDisappear {
-            coordinator.reset()
+        .sheet(item: $editingCommand, onDismiss: { isSearchFocused = true }) { command in
+            CommandEditorView(command: command, onSave: { CommandsManager.shared.upsert($0) }, onDelete: CommandsManager.shared.commands.contains(where: { $0.id == command.id }) ? {
+                CommandsManager.shared.deleteCommand(id: command.id)
+            } : nil)
         }
     }
 }
 
-// MARK: - 分组标题行
 struct GroupHeaderRow: View {
     let title: String
 
     var body: some View {
-        HStack {
-            Text(title)
-                .font(.subheadline)
-                .fontWeight(.bold)
-                .foregroundColor(.primary.opacity(0.7))
-            Spacer()
-        }
-        .padding(.horizontal, 12)
-        .padding(.top, 10)
-        .padding(.bottom, 4)
-        .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+        HStack(spacing: 10) {
+            Text(title).font(.system(size: 11, weight: .semibold)).foregroundColor(InterfaceStyle.muted)
+            Rectangle().fill(Color.secondary.opacity(0.2)).frame(height: 1)
+        }.padding(.horizontal, 12).frame(height: 25)
     }
 }
 
@@ -176,102 +139,182 @@ struct CommandPaletteRow: View {
     let isSelected: Bool
     let searchText: String
     let autoExecuteState: AutoExecuteState?
+    @State private var showingResult = false
+    @State private var copied = false
+    @State private var resultButton: NSButton?
+    @State private var resultHovered = false
 
-    private var rowBackground: Color {
-        isSelected ? Color.accentColor.opacity(0.15) : .clear
+    private var result: (text: String, marker: String, color: Color, canView: Bool)? {
+        switch autoExecuteState {
+        case .loading: return ("执行中…", "◌", .secondary, false)
+        case .success(let output): return (output.isEmpty ? "无输出" : output, "●", .green, !output.isEmpty)
+        case .failure(let error): return (error, "●", .red, !error.isEmpty)
+        case .none: return nil
+        }
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            // 显示索引，仅 1-9 显示快捷键提示
-            Group {
-                if displayIndex <= PaletteConfig.maxQuickSelectCount {
-                    Text("\(displayIndex)")
-                        .foregroundColor(.secondary)
-                } else {
-                    Text(" ")
+        GeometryReader { geometry in
+            let titleWidth = min((command.name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 13, weight: .medium)]).width.rounded(.up), geometry.size.width * 0.55)
+            HStack(spacing: 12) {
+                Button { PaletteCoordinator.shared.execute(command) } label: {
+                    HighlightedText(text: command.name, search: searchText)
+                        .font(.system(size: 13, weight: .medium)).foregroundColor(isSelected ? InterfaceStyle.selectedText : InterfaceStyle.text)
+                        .lineLimit(1).frame(maxWidth: result == nil ? .infinity : titleWidth, alignment: .leading)
+                        .contentShape(Rectangle())
+                }.buttonStyle(.plain).layoutPriority(1)
+                if let result {
+                    if result.canView {
+                        NativeResultButton(text: result.text, color: result.color, name: command.name, hovered: resultHovered) { button in
+                            resultButton = button
+                            openResult()
+                        }.frame(maxWidth: .infinity, maxHeight: 22)
+                            .onHover { resultHovered = $0 }
+                            .popover(isPresented: $showingResult, arrowEdge: .bottom) {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    HStack {
+                                        Text(command.name).font(.system(size: 13, weight: .semibold))
+                                        Spacer()
+                                        Button("关闭") { showingResult = false }.keyboardShortcut(.cancelAction)
+                                    }
+                                    ScrollView {
+                                        Text(result.text).font(.system(size: 12, design: .monospaced))
+                                            .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
+                                    }.frame(maxHeight: 180)
+                                    Button(copied ? "已复制" : "复制结果") {
+                                        NSPasteboard.general.clearContents()
+                                        NSPasteboard.general.setString(result.text, forType: .string)
+                                        copied = true
+                                    }
+                                }.padding(16).frame(width: 420)
+                                .foregroundColor(InterfaceStyle.text).background(InterfaceStyle.surface)
+                            }
+                            .onChange(of: showingResult) { visible in
+                                CommandPaletteWindowController.shared.resultPopoverIsPresented = visible
+                                if !visible {
+                                    if let button = resultButton {
+                                        CommandPaletteWindowController.shared.focusResultButton(button)
+                                    }
+                                    CommandPaletteWindowController.shared.closeIfInactive()
+                                }
+                            }
+                            .onDisappear {
+                                if showingResult {
+                                    CommandPaletteWindowController.shared.resultPopoverIsPresented = false
+                                    CommandPaletteWindowController.shared.closeIfInactive()
+                                }
+                            }
+                    } else { resultLabel(result).frame(maxWidth: .infinity, alignment: .leading) }
                 }
+                if displayIndex <= PaletteConfig.maxQuickSelectCount { Keycap(text: "⌘ \(displayIndex)") }
             }
-            .font(.caption)
-            .frame(width: 16, height: 16, alignment: .trailing)
-
-            VStack(alignment: .leading, spacing: 2) {
-                switch autoExecuteState {
-                case .loading:
-                    HStack(spacing: 6) {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text(command.name)
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                        Text("执行中...")
-                            .font(.caption)
-                            .foregroundColor(.secondary.opacity(0.7))
-                    }
-                case .success(let output):
-                    HStack(spacing: 4) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                            .font(.caption)
-                        HighlightedText(text: command.name, search: searchText)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                            .layoutPriority(1)
-                        if !output.isEmpty {
-                            Text(output)
-                                .font(.system(.body, design: .monospaced))
-                                .foregroundColor(.primary)
-                                .lineLimit(1)
-                        }
-                    }
-                case .failure(let error):
-                    HStack(spacing: 4) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.red)
-                            .font(.caption)
-                        HighlightedText(text: command.name, search: searchText)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                            .layoutPriority(1)
-                        Text(error)
-                            .font(.callout)
-                            .foregroundColor(.red)
-                            .lineLimit(1)
-                    }
-                case .none:
-                    HStack(spacing: 4) {
-                        if command.autoExecute {
-                            Image(systemName: "bolt.fill")
-                                .foregroundColor(.orange)
-                                .font(.caption)
-                        }
-                        HighlightedText(text: command.name, search: searchText)
-                            .font(.body)
-                            .foregroundColor(.primary)
-                            .lineLimit(1)
-                    }
-                }
-                if let wd = command.workingDirectory, !wd.isEmpty {
-                    Text(wd)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
-            }
-
-            Spacer()
-
-            if isSelected {
-                Image(systemName: "arrow.right.circle.fill")
-                    .foregroundColor(.accentColor)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(rowBackground)
-        .contentShape(Rectangle())
+            .padding(.leading, 20).padding(.trailing, 12).frame(height: 36)
+            .background(isSelected ? InterfaceStyle.selection : .clear)
+            .cornerRadius(11)
+        }.frame(height: 36)
     }
+
+    private func openResult() {
+        copied = false
+        CommandPaletteWindowController.shared.setSearchFocus?(false)
+        CommandPaletteWindowController.shared.resultPopoverIsPresented = true
+        showingResult = true
+    }
+
+    private func resultLabel(_ result: (text: String, marker: String, color: Color, canView: Bool)) -> some View {
+        HStack(spacing: 6) {
+            Text(result.marker).font(.system(size: 9)).foregroundColor(result.color)
+            Text(result.text.replacingOccurrences(of: "\n", with: " "))
+                .font(.system(size: 12, design: .monospaced)).foregroundColor(InterfaceStyle.muted).lineLimit(1)
+
+        }.help(result.text)
+    }
+}
+
+/// 仅响应实际指针移动，布局或键盘滚动不会抢回选中项。
+private struct PalettePointerView: NSViewRepresentable {
+    let onMove: () -> Void
+
+    func makeNSView(context: Context) -> PointerView { PointerView() }
+    func updateNSView(_ view: PointerView, context: Context) { view.onMove = onMove }
+
+    final class PointerView: NSView {
+        var onMove: (() -> Void)?
+        private var tracking: NSTrackingArea?
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+        override func updateTrackingAreas() {
+            if let tracking { removeTrackingArea(tracking) }
+            let area = NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect], owner: self)
+            addTrackingArea(area)
+            tracking = area
+            super.updateTrackingAreas()
+        }
+        override func mouseEntered(with event: NSEvent) { selectIfMoved() }
+        override func mouseMoved(with event: NSEvent) { selectIfMoved() }
+        private func selectIfMoved() {
+            let controller = CommandPaletteWindowController.shared
+            let position = NSEvent.mouseLocation
+            guard controller.lastPointerLocation != position else { return }
+            controller.lastPointerLocation = position
+            onMove?()
+        }
+    }
+}
+
+/// 原生按钮显式加入 Tab 焦点链，并让回车只打开结果。
+private struct NativeResultButton: NSViewRepresentable {
+    let text: String
+    let color: Color
+    let name: String
+    let hovered: Bool
+    let onActivate: (NSButton) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(onActivate: onActivate) }
+    func makeNSView(context: Context) -> PaletteResultButton {
+        let button = PaletteResultButton()
+        button.target = context.coordinator
+        button.action = #selector(Coordinator.activate(_:))
+        button.isBordered = false
+        button.bezelStyle = .inline
+        button.focusRingType = .exterior
+        button.lineBreakMode = .byTruncatingTail
+        button.imagePosition = .imageLeading
+        button.alignment = .left
+        button.cell?.usesSingleLineMode = true
+        button.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        button.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        DispatchQueue.main.async { [weak button] in
+            if let button { CommandPaletteWindowController.shared.registerResultButton(button) }
+        }
+        return button
+    }
+    func updateNSView(_ button: PaletteResultButton, context: Context) {
+        context.coordinator.onActivate = onActivate
+        button.attributedTitle = NSAttributedString(string: text.replacingOccurrences(of: "\n", with: " "), attributes: [
+            .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular),
+            .foregroundColor: NSColor(hovered ? InterfaceStyle.selectedText : InterfaceStyle.muted)
+        ])
+        button.image = NSImage(systemSymbolName: "circle.fill", accessibilityDescription: nil)?
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 6, weight: .regular))
+        button.contentTintColor = NSColor(color)
+        button.toolTip = "查看完整结果"
+        button.setAccessibilityLabel("\(name)：查看完整结果")
+    }
+
+    final class Coordinator: NSObject {
+        var onActivate: (NSButton) -> Void
+        init(onActivate: @escaping (NSButton) -> Void) { self.onActivate = onActivate }
+        @objc func activate(_ sender: NSButton) { onActivate(sender) }
+    }
+}
+
+final class PaletteResultButton: NSButton {
+    override var acceptsFirstResponder: Bool { true }
+    override var canBecomeKeyView: Bool { true }
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == KeyCode.returnKey { performClick(nil) }
+        else { super.keyDown(with: event) }
+    }
+    override var focusRingMaskBounds: NSRect { bounds }
+    override func drawFocusRingMask() { NSBezierPath(roundedRect: bounds, xRadius: 4, yRadius: 4).fill() }
 }

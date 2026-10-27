@@ -6,21 +6,17 @@ enum PaletteConfig {
     /// 焦点设置延迟（确保窗口完全显示）
     static let focusDelay: TimeInterval = 0.05
     /// 默认尺寸
-    static let defaultWidth: CGFloat = 500
+    static let defaultWidth: CGFloat = 560
     static let defaultHeight: CGFloat = 480
     /// 尺寸范围
-    static let minWidth: CGFloat = 300
+    static let minWidth: CGFloat = 360
     static let minHeight: CGFloat = 250
     static let maxWidth: CGFloat = 800
     static let maxHeight: CGFloat = 1000
     /// 快捷键最大数量（⌘+1 到 ⌘+9）
     static let maxQuickSelectCount = 9
-    /// 滚动位置容差（像素）
-    static let scrollPositionTolerance: CGFloat = 10
     /// 面板淡入时长
     static let fadeDuration: TimeInterval = 0.1
-    /// 列表行内布局过渡时长（自动执行结果切换、导航滚动）
-    static let rowTransitionDuration: TimeInterval = 0.15
 }
 
 // MARK: - 自动执行状态
@@ -59,8 +55,7 @@ final class PaletteCoordinator: ObservableObject {
             commands: settingsManager.settings.commands,
             searchText: "",
             groupOrder: settingsManager.settings.groupOrder,
-            previousIndex: 0,
-            previousFirstVisibleIndex: 0
+            previousIndex: 0
         )
 
         // commands 和 groupOrder 必须取自同一次发布，避免 willSet 期间回读旧属性。
@@ -77,8 +72,7 @@ final class PaletteCoordinator: ObservableObject {
             commands: settings.commands,
             searchText: searchText,
             groupOrder: settings.groupOrder,
-            previousIndex: listModel.selectedIndex,
-            previousFirstVisibleIndex: listModel.firstVisibleIndex
+            previousIndex: listModel.selectedIndex
         )
         guard next != listModel else { return }
         let selectedIndexChanged = next.selectedIndex != listModel.selectedIndex
@@ -91,11 +85,6 @@ final class PaletteCoordinator: ObservableObject {
 
     func refreshCommands() {
         rebuild(with: settingsManager.settings)
-    }
-
-    func updateFirstVisibleIndex(_ index: Int) {
-        guard index != listModel.firstVisibleIndex else { return }
-        listModel = listModel.updatingFirstVisibleIndex(index)
     }
 
     /// 搜索文本变化后由视图调用：重置到第一个命令项
@@ -144,8 +133,8 @@ final class PaletteCoordinator: ObservableObject {
     func reset() {
         // 已发出的命令继续运行，旧轮次回调不得重新写入清空后的结果。
         autoExecuteGeneration += 1
-        // 复刻原顺序：先清选中与窗口，再清搜索（触发 rebuild）
-        listModel = PaletteListModel(items: listModel.items, selectedIndex: 0, firstVisibleIndex: 0)
+        // 复刻原顺序：先清选中，再清搜索（触发 rebuild）
+        listModel = PaletteListModel(items: listModel.items, selectedIndex: 0)
         searchText = ""
         autoExecuteResults.removeAll()
         scrollRequest = nil

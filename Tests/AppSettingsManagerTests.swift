@@ -104,6 +104,21 @@ final class AppSettingsManagerTests: XCTestCase {
         XCTAssertEqual(reader.settings.defaultInputSourceID, "com.apple.keylayout.ABC")
     }
 
+    @MainActor
+    func testAutoCheckUpdates_LegacyDefaultAndPersistedChoice() throws {
+        let fileURL = makeFileURL()
+        try Data("{\"commands\":[]}".utf8).write(to: fileURL)
+        let writer = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        XCTAssertTrue(writer.settings.autoCheckUpdates)
+        writer.setAutoCheckUpdates(false)
+        let reader = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        XCTAssertFalse(reader.settings.autoCheckUpdates)
+        let exportedURL = tempDirectory.appendingPathComponent("export.json")
+        try reader.exportSettings(to: exportedURL)
+        let decoded = try JSONDecoder().decode(AppSettings.self, from: Data(contentsOf: exportedURL))
+        XCTAssertFalse(decoded.autoCheckUpdates)
+    }
+
     /// 原子写入不残留 .tmp 文件
     @MainActor
     func testSave_LeavesNoTempFile() throws {

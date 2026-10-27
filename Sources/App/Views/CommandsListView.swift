@@ -1,271 +1,107 @@
 import SwiftUI
-import UniformTypeIdentifiers
-import KeyboardShortcuts
 
 struct CommandsListView: View {
     @ObservedObject private var manager = CommandsManager.shared
+    @ObservedObject private var settings = AppSettingsManager.shared
     @State private var editingCommand: Command?
-    @State private var commandToDelete: Command?
-    @State private var showingDeleteConfirmation = false
     @State private var searchText = ""
-    @State private var showingImportConfirmation = false
-    @State private var importURL: URL?
 
-    private static let exportDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd_HHmmss"
-        return formatter
-    }()
-
-    private var filteredCommands: [Command] {
-        CommandsManager.filteredCommands(from: manager.commands, by: searchText)
+    private var listModel: PaletteListModel {
+        PaletteListModel.derive(commands: manager.commands, searchText: searchText,
+                                groupOrder: settings.settings.groupOrder,
+                                previousIndex: 0)
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text("命令设置")
-                    .font(.headline)
-                Spacer()
-                Button(action: {
-                    editingCommand = Command(name: "", command: "")
-                }) {
+            HStack(spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass").foregroundColor(InterfaceStyle.muted)
+                    TextField("搜索命令标题", text: $searchText).textFieldStyle(.plain)
+                    if !searchText.isEmpty {
+                        Button { searchText = "" } label: { Image(systemName: "xmark.circle.fill") }
+                            .buttonStyle(.plain).accessibilityLabel("清空搜索")
+                    }
+                }
+                .padding(9)
+                .background(InterfaceStyle.surface)
+                .clipShape(Capsule())
+                Button { editingCommand = Command(name: "", command: "") } label: {
                     Label("添加命令", systemImage: "plus")
-                }
+                }.buttonStyle(.borderedProminent).controlSize(.large)
             }
-            .padding()
-            .background(Color(nsColor: .controlBackgroundColor))
-
+            .padding(.horizontal, 20).padding(.bottom, 16)
+            .background(InterfaceStyle.material)
             Divider()
-
             HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-                TextField("搜索命令...", text: $searchText)
-                    .textFieldStyle(.plain)
-                if !searchText.isEmpty {
-                    Button(action: { searchText = "" }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(8)
-            .background(Color(nsColor: .controlBackgroundColor))
+                Text("\(listModel.items.filter(\.isCommand).count) 条命令")
+                Spacer()
+                Text("按分组显示，与命令面板一致")
+            }.font(.caption).foregroundColor(InterfaceStyle.muted).padding(.horizontal, 20).padding(.vertical, 10)
 
-            Divider()
-
-            List {
-                ForEach(searchText.isEmpty ? manager.commands : filteredCommands) { command in
-                    HStack {
-                        Image(systemName: "line.3.horizontal")
-                            .foregroundColor(searchText.isEmpty ? .secondary : Color.gray.opacity(0.5))
-                            .frame(width: 20)
-
-                        if command.autoExecute {
-                            Image(systemName: "bolt.fill")
-                                .foregroundColor(.orange)
-                                .font(.caption)
-                        }
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(command.name)
-                                .font(.body)
-                                .lineLimit(1)
-                            HStack(spacing: 6) {
-                                Text(command.command)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                                if let group = command.group, !group.isEmpty {
-                                    Text(group)
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                        .padding(.horizontal, 4)
-                                        .padding(.vertical, 1)
-                                        .background(Color.primary.opacity(0.08))
-                                        .cornerRadius(3)
-                                }
-                            }
-                        }
-                        Spacer()
-                        HStack(spacing: 8) {
-                            Button(action: {
-                                editingCommand = command
-                            }) {
-                                Image(systemName: "pencil")
-                            }
-                            .buttonStyle(.borderless)
-
-                            Button(action: {
-                                commandToDelete = command
-                                showingDeleteConfirmation = true
-                            }) {
-                                Image(systemName: "trash")
-                            }
-                            .buttonStyle(.borderless)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-                .onMove(perform: searchText.isEmpty ? { source, destination in
-                    manager.reorderCommands(from: source, to: destination)
-                } : nil)
-            }
-
-            if manager.commands.count > 1 && searchText.isEmpty {
-                Text("拖拽可排序")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 4)
-            }
-        }
-        .frame(minWidth: 500, minHeight: 400)
-        .sheet(item: $editingCommand) { command in
-            CommandEditorView(command: command) { newCommand in
-                manager.upsert(newCommand)
-            }
-        }
-        .alert("确认删除", isPresented: $showingDeleteConfirmation) {
-            Button("删除", role: .destructive) {
-                if let command = commandToDelete {
-                    manager.deleteCommand(id: command.id)
-                }
-                commandToDelete = nil
-            }
-            Button("取消", role: .cancel) {
-                commandToDelete = nil
-            }
-        } message: {
-            Text("确定要删除命令「\(commandToDelete?.name ?? "")」吗？")
-        }
-        .alert("操作失败", isPresented: Binding(
-            get: { manager.lastError != nil },
-            set: { if !$0 { manager.clearError() } }
-        )) {
-            Button("确定", role: .cancel) {
-                manager.clearError()
-            }
-        } message: {
-            Text(manager.lastError?.errorDescription ?? "未知错误")
-        }
-        .alert("确认导入", isPresented: $showingImportConfirmation) {
-            Button("导入", role: .destructive) {
-                if let url = importURL {
-                    manager.importSettings(from: url)
-                }
-                importURL = nil
-            }
-            Button("取消", role: .cancel) {
-                importURL = nil
-            }
-        } message: {
-            Text("导入将覆盖当前所有设置（包括命令和面板配置），确定要继续吗？")
-        }
-        .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 0) {
-                Divider()
+            if listModel.items.isEmpty {
                 VStack(spacing: 12) {
-                    // 全局快捷键
-                    HStack {
-                        Text("全局快捷键")
-                            .font(.headline)
-                        Spacer()
-                        KeyboardShortcuts.Recorder("全局快捷键:", name: .commandPalette)
-                        Button("清除") {
-                            KeyboardShortcuts.setShortcut(nil, for: .commandPalette)
-                        }
+                    Image(systemName: searchText.isEmpty ? "terminal" : "magnifyingglass").font(.largeTitle)
+                    Text(searchText.isEmpty ? "暂无命令" : "未找到匹配命令")
+                    Button(searchText.isEmpty ? "添加命令" : "清空搜索") {
+                        if searchText.isEmpty { editingCommand = Command(name: "", command: "") }
+                        else { searchText = "" }
                     }
-
-                    Divider()
-
-                    // 默认输入法
-                    HStack {
-                        Text("默认输入法")
-                            .font(.headline)
-                        Spacer()
-                        Picker("", selection: Binding(
-                            get: { AppSettingsManager.shared.settings.defaultInputSourceID ?? "" },
-                            set: { newValue in
-                                AppSettingsManager.shared.setDefaultInputSource(newValue.isEmpty ? nil : newValue)
-                            }
-                        )) {
-                            Text("不切换").tag("")
-                            ForEach(InputSourceHelper.availableInputSources(), id: \.id) { source in
-                                Text(source.name).tag(source.id)
-                            }
-                        }
-                        .frame(width: 200)
-                    }
-
-                    Divider()
-
-                    // 开机自启（仅 macOS 13+ 支持）
-                    if LaunchAtLoginManager.shared.isSupported {
-                        HStack {
-                            Text("开机自启")
-                                .font(.headline)
-                            Spacer()
-                            Toggle("", isOn: Binding(
-                                get: { AppSettingsManager.shared.settings.launchAtLogin },
-                                set: { AppSettingsManager.shared.setLaunchAtLogin($0) }
-                            ))
-                        }
-                    }
-
-                    Divider()
-
-                    // 导入导出
-                    HStack {
-                        Text("配置")
-                            .font(.headline)
-                        Spacer()
-                        HStack(spacing: 12) {
-                            Button(action: exportConfig) {
-                                Label("导出", systemImage: "square.and.arrow.up")
-                            }
-                            Button(action: showImportPanel) {
-                                Label("导入", systemImage: "square.and.arrow.down")
+                }.foregroundColor(InterfaceStyle.muted).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(listModel.items) { item in
+                            switch item {
+                            case .groupHeader(let name):
+                                Text(name).font(.caption).fontWeight(.semibold).foregroundColor(InterfaceStyle.muted)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 7)
+                            case .command(let command, _):
+                                commandRow(command)
                             }
                         }
                     }
                 }
-                .padding()
-                .background(Color(nsColor: .controlBackgroundColor))
             }
+            Divider()
+            HStack {
+                Text("选择命令后编辑，箭头可调整组内顺序")
+                Spacer()
+                Text("\(manager.commands.filter(\.autoExecute).count) 条自动执行")
+            }.font(.caption).foregroundColor(InterfaceStyle.muted).padding(.horizontal, 20).padding(.vertical, 10)
+                .background(InterfaceStyle.chrome)
+        }
+        .sheet(item: $editingCommand) { command in
+            CommandEditorView(command: command, onSave: { manager.upsert($0) }, onDelete: manager.commands.contains(where: { $0.id == command.id }) ? {
+                manager.deleteCommand(id: command.id)
+            } : nil)
         }
     }
 
-    private func exportConfig() {
-        let timestamp = Self.exportDateFormatter.string(from: Date())
-
-        let panel = NSSavePanel()
-        panel.title = "导出配置"
-        panel.nameFieldStringValue = "settings-\(timestamp).json"
-        panel.allowedContentTypes = [UTType.json]
-        panel.canCreateDirectories = true
-
-        if panel.runModal() == .OK, let url = panel.url {
-            manager.exportSettings(to: url)
+    private func commandRow(_ command: Command) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: command.autoExecute ? "bolt" : "terminal")
+                .foregroundColor(InterfaceStyle.muted).frame(width: 30, height: 30)
+                .background(InterfaceStyle.chrome).cornerRadius(8)
+            VStack(alignment: .leading, spacing: 5) {
+                HStack {
+                    Text(command.name).lineLimit(1)
+                    if command.autoExecute {
+                        Text("自动执行").font(.system(size: 10)).foregroundColor(InterfaceStyle.muted)
+                            .padding(.horizontal, 5).padding(.vertical, 2)
+                            .background(InterfaceStyle.chrome).cornerRadius(4)
+                    }
+                }
+                Text(command.command).font(.system(size: 11, design: .monospaced)).foregroundColor(InterfaceStyle.muted).lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            Button("编辑") { editingCommand = command }.buttonStyle(.borderless)
+            Button { manager.moveUp(command) } label: { Image(systemName: "arrow.up") }
+                .disabled(!searchText.isEmpty || !manager.canMoveUp(command))
+                .accessibilityLabel("在组内上移\(command.name)")
         }
+        .padding(.horizontal, 20).frame(height: 67)
+        .overlay(alignment: .bottom) { Divider().opacity(0.5) }
     }
-
-    private func showImportPanel() {
-        let panel = NSOpenPanel()
-        panel.title = "导入配置"
-        panel.allowedContentTypes = [UTType.json]
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-
-        if panel.runModal() == .OK, let url = panel.url {
-            importURL = url
-            showingImportConfirmation = true
-        }
-    }
-}
-
-#Preview {
-    CommandsListView()
 }

@@ -38,6 +38,7 @@ enum InputSourceHelper {
                 localizedName = sourceID
             }
 
+            guard !localizedName.contains("&"), !localizedName.contains(".") else { continue }
             sources.append((id: sourceID, name: localizedName))
         }
 

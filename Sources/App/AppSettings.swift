@@ -49,6 +49,8 @@ struct AppSettings: Codable, Equatable {
     /// 分组显示顺序（nil 时按命令列表中首次出现顺序）
     var groupOrder: [String]?
 
+    var autoCheckUpdates: Bool = true
+
     enum CodingKeys: String, CodingKey {
         case commands
         case palettePosition
@@ -58,12 +60,14 @@ struct AppSettings: Codable, Equatable {
         case lastUpdateCheckDate
         case skippedVersion
         case groupOrder
+        case autoCheckUpdates
     }
 
     init() {}
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        autoCheckUpdates = try container.decodeIfPresent(Bool.self, forKey: .autoCheckUpdates) ?? true
         commands = try container.decodeIfPresent([Command].self, forKey: .commands) ?? []
         defaultInputSourceID = try container.decodeIfPresent(String.self, forKey: .defaultInputSourceID)
         launchAtLogin = try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
@@ -81,6 +85,7 @@ struct AppSettings: Codable, Equatable {
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(autoCheckUpdates, forKey: .autoCheckUpdates)
         try container.encode(commands, forKey: .commands)
         try container.encodeIfPresent(defaultInputSourceID, forKey: .defaultInputSourceID)
         try container.encode(launchAtLogin, forKey: .launchAtLogin)
@@ -421,6 +426,11 @@ final class AppSettingsManager: ObservableObject {
 
     func setDefaultInputSource(_ sourceID: String?) {
         settings.defaultInputSourceID = sourceID
+        save()
+    }
+
+    func setAutoCheckUpdates(_ enabled: Bool) {
+        settings.autoCheckUpdates = enabled
         save()
     }
 

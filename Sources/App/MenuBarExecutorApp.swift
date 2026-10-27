@@ -6,8 +6,7 @@ struct MenuBarExecutorApp: App {
 
     var body: some Scene {
         Settings {
-            CommandsListView()
-                .frame(minWidth: 600, minHeight: 400)
+            SettingsView()
         }
     }
 }

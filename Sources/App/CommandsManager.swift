@@ -35,7 +35,7 @@ final class CommandsManager: ObservableObject {
     /// 将命令按 group 分组，返回排序后的组名列表（groupOrder 存在时 nil 代表未分组，排在最后）
     nonisolated static func sortedGroupNames(from commands: [Command], groupOrder: [String]?) -> [String?] {
         var seen = Set<String?>()
-        let appearanceOrder = commands.map(\.group).filter { seen.insert($0).inserted }
+        let appearanceOrder = commands.map { $0.group?.isEmpty == true ? nil : $0.group }.filter { seen.insert($0).inserted }
 
         if let order = groupOrder {
             let ordered = order.filter { name in commands.contains(where: { $0.group == name }) }
@@ -72,6 +72,25 @@ final class CommandsManager: ObservableObject {
         var reordered = commands
         reordered.move(fromOffsets: source, toOffset: destination)
         settingsManager.saveCommands(reordered)
+    }
+
+    func canMoveUp(_ command: Command) -> Bool {
+        guard let index = commands.firstIndex(where: { $0.id == command.id }) else { return false }
+        return commands[..<index].contains { ($0.group ?? "") == (command.group ?? "") }
+    }
+
+    func moveUp(_ command: Command) {
+        settingsManager.saveCommands(Self.movingUp(command, in: commands))
+    }
+
+    nonisolated static func movingUp(_ command: Command, in commands: [Command]) -> [Command] {
+        guard let index = commands.firstIndex(where: { $0.id == command.id }),
+              let previous = commands[..<index].lastIndex(where: { ($0.group ?? "") == (command.group ?? "") }) else {
+            return commands
+        }
+        var reordered = commands
+        reordered.swapAt(previous, index)
+        return reordered
     }
 
     func clearError() {

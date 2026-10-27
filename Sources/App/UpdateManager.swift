@@ -188,10 +188,13 @@ extension UpdateManager {
     /// 执行自动检查（启动时调用）
     /// 延迟 2 秒后检查，避免阻塞启动
     func performAutoCheck() {
+        guard settingsManager.settings.autoCheckUpdates else { return }
         Task {
             try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 秒
 
-            guard let updateInfo = await checkForUpdate() else { return }
+            guard settingsManager.settings.autoCheckUpdates else { return }
+            guard let updateInfo = await checkForUpdate(),
+                  settingsManager.settings.autoCheckUpdates else { return }
 
             // 显示系统通知
             notificationManager.showUpdateAvailable(
