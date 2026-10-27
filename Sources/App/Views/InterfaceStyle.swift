@@ -34,6 +34,66 @@ struct Keycap: View {
     }
 }
 
+struct ToolbarSearchStyle: ViewModifier {
+    let focused: Bool
+
+    func body(content: Content) -> some View {
+        content.padding(.horizontal, 13).frame(height: 34)
+            .background(InterfaceStyle.surface)
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(focused ? Color.accentColor : InterfaceStyle.line, lineWidth: 1))
+    }
+}
+
+struct CommandRowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        RowLabel(label: configuration.label, pressed: configuration.isPressed)
+    }
+
+    private struct RowLabel: View {
+        let label: ButtonStyleConfiguration.Label
+        let pressed: Bool
+        @State private var hovered = false
+        @Environment(\.isEnabled) private var enabled
+        @Environment(\.isFocused) private var focused
+
+        var body: some View {
+            let highlighted = enabled && (hovered || pressed)
+            label.foregroundColor(highlighted ? InterfaceStyle.selectedText : InterfaceStyle.text)
+                .padding(.horizontal, 8).frame(height: 26)
+                .background(highlighted ? InterfaceStyle.selection : InterfaceStyle.surface)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(focused ? Color.accentColor : InterfaceStyle.line, lineWidth: focused ? 2 : 1))
+                .cornerRadius(8).contentShape(Rectangle())
+                .opacity(enabled ? 1 : 0.4)
+                .onHover { hovered = $0 }
+        }
+    }
+}
+
+struct CompactQuietButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        QuietLabel(label: configuration.label, pressed: configuration.isPressed)
+    }
+
+    private struct QuietLabel: View {
+        let label: ButtonStyleConfiguration.Label
+        let pressed: Bool
+        @State private var hovered = false
+        @Environment(\.isEnabled) private var enabled
+        @Environment(\.isFocused) private var focused
+
+        var body: some View {
+            label.foregroundColor(InterfaceStyle.muted)
+                .padding(.horizontal, 8).frame(minHeight: 26)
+                .background(enabled && (hovered || pressed) ? InterfaceStyle.subtle : .clear)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(focused ? Color.accentColor : .clear, lineWidth: 2))
+                .cornerRadius(8).contentShape(Rectangle())
+                .opacity(enabled ? 1 : 0.4)
+                .onHover { hovered = $0 }
+        }
+    }
+}
+
 struct PaletteFooterButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         FooterLabel(label: configuration.label, pressed: configuration.isPressed)
@@ -50,7 +110,7 @@ struct PaletteFooterButtonStyle: ButtonStyle {
                 .foregroundColor(hovered ? InterfaceStyle.selectedText : InterfaceStyle.text)
                 .padding(.horizontal, 8).frame(height: 24)
                 .background(hovered || pressed ? InterfaceStyle.selection : InterfaceStyle.surface)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(focused ? Color.accentColor : InterfaceStyle.line, lineWidth: focused ? 2 : 1))
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(focused ? Color.accentColor : (hovered ? InterfaceStyle.selectedText.opacity(0.35) : InterfaceStyle.line), lineWidth: focused ? 2 : 1))
                 .cornerRadius(6)
                 .onHover { hovered = $0 }
         }

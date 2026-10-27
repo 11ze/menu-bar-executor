@@ -7,6 +7,7 @@ struct HistoryView: View {
     @State private var searchText = ""
     @State private var onlyFailed = false
     @State private var copied = false
+    @FocusState private var searchFocused: Bool
 
     private var records: [ExecutionRecord] {
         history.records.filter {
@@ -22,10 +23,10 @@ struct HistoryView: View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
                 HStack(spacing: 16) {
-                    HStack {
+                    HStack(spacing: 8) {
                         Image(systemName: "magnifyingglass").foregroundColor(InterfaceStyle.muted)
-                        TextField("搜索命令名称", text: $searchText).textFieldStyle(.plain)
-                    }.padding(9).background(InterfaceStyle.surface).clipShape(Capsule())
+                        TextField("搜索命令名称", text: $searchText).textFieldStyle(.plain).focused($searchFocused)
+                    }.modifier(ToolbarSearchStyle(focused: searchFocused))
                     Toggle("仅失败", isOn: $onlyFailed)
                     Button("清空历史") { showingClearConfirmation = true }.disabled(history.records.isEmpty)
                 }.padding(16).background(InterfaceStyle.material)
@@ -71,14 +72,16 @@ struct HistoryView: View {
                                         NSPasteboard.general.clearContents()
                                         NSPasteboard.general.setString(record.output ?? "", forType: .string)
                                         copied = true
-                                    }.disabled(record.output?.isEmpty != false)
+                                    }.buttonStyle(CompactQuietButtonStyle()).disabled(record.output?.isEmpty != false)
                                 }
                                 ScrollView {
                                     Text(record.output.flatMap { $0.isEmpty ? nil : $0 } ?? "（无输出）")
                                         .font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
                                         .frame(maxWidth: .infinity, alignment: .leading).padding(14)
                                 }.frame(minHeight: 190, maxHeight: 300)
-                                    .background(InterfaceStyle.surface).cornerRadius(6)
+                                    .background(InterfaceStyle.subtle)
+                                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(InterfaceStyle.line, lineWidth: 1))
+                                    .cornerRadius(6)
                                 Text("每条记录最多保存 500 字符输出。").font(.caption).foregroundColor(InterfaceStyle.muted)
                             }.frame(maxWidth: .infinity, alignment: .leading).padding(24)
                         }
@@ -100,6 +103,7 @@ struct HistoryView: View {
                     Spacer()
                     Text("最近 100 条 · 不含自动执行")
                 }.font(.caption).foregroundColor(InterfaceStyle.muted).padding(.horizontal, 20).padding(.vertical, 10)
+                    .background(InterfaceStyle.chrome)
             }
         }
         .font(.system(size: 13)).foregroundColor(InterfaceStyle.text).background(InterfaceStyle.surface)

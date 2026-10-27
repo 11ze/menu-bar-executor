@@ -5,6 +5,8 @@ struct CommandsListView: View {
     @ObservedObject private var settings = AppSettingsManager.shared
     @State private var editingCommand: Command?
     @State private var searchText = ""
+    @State private var hoveredCommandID: UUID?
+    @FocusState private var searchFocused: Bool
 
     private var listModel: PaletteListModel {
         PaletteListModel.derive(commands: manager.commands, searchText: searchText,
@@ -17,7 +19,7 @@ struct CommandsListView: View {
             HStack(spacing: 12) {
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass").foregroundColor(InterfaceStyle.muted)
-                    TextField("搜索命令标题", text: $searchText).textFieldStyle(.plain)
+                    TextField("搜索命令标题", text: $searchText).textFieldStyle(.plain).focused($searchFocused)
                     if !searchText.isEmpty {
                         Button { searchText = "" } label: {
                             Image(systemName: "xmark.circle.fill").frame(width: 24, height: 24).contentShape(Rectangle())
@@ -25,9 +27,7 @@ struct CommandsListView: View {
                             .buttonStyle(.plain).accessibilityLabel("清空搜索")
                     }
                 }
-                .padding(9)
-                .background(InterfaceStyle.surface)
-                .clipShape(Capsule())
+                .modifier(ToolbarSearchStyle(focused: searchFocused))
                 Button { editingCommand = Command(name: "", command: "") } label: {
                     Label("添加命令", systemImage: "plus")
                 }.buttonStyle(.borderedProminent).controlSize(.large)
@@ -83,9 +83,6 @@ struct CommandsListView: View {
 
     private func commandRow(_ command: Command) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: command.autoExecute ? "bolt" : "terminal")
-                .foregroundColor(InterfaceStyle.muted).frame(width: 30, height: 30)
-                .background(InterfaceStyle.chrome).cornerRadius(8)
             VStack(alignment: .leading, spacing: 5) {
                 HStack {
                     Text(command.name).lineLimit(1)
@@ -98,14 +95,21 @@ struct CommandsListView: View {
                 Text(command.command).font(.system(size: 11, design: .monospaced)).foregroundColor(InterfaceStyle.muted).lineLimit(1)
             }
             Spacer(minLength: 8)
-            Button { editingCommand = command } label: {
-                Text("编辑").padding(.horizontal, 8).frame(minHeight: 26).contentShape(Rectangle())
-            }.buttonStyle(.plain).foregroundColor(InterfaceStyle.muted)
-            Button { manager.moveUp(command) } label: { Image(systemName: "arrow.up") }
-                .disabled(!searchText.isEmpty || !manager.canMoveUp(command))
-                .accessibilityLabel("在组内上移\(command.name)")
+            HStack(spacing: 3) {
+                Button { editingCommand = command } label: {
+                    Text("编辑")
+                }
+                Button { manager.moveUp(command) } label: { Image(systemName: "arrow.up") }
+                    .disabled(!searchText.isEmpty || !manager.canMoveUp(command))
+                    .accessibilityLabel("在组内上移\(command.name)")
+            }.buttonStyle(CommandRowButtonStyle())
         }
         .padding(.horizontal, 20).frame(height: 67)
+        .background(hoveredCommandID == command.id ? InterfaceStyle.subtle : .clear)
         .overlay(alignment: .bottom) { Divider().opacity(0.5) }
+        .onHover { hovered in
+            if hovered { hoveredCommandID = command.id }
+            else if hoveredCommandID == command.id { hoveredCommandID = nil }
+        }
     }
 }

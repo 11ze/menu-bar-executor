@@ -50,7 +50,7 @@ struct CommandEditorView: View {
                             .frame(height: 96)
                             .padding(5)
                             .background(InterfaceStyle.surface)
-                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.15)))
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(InterfaceStyle.line, lineWidth: 1))
                     }
                     HStack(alignment: .top, spacing: 16) {
                         field("分组 · 可选") {
