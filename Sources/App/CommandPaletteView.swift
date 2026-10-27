@@ -6,11 +6,6 @@ struct CommandPaletteView: View {
     @FocusState private var isSearchFocused: Bool
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
-    private var selectedCommand: Command? {
-        guard coordinator.listModel.items.indices.contains(coordinator.listModel.selectedIndex) else { return nil }
-        return coordinator.listModel.items[coordinator.listModel.selectedIndex].command
-    }
-
     var body: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
@@ -61,24 +56,6 @@ struct CommandPaletteView: View {
                             coordinator.scrollRequest = nil
                         }
                     }
-                    if let command = selectedCommand {
-                        Divider()
-                        VStack(alignment: .leading, spacing: 3) {
-                            HStack(spacing: 10) {
-                                Text("执行内容").foregroundColor(InterfaceStyle.muted)
-                                Spacer(minLength: 4)
-                                Text(command.workingDirectory.flatMap { $0.isEmpty ? nil : $0 } ?? "默认工作目录")
-                                    .foregroundColor(InterfaceStyle.muted).lineLimit(1).truncationMode(.middle)
-                                    .help(command.workingDirectory ?? "默认工作目录")
-                                Button("编辑") { editingCommand = command }.buttonStyle(.borderless)
-                            }.font(.system(size: 11))
-                            ScrollView {
-                                Text(command.command).font(.system(size: 11, design: .monospaced))
-                                    .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                        }.padding(.horizontal, 20).padding(.vertical, 6).frame(height: 64)
-                            .background(InterfaceStyle.surface.opacity(0.65))
-                    }
                 }
                 Divider()
                 HStack(spacing: geometry.size.width < 400 ? 4 : (geometry.size.width < 540 ? 8 : 12)) {
@@ -115,9 +92,7 @@ struct CommandPaletteView: View {
             }
         }
         .sheet(item: $editingCommand, onDismiss: { isSearchFocused = true }) { command in
-            CommandEditorView(command: command, onSave: { CommandsManager.shared.upsert($0) }, onDelete: CommandsManager.shared.commands.contains(where: { $0.id == command.id }) ? {
-                CommandsManager.shared.deleteCommand(id: command.id)
-            } : nil)
+            CommandEditorView(command: command, onSave: { CommandsManager.shared.upsert($0) })
         }
     }
 }
