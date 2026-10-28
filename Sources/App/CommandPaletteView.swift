@@ -22,6 +22,7 @@ struct CommandPaletteView: View {
                     }
                     Keycap(text: "esc")
                 }.padding(.horizontal, 22).frame(height: 52)
+                    .background(PaletteDragArea())
                 Divider()
                 if coordinator.listModel.items.isEmpty {
                     VStack(spacing: 12) {
@@ -76,6 +77,7 @@ struct CommandPaletteView: View {
                 }.font(.system(size: 10)).foregroundColor(InterfaceStyle.muted)
                     .buttonStyle(PaletteFooterButtonStyle())
                     .padding(.horizontal, 16).frame(height: 32)
+                    .background(PaletteDragArea())
             }
         }
         .foregroundColor(InterfaceStyle.text)
@@ -95,6 +97,22 @@ struct CommandPaletteView: View {
         }
         .sheet(item: $editingCommand, onDismiss: { isSearchFocused = true }) { command in
             CommandEditorView(command: command, onSave: { CommandsManager.shared.upsert($0) })
+        }
+    }
+}
+
+/// SwiftUI 背景不会自动启动无标题栏窗口拖拽；只在非控件区域接收鼠标。
+private struct PaletteDragArea: NSViewRepresentable {
+    func makeNSView(context: Context) -> DragView { DragView() }
+    func updateNSView(_ view: DragView, context: Context) {}
+
+    final class DragView: NSView {
+        // 让按下事件到达此视图，避免被窗口的自动背景拖拽提前接管。
+        override var mouseDownCanMoveWindow: Bool { false }
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+        override func mouseDown(with event: NSEvent) {
+            window?.performDrag(with: event)
         }
     }
 }
