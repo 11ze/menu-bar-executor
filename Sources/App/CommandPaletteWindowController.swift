@@ -299,14 +299,14 @@ final class CommandPaletteWindowController: NSWindowController {
         let items = PaletteCoordinator.shared.listModel.items
         let screen = panel.screen ?? NSScreen.main
         let available = screen?.visibleFrame ?? panel.frame
-        let listHeight = items.isEmpty ? CGFloat(160) : items.enumerated().reduce(CGFloat(8)) { height, entry in
+        let listHeight = items.isEmpty ? CGFloat(160) : items.enumerated().reduce(CGFloat(21)) { height, entry in
             switch entry.element {
-            case .groupHeader: return height + 25 + (entry.offset == 0 ? 0 : 4)
+            case .groupHeader: return height + 32
             case .command: return height + 36
             }
         }
-        let fixedHeight: CGFloat = 52 + 32 + 2
-        let contentHeight = fixedHeight + min(listHeight, 460)
+        let fixedHeight: CGFloat = 60 + 41 + 2
+        let contentHeight = fixedHeight + min(listHeight, 410)
         let height = min(max(preferredHeight ?? contentHeight, PaletteConfig.minHeight), PaletteConfig.maxHeight, available.height)
         let width = min(max(panel.frame.width, PaletteConfig.minWidth), PaletteConfig.maxWidth, available.width)
         var frame = panel.frame

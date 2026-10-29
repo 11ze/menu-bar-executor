@@ -11,14 +11,6 @@
 
 macOS 12.0+ · SwiftUI + AppKit
 
-在线预览使用示例数据，不执行真实命令。
-
-## 界面
-
-| 浅色 | 深色 |
-| --- | --- |
-| ![浅色命令面板](docs/screenshots/palette-light.png) | ![深色命令面板](docs/screenshots/palette-dark.png) |
-
 ## 安装
 
 1. 从 [Releases](https://github.com/11ze/menu-bar-executor/releases/latest) 下载并解压，将 `MenuBarExecutor.app` 拖入应用程序文件夹。
@@ -51,7 +43,7 @@ xcodebuild test -project menu-bar-executor.xcodeproj \
   -derivedDataPath /tmp/menu-bar-executor-build
 ```
 
-开发约定见 [开发规范](docs/conventions.md) 与 [领域词汇表](CONTEXT.md)。交互预览的发布方式见 [设计说明](docs/design/README.md#在线预览与发布)。
+开发约定见 [开发规范](docs/conventions.md) 与 [领域词汇表](CONTEXT.md)。交互预览的发布方式见 [设计说明](designs/menu-bar-executor/README.md#在线预览与发布)。
 
 ## 许可证
 

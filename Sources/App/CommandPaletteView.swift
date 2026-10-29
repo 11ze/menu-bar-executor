@@ -1,37 +1,42 @@
 import SwiftUI
 
 struct CommandPaletteView: View {
-    @ObservedObject private var coordinator = PaletteCoordinator.shared
+    @ObservedObject private var coordinator: PaletteCoordinator
     @State private var editingCommand: Command?
     @FocusState private var isSearchFocused: Bool
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    @MainActor
+    init(coordinator: PaletteCoordinator? = nil) {
+        self.coordinator = coordinator ?? .shared
+    }
 
     var body: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
                 HStack(spacing: 12) {
-                    Image(systemName: "magnifyingglass").font(.system(size: 19)).foregroundColor(InterfaceStyle.muted)
-                    TextField("搜索命令标题", text: $coordinator.searchText)
-                        .textFieldStyle(.plain).font(.system(size: 15)).focused($isSearchFocused)
+                    Image(systemName: "magnifyingglass").font(.system(size: 17)).foregroundColor(InterfaceStyle.muted)
+                    TextField("搜索命令…", text: $coordinator.searchText)
+                        .textFieldStyle(.plain).font(.system(size: 17)).focused($isSearchFocused)
                         .onChange(of: coordinator.searchText) { _ in coordinator.selectFirstCommand() }
                     if !coordinator.searchText.isEmpty {
                         Button { coordinator.clearSearch() } label: {
                             Image(systemName: "xmark.circle.fill").frame(width: 24, height: 24).contentShape(Rectangle())
                         }
                             .buttonStyle(.plain).foregroundColor(InterfaceStyle.muted).accessibilityLabel("清空搜索")
-                    }
-                    Keycap(text: "esc")
-                }.padding(.horizontal, 22).frame(height: 52)
-                    .background(PaletteDragArea())
+                    } else { Keycap(text: "esc") }
+                }.padding(.horizontal, 20).frame(height: 60)
+                    .background(WindowDragArea()).background(InterfaceStyle.material)
                 Divider()
                 if coordinator.listModel.items.isEmpty {
                     VStack(spacing: 12) {
-                        Text(coordinator.searchText.isEmpty ? "暂无命令" : "未找到匹配命令").foregroundColor(InterfaceStyle.muted)
+                        Text("›_").font(.system(size: 30, design: .monospaced)).foregroundColor(InterfaceStyle.muted).opacity(0.55)
+                        Text(coordinator.searchText.isEmpty ? "还没有命令" : "没有匹配的命令").font(.system(size: 15, weight: .medium))
+                        Text(coordinator.searchText.isEmpty ? "添加一条常用命令，随时呼出执行。" : "试试其他名称，或清空搜索。").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
                         Button(coordinator.searchText.isEmpty ? "添加命令" : "清空搜索") {
                             if coordinator.searchText.isEmpty { editingCommand = Command(name: "", command: "") }
                             else { coordinator.clearSearch(); isSearchFocused = true }
                         }
-                    }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }.buttonStyle(InterfaceButtonStyle()).frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView {
@@ -40,7 +45,6 @@ struct CommandPaletteView: View {
                                     switch item {
                                     case .groupHeader(let name):
                                         GroupHeaderRow(title: name)
-                                            .padding(.top, index == 0 ? 0 : 4)
                                     case .command(let command, let displayIndex):
                                         CommandPaletteRow(command: command, displayIndex: displayIndex,
                                                           isSelected: index == coordinator.listModel.selectedIndex,
@@ -50,7 +54,7 @@ struct CommandPaletteView: View {
                                             .id(item.id)
                                     }
                                 }
-                            }.padding(.horizontal, 8).padding(.vertical, 4)
+                            }.padding(.horizontal, 8).padding(.top, 9).padding(.bottom, 12)
                         }
                         .onChange(of: coordinator.scrollRequest) { target in
                             guard let target, coordinator.listModel.items.indices.contains(target) else { return }
@@ -64,26 +68,25 @@ struct CommandPaletteView: View {
                 HStack(spacing: geometry.size.width < 400 ? 4 : (geometry.size.width < 540 ? 8 : 12)) {
                     HStack(spacing: 3) { Keycap(text: "↑"); Keycap(text: "↓"); Text("选择") }.fixedSize()
                     HStack(spacing: 3) { Keycap(text: "↵"); Text("执行") }.fixedSize()
-                    HStack(spacing: 3) { Keycap(text: "esc"); Text(coordinator.searchText.isEmpty ? "关闭" : "清空") }.fixedSize()
                     Spacer(minLength: 4)
-                    Button("历史") {
+                    Button("执行历史") {
                         CommandPaletteWindowController.shared.hide()
                         HistoryWindowController.shared.showWindow()
                     }
-                    Button("设置 ⌘ ,") {
+                    Button("设置 ⌘,") {
                         CommandPaletteWindowController.shared.hide()
                         SettingsWindowController.shared.showWindow()
                     }
                 }.font(.system(size: 10)).foregroundColor(InterfaceStyle.muted)
                     .buttonStyle(PaletteFooterButtonStyle())
-                    .padding(.horizontal, 16).frame(height: 32)
-                    .background(PaletteDragArea())
+                    .padding(.horizontal, 12).frame(height: 41)
+                    .background(WindowDragArea()).background(InterfaceStyle.chrome)
             }
         }
         .foregroundColor(InterfaceStyle.text)
-        .background(InterfaceStyle.material.opacity(reduceTransparency ? 1 : 0.94))
+        .background(InterfaceStyle.surface)
         .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .clipShape(RoundedRectangle(cornerRadius: 15))
         .onReceive(coordinator.$searchText) { _ in
             DispatchQueue.main.async { isSearchFocused = true }
         }
@@ -101,30 +104,14 @@ struct CommandPaletteView: View {
     }
 }
 
-/// SwiftUI 背景不会自动启动无标题栏窗口拖拽；只在非控件区域接收鼠标。
-private struct PaletteDragArea: NSViewRepresentable {
-    func makeNSView(context: Context) -> DragView { DragView() }
-    func updateNSView(_ view: DragView, context: Context) {}
-
-    final class DragView: NSView {
-        // 让按下事件到达此视图，避免被窗口的自动背景拖拽提前接管。
-        override var mouseDownCanMoveWindow: Bool { false }
-        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-
-        override func mouseDown(with event: NSEvent) {
-            window?.performDrag(with: event)
-        }
-    }
-}
-
 struct GroupHeaderRow: View {
     let title: String
 
     var body: some View {
         HStack(spacing: 10) {
-            Text(title).font(.system(size: 11, weight: .semibold)).foregroundColor(InterfaceStyle.muted)
-            Rectangle().fill(Color.secondary.opacity(0.2)).frame(height: 1)
-        }.padding(.horizontal, 12).frame(height: 25)
+            Text(title).font(.system(size: 10, weight: .semibold)).foregroundColor(InterfaceStyle.muted)
+            Rectangle().fill(InterfaceStyle.line).frame(height: 1)
+        }.padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 7).frame(height: 32)
     }
 }
 
@@ -141,30 +128,29 @@ struct CommandPaletteRow: View {
 
     private var result: (text: String, marker: String, color: Color, canView: Bool)? {
         switch autoExecuteState {
-        case .loading: return ("执行中…", "◌", .secondary, false)
-        case .success(let output): return (output.isEmpty ? "无输出" : output, "●", .green, !output.isEmpty)
-        case .failure(let error): return (error, "●", .red, !error.isEmpty)
+        case .loading: return ("正在执行…", "●", InterfaceStyle.muted, false)
+        case .success(let output): return (output.isEmpty ? "无输出" : output, "●", InterfaceStyle.success, !output.isEmpty)
+        case .failure(let error): return (error, "●", InterfaceStyle.failure, !error.isEmpty)
         case .none: return nil
         }
     }
 
     var body: some View {
         GeometryReader { geometry in
-            let titleWidth = min((command.name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 13, weight: .medium)]).width.rounded(.up), geometry.size.width * 0.55)
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
                 Button { PaletteCoordinator.shared.execute(command) } label: {
                     HighlightedText(text: command.name, search: searchText)
-                        .font(.system(size: 13, weight: .medium)).foregroundColor(isSelected ? InterfaceStyle.selectedText : InterfaceStyle.text)
-                        .lineLimit(1).frame(maxWidth: result == nil ? .infinity : titleWidth, alignment: .leading)
+                        .font(.system(size: 13)).foregroundColor(isSelected ? InterfaceStyle.selectedText : InterfaceStyle.text)
+                        .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
                         .frame(height: 36).padding(.leading, 20)
                         .contentShape(Rectangle())
-                }.buttonStyle(.plain).layoutPriority(1)
+                }.buttonStyle(.plain)
                 if let result {
                     if result.canView {
                         NativeResultButton(text: result.text, color: result.color, name: command.name, hovered: resultHovered) { button in
                             resultButton = button
                             openResult()
-                        }.frame(maxWidth: .infinity).frame(height: 36)
+                        }.frame(width: min((result.text as NSString).size(withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)]).width + 17, geometry.size.width * 0.44)).frame(height: 36)
                             .onHover { resultHovered = $0 }
                             .popover(isPresented: $showingResult, arrowEdge: .bottom) {
                                 VStack(alignment: .leading, spacing: 12) {
@@ -182,7 +168,7 @@ struct CommandPaletteRow: View {
                                         NSPasteboard.general.setString(result.text, forType: .string)
                                         copied = true
                                     }
-                                }.padding(16).frame(width: 420)
+                                }.padding(16).frame(width: 328)
                                 .foregroundColor(InterfaceStyle.text).background(InterfaceStyle.surface)
                             }
                             .onChange(of: showingResult) { visible in
@@ -200,13 +186,13 @@ struct CommandPaletteRow: View {
                                     CommandPaletteWindowController.shared.closeIfInactive()
                                 }
                             }
-                    } else { resultLabel(result).frame(maxWidth: .infinity, alignment: .leading) }
+                    } else { resultLabel(result).frame(maxWidth: geometry.size.width * 0.44, alignment: .trailing) }
                 }
-                if displayIndex <= PaletteConfig.maxQuickSelectCount { Keycap(text: "⌘ \(displayIndex)") }
+                if displayIndex <= PaletteConfig.maxQuickSelectCount { Text("⌘\(displayIndex)").font(.system(size: 11)).foregroundColor(InterfaceStyle.muted) }
             }
-            .padding(.trailing, 12).frame(height: 36)
+            .padding(.trailing, 10).frame(height: 36)
             .background(isSelected ? InterfaceStyle.selection : .clear)
-            .cornerRadius(11)
+            .cornerRadius(7)
         }.frame(height: 36)
     }
 
@@ -221,7 +207,7 @@ struct CommandPaletteRow: View {
         HStack(spacing: 6) {
             Text(result.marker).font(.system(size: 9)).foregroundColor(result.color)
             Text(result.text.replacingOccurrences(of: "\n", with: " "))
-                .font(.system(size: 12, design: .monospaced)).foregroundColor(InterfaceStyle.muted).lineLimit(1)
+                .font(.system(size: 11, design: .monospaced)).foregroundColor(InterfaceStyle.muted).lineLimit(1)
 
         }.help(result.text)
     }
@@ -287,7 +273,7 @@ private struct NativeResultButton: NSViewRepresentable {
     func updateNSView(_ button: PaletteResultButton, context: Context) {
         context.coordinator.onActivate = onActivate
         button.attributedTitle = NSAttributedString(string: text.replacingOccurrences(of: "\n", with: " "), attributes: [
-            .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular),
+            .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular),
             .foregroundColor: NSColor(hovered ? InterfaceStyle.selectedText : InterfaceStyle.muted)
         ])
         button.image = NSImage(systemSymbolName: "circle.fill", accessibilityDescription: nil)?

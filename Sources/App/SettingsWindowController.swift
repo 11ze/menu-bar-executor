@@ -23,17 +23,15 @@ final class SettingsWindowController: NSWindowController {
     private init() {
         let contentView = SettingsView()
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 840, height: 620),
-            styleMask: [.titled, .closable, .resizable, .miniaturizable],
+            contentRect: NSRect(x: 0, y: 0, width: 840, height: 549),
+            styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        window.minSize = NSSize(width: 640, height: 442)
-        window.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: 642)
+        window.contentMinSize = NSSize(width: 640, height: 420)
         window.center()
         window.title = "设置"
-        window.titlebarAppearsTransparent = true
-        window.backgroundColor = NSColor(InterfaceStyle.material)
+        InterfaceStyle.applyWindowChrome(to: window)
         window.contentView = NSHostingView(rootView: contentView)
         window.isReleasedWhenClosed = false
 

@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - docs/design/prototype.html
+      - designs/menu-bar-executor/**
       - .github/workflows/pages.yml
   workflow_dispatch:
 
@@ -29,13 +29,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: actions/configure-pages@v5
-      - name: Prepare design preview
-        run: |
-          preview_dir="$RUNNER_TEMP/design-preview"
-          mkdir -p "$preview_dir"
-          cp docs/design/prototype.html "$preview_dir/index.html"
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: ${{ runner.temp }}/design-preview
+          path: designs/menu-bar-executor
       - uses: actions/deploy-pages@v4
         id: deployment

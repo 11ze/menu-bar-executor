@@ -18,11 +18,11 @@ struct GeneralSettingsView: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 20) {
                     section("呼出与输入") {
                         settingRow("全局快捷键", detail: "在任何应用中打开或关闭命令面板。") {
                             KeyboardShortcuts.Recorder(for: .commandPalette)
-                            Button("清除") { KeyboardShortcuts.setShortcut(nil, for: .commandPalette) }
+                            Button("清除") { KeyboardShortcuts.setShortcut(nil, for: .commandPalette) }.buttonStyle(CompactQuietButtonStyle())
                         }
                         Divider()
                         settingRow("面板输入法", detail: "打开时切换，关闭后恢复原输入法。") {
@@ -40,7 +40,7 @@ struct GeneralSettingsView: View {
                                 }
                             }
                             .labelsHidden()
-                            .frame(width: 180)
+                            .frame(width: 160)
                         }
                     }
                     section("启动、通知与更新") {
@@ -49,12 +49,12 @@ struct GeneralSettingsView: View {
                                 Toggle("登录时启动", isOn: Binding(
                                     get: { settings.settings.launchAtLogin },
                                     set: { settings.setLaunchAtLogin($0) }
-                                )).labelsHidden().toggleStyle(.switch)
+                                )).labelsHidden().toggleStyle(.switch).controlSize(.mini)
                             }
                             Divider()
                         }
-                        settingRow("系统通知", detail: "每条命令可单独设置完成通知，授权状态以系统设置为准。") {
-                            Button("查看说明") {
+                        settingRow("系统通知", detail: "每条命令可单独设置完成通知。") {
+                            Button("查看说明 ↗") {
                                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.notifications")!)
                             }
                         }
@@ -63,7 +63,7 @@ struct GeneralSettingsView: View {
                             Toggle("自动检查更新", isOn: Binding(
                                 get: { settings.settings.autoCheckUpdates },
                                 set: { settings.setAutoCheckUpdates($0) }
-                            )).labelsHidden().toggleStyle(.switch)
+                            )).labelsHidden().toggleStyle(.switch).controlSize(.mini)
                         }
                     }
                     section("配置文件") {
@@ -73,13 +73,13 @@ struct GeneralSettingsView: View {
                         }
                         Divider()
                         Text("~/.config/menu-bar-executor/settings.json")
-                            .font(.system(size: 11, design: .monospaced))
+                            .font(.system(size: 10, design: .monospaced))
                             .foregroundColor(InterfaceStyle.muted)
                             .textSelection(.enabled)
-                            .padding(.vertical, 12)
+                            .padding(.vertical, 14)
                     }
                 }
-                .padding(24)
+                .padding(.horizontal, 30).padding(.vertical, 24)
             }
             .background(InterfaceStyle.subtle)
             Divider()
@@ -87,8 +87,8 @@ struct GeneralSettingsView: View {
                 Text("MenuBarExecutor")
                 Spacer()
                 Text("命令执行超时：30 秒")
-            }.font(.caption).foregroundColor(InterfaceStyle.muted).padding(.horizontal, 20).padding(.vertical, 10).background(InterfaceStyle.chrome)
-        }
+            }.font(.system(size: 11)).foregroundColor(InterfaceStyle.muted).padding(.horizontal, 20).padding(.vertical, 10).background(InterfaceStyle.chrome)
+        }.font(.system(size: 13)).buttonStyle(InterfaceButtonStyle(height: 29))
         .onAppear { inputSources = InputSourceHelper.availableInputSources(forceRefresh: true) }
         .alert("确认导入", isPresented: $showingImportConfirmation) {
             Button("导入", role: .destructive) {
@@ -110,26 +110,26 @@ struct GeneralSettingsView: View {
     }
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(.caption).fontWeight(.semibold).foregroundColor(InterfaceStyle.muted)
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).font(.system(size: 11, weight: .medium)).padding(.leading, 4).foregroundColor(InterfaceStyle.muted)
             VStack(spacing: 0, content: content)
                 .padding(.horizontal, 16)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(InterfaceStyle.surface)
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(InterfaceStyle.line, lineWidth: 1))
-                .cornerRadius(14)
+                .overlay(RoundedRectangle(cornerRadius: 11).stroke(InterfaceStyle.line, lineWidth: 1))
+                .cornerRadius(11)
         }
     }
 
     private func settingRow<Content: View>(_ title: String, detail: String? = nil, @ViewBuilder content: () -> Content) -> some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
+        HStack(spacing: 24) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                if let detail { Text(detail).font(.caption).foregroundColor(InterfaceStyle.muted).fixedSize(horizontal: false, vertical: true) }
+                if let detail { Text(detail).font(.system(size: 11)).foregroundColor(InterfaceStyle.muted).fixedSize(horizontal: false, vertical: true) }
             }
             Spacer(minLength: 12)
-            content()
-        }.padding(.vertical, 14)
+            content().font(.system(size: 11))
+        }.padding(.vertical, 13).frame(minHeight: 63)
     }
     private func exportConfig() {
         let timestamp = Self.exportDateFormatter.string(from: Date())

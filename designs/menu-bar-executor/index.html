@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MenuBarExecutor · 界面探索</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- 现有功能来源：Sources/App；视觉来源：InterfaceStyle.swift；此目录为软件界面的设计参照。
+设计假设：延续 macOS 紧凑操作习惯；外部导航仅用于评审。全部数据保存在内存，不执行 shell。 -->
+<header class="reviewbar">
+<a class="brand" href="#palette"><span class="appmark">›_</span><span>MenuBarExecutor<small>界面探索 / 01</small></span></a>
+<nav aria-label="设计稿界面">
+<button data-page="palette">命令面板</button><button data-page="commands">命令管理</button><button data-page="editor">命令编辑</button><button data-page="general">通用设置</button><button data-page="history">执行历史</button>
+</nav>
+<button id="theme" class="theme" aria-label="切换深浅色">◐ <span>深色</span></button>
+</header>
+<main>
+<div class="caption"><span id="screen-number">01 / 05</span><span class="caption-line"></span><span id="screen-kind">COMMAND PALETTE</span></div>
+<section class="stage" id="stage" aria-label="应用界面预览"></section>
+<section class="design-note"><div><span class="eyebrow">DESIGN NOTE</span><h1 id="note-title">从想到执行，只隔一个回车。</h1></div><p id="note-text"></p></section>
+</main>
+<footer class="reviewfoot"><span><i class="dot"></i> 交互原型 · 示例数据</span><span>不执行真实命令，刷新恢复所有编辑。</span><span>macOS / SwiftUI + AppKit</span></footer>
+<div id="modal-layer"></div><div id="popover-layer"></div><div id="toast" role="status" aria-live="polite"></div>
+<script src="app.js"></script>
+</body>
+</html>

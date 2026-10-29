@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<meta charset="UTF-8">
+<title>原型中文输入回归</title>
+<h1>原型中文输入回归</h1>
+<pre id="results">运行中…</pre>
+<iframe id="prototype" title="原型测试窗口" style="width:1000px;height:700px"></iframe>
+<script>
+(async () => {
+    const frame = document.querySelector('iframe');
+    const results = [];
+    for (const [page, id] of [['palette', 'palette-search'], ['commands', 'command-search'], ['history', 'history-search']]) {
+        try {
+            await new Promise(resolve => {
+                frame.onload = resolve;
+                frame.src = '../designs/menu-bar-executor/index.html?case=' + page + '&run=' + Date.now() + '#' + page;
+            });
+            const win = frame.contentWindow;
+            const doc = frame.contentDocument;
+            const input = doc.getElementById(id);
+            input.focus();
+            input.dispatchEvent(new win.CompositionEvent('compositionstart', {bubbles: true, data: ''}));
+            input.value = 'qi';
+            input.dispatchEvent(new win.InputEvent('input', {bubbles: true, isComposing: true, data: 'qi', inputType: 'insertCompositionText'}));
+            if (!input.isConnected || doc.activeElement !== input) throw new Error('组词期间输入节点被替换或失去焦点：connected=' + input.isConnected + ', active=' + doc.activeElement?.id);
+            input.value = '启动';
+            input.dispatchEvent(new win.CompositionEvent('compositionend', {bubbles: true, data: '启动'}));
+            const committedInput = doc.getElementById(id);
+            committedInput.dispatchEvent(new win.InputEvent('input', {bubbles: true, data: '启动', inputType: 'insertText'}));
+            if (doc.getElementById(id).value !== '启动') throw new Error('中文提交值丢失');
+            const names = [...doc.querySelectorAll(page === 'palette' ? '.execute' : page === 'commands' ? '.command-row h3' : '.history-item strong')].map(el => el.textContent);
+            if (names.length !== 2 || names.some(name => !name.includes('启动'))) throw new Error('中文提交后未按名称过滤：' + names.join(','));
+            results.push('PASS ' + page + '：组合期间保留输入节点，提交后按中文名称过滤');
+        } catch (error) {
+            results.push('FAIL ' + page + '：' + error.message);
+        }
+    }
+    document.getElementById('results').textContent = results.join('\n');
+    document.title = results.some(result => result.startsWith('FAIL')) ? 'FAIL 原型中文输入回归' : 'PASS 原型中文输入回归';
+})();
+</script>
+</html>

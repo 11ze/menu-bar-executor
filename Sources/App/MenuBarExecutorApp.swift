@@ -6,7 +6,7 @@ struct MenuBarExecutorApp: App {
 
     var body: some Scene {
         Settings {
-            SettingsView()
+            SettingsView().background(SettingsWindowChrome())
         }
     }
 }

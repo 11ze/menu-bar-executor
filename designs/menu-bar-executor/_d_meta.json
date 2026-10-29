@@ -1,0 +1,18 @@
+{
+  "type": "design",
+  "designSystems": [],
+  "primaryDesignSystem": null,
+  "assets": {
+    "MenuBarExecutor 界面探索": {
+      "versions": [
+        {
+          "path": "index.html",
+          "createdAt": "2026-10-29T07:21:23.342Z",
+          "status": "approved"
+        }
+      ]
+    }
+  },
+  "createdAt": "2026-10-29T07:21:23.348Z",
+  "updatedAt": "2026-10-29T07:42:15.338Z"
+}

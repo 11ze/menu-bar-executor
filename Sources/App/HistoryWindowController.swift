@@ -43,15 +43,14 @@ final class HistoryWindowController: NSObject {
         let hostingView = NSHostingView(rootView: contentView)
 
         window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 840, height: 560),
-            styleMask: [.titled, .closable, .resizable, .miniaturizable],
+            contentRect: NSRect(x: 0, y: 0, width: 840, height: 566),
+            styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        window?.minSize = NSSize(width: 640, height: 442)
+        window?.contentMinSize = NSSize(width: 640, height: 420)
         window?.title = "执行历史"
-        window?.titlebarAppearsTransparent = true
-        window?.backgroundColor = NSColor(InterfaceStyle.material)
+        if let window { InterfaceStyle.applyWindowChrome(to: window) }
         window?.contentView = hostingView
         window?.isReleasedWhenClosed = false
         window?.center()
