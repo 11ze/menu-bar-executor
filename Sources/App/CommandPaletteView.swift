@@ -14,9 +14,9 @@ struct CommandPaletteView: View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
                 HStack(spacing: 12) {
-                    Image(systemName: "magnifyingglass").font(.system(size: 17)).foregroundColor(InterfaceStyle.muted)
+                    Image(systemName: "magnifyingglass").font(.system(size: 15)).foregroundColor(InterfaceStyle.muted)
                     TextField("搜索命令…", text: $coordinator.searchText)
-                        .textFieldStyle(.plain).font(.system(size: 17)).focused($isSearchFocused)
+                        .textFieldStyle(.plain).font(.system(size: 15)).focused($isSearchFocused)
                         .onChange(of: coordinator.searchText) { _ in coordinator.selectFirstCommand() }
                     if !coordinator.searchText.isEmpty {
                         Button { coordinator.clearSearch() } label: {
@@ -24,7 +24,7 @@ struct CommandPaletteView: View {
                         }
                             .buttonStyle(.plain).foregroundColor(InterfaceStyle.muted).accessibilityLabel("清空搜索")
                     } else { Keycap(text: "esc") }
-                }.padding(.horizontal, 20).frame(height: 60)
+                }.padding(.horizontal, 16).frame(height: 48)
                     .background(WindowDragArea()).background(InterfaceStyle.material)
                 Divider()
                 if coordinator.listModel.items.isEmpty {

@@ -305,7 +305,7 @@ final class CommandPaletteWindowController: NSWindowController {
             case .command: return height + 36
             }
         }
-        let fixedHeight: CGFloat = 60 + 41 + 2
+        let fixedHeight: CGFloat = 48 + 41 + 2
         let contentHeight = fixedHeight + min(listHeight, 410)
         let height = min(max(preferredHeight ?? contentHeight, PaletteConfig.minHeight), PaletteConfig.maxHeight, available.height)
         let width = min(max(panel.frame.width, PaletteConfig.minWidth), PaletteConfig.maxWidth, available.width)
