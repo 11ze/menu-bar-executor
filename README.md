@@ -15,8 +15,9 @@ macOS 12.0+ · SwiftUI + AppKit
 
 ## 界面
 
-![浅色命令面板](docs/screenshots/palette-light.png)
-![深色命令面板](docs/screenshots/palette-dark.png)
+| 浅色 | 深色 |
+| --- | --- |
+| ![浅色命令面板](docs/screenshots/palette-light.png) | ![深色命令面板](docs/screenshots/palette-dark.png) |
 
 ## 安装
 
