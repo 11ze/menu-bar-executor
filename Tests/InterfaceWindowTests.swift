@@ -5,6 +5,53 @@ import XCTest
 
 @MainActor
 final class InterfaceWindowTests: XCTestCase {
+    func testLongAutoResultUsesSpaceBesideShortTitle() async throws {
+        let command = Command(name: "IP", command: "printf test", autoExecute: true)
+        let output = String(repeating: "192.168.31.108 / ", count: 8)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 36),
+                              styleMask: [.borderless], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.orderOut(nil) }
+        let host = NSHostingView(rootView: CommandPaletteRow(command: command, displayIndex: 1,
+            isSelected: false, searchText: "", autoExecuteState: .success(output)))
+        window.contentView = host
+        window.setContentSize(NSSize(width: 560, height: 36))
+        window.orderFront(nil)
+        await nextLayout()
+        host.layoutSubtreeIfNeeded()
+        let result = try XCTUnwrap(descendants(host).compactMap { $0 as? NSButton }.first {
+            $0.title == output
+        })
+        let frame = result.convert(result.bounds, to: host)
+        XCTAssertGreaterThan(frame.width, 400, "短标题旁的空白应供长结果使用")
+        XCTAssertGreaterThan(frame.minX, 40, "结果不能覆盖左侧标题")
+        XCTAssertLessThan(frame.minX, 70, "结果应扩展到标题右侧，仅保留间隔")
+        XCTAssertLessThan(frame.maxX, 540, "结果右侧应保留快捷键区域")
+    }
+
+    func testAutoResultsRenderAtPanelWidths() async throws {
+        let folder = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("menu-bar-executor-native-reference")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let short = Command(name: "IP", command: "printf test", autoExecute: true)
+        let long = Command(name: "当前开发环境的网络连接状态与地址", command: "printf test", autoExecute: true)
+        let output = "192.168.31.108 / en0 / 当前网络连接正常，以下内容超出行内显示范围"
+        for appearance in [NSAppearance.Name.aqua, .darkAqua] {
+            let suffix = appearance == .aqua ? "light" : "dark"
+            for width in [360, 560, 800] {
+                try await snapshot(VStack(spacing: 0) {
+                    CommandPaletteRow(command: short, displayIndex: 1, isSelected: true, searchText: "", autoExecuteState: .success(output))
+                    CommandPaletteRow(command: long, displayIndex: 2, isSelected: false, searchText: "", autoExecuteState: .success(output))
+                    CommandPaletteRow(command: short, displayIndex: 3, isSelected: false, searchText: "", autoExecuteState: .success("main"))
+                    CommandPaletteRow(command: short, displayIndex: 4, isSelected: false, searchText: "", autoExecuteState: .success("第一行\n第二行\n第三行"))
+                    CommandPaletteRow(command: short, displayIndex: 5, isSelected: false, searchText: "", autoExecuteState: .loading)
+                    CommandPaletteRow(command: short, displayIndex: 6, isSelected: false, searchText: "", autoExecuteState: .success(""))
+                    CommandPaletteRow(command: short, displayIndex: 10, isSelected: false, searchText: "", autoExecuteState: .failure(output))
+                }.background(InterfaceStyle.surface), size: NSSize(width: width, height: 252),
+                name: "palette-long-results-\(suffix)-\(width)", folder: folder, appearance: appearance)
+            }
+        }
+    }
+
     func testSettingsWindowUsesOneTitlebarAndItsCloseButtonWorks() async throws {
         let controller = SettingsWindowController.shared
         controller.showWindow()

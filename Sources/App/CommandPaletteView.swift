@@ -144,13 +144,13 @@ struct CommandPaletteRow: View {
                         .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
                         .frame(height: 36).padding(.leading, 20)
                         .contentShape(Rectangle())
-                }.buttonStyle(.plain)
+                }.buttonStyle(.plain).padding(.trailing, result == nil ? 0 : 4)
                 if let result {
                     if result.canView {
                         NativeResultButton(text: result.text, color: result.color, name: command.name, hovered: resultHovered) { button in
                             resultButton = button
                             openResult()
-                        }.frame(width: min((result.text as NSString).size(withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)]).width + 17, geometry.size.width * 0.44)).frame(height: 36)
+                        }.frame(width: resultWidth(for: result.text, in: geometry.size.width)).frame(height: 36)
                             .onHover { resultHovered = $0 }
                             .popover(isPresented: $showingResult, arrowEdge: .bottom) {
                                 VStack(alignment: .leading, spacing: 12) {
@@ -186,7 +186,7 @@ struct CommandPaletteRow: View {
                                     CommandPaletteWindowController.shared.closeIfInactive()
                                 }
                             }
-                    } else { resultLabel(result).frame(maxWidth: geometry.size.width * 0.44, alignment: .trailing) }
+                    } else { resultLabel(result).frame(width: resultWidth(for: result.text, in: geometry.size.width), alignment: .trailing) }
                 }
                 if displayIndex <= PaletteConfig.maxQuickSelectCount { Text("⌘\(displayIndex)").font(.system(size: 11)).foregroundColor(InterfaceStyle.muted) }
             }
@@ -194,6 +194,16 @@ struct CommandPaletteRow: View {
             .background(isSelected ? InterfaceStyle.selection : .clear)
             .cornerRadius(7)
         }.frame(height: 36)
+    }
+
+    private func resultWidth(for text: String, in rowWidth: CGFloat) -> CGFloat {
+        let titleWidth = ceil((command.name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 13)]).width)
+        let shortcutWidth = displayIndex <= PaletteConfig.maxQuickSelectCount
+            ? ceil(("⌘\(displayIndex)" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 11)]).width) + 8 : 0
+        let available = max(17, rowWidth - 20 - titleWidth - 12 - shortcutWidth - 10)
+        let inlineText = text.replacingOccurrences(of: "\n", with: " ")
+        let textWidth = ceil((inlineText as NSString).size(withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)]).width)
+        return min(textWidth + 17, available)
     }
 
     private func openResult() {
