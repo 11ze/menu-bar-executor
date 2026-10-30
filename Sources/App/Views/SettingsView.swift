@@ -14,5 +14,6 @@ struct SettingsView: View {
         .background(InterfaceStyle.surface)
         .clipShape(RoundedRectangle(cornerRadius: 15))
         .frame(minWidth: 640, idealWidth: 840, minHeight: 420, idealHeight: 549)
+        .ignoresSafeArea(edges: .top)
     }
 }

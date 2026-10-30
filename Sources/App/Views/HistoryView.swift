@@ -117,6 +117,7 @@ struct HistoryView: View {
         .buttonStyle(InterfaceButtonStyle())
         .clipShape(RoundedRectangle(cornerRadius: 15))
         .frame(minWidth: 640, minHeight: 420)
+        .ignoresSafeArea(edges: .top)
         .onChange(of: selectedRecord?.id) { _ in copied = false }
         .alert("确认清空", isPresented: $showingClearConfirmation) {
             Button("清空", role: .destructive) { history.clearHistory() }

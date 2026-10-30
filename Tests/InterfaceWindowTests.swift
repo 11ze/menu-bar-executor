@@ -60,11 +60,10 @@ final class InterfaceWindowTests: XCTestCase {
         let content = try XCTUnwrap(window.contentView)
         XCTAssertEqual(content.bounds.height, window.frame.height, accuracy: 1,
                        "原型的标题区已在内容中，不能再保留一条系统标题栏")
-        let close = descendants(content).compactMap { $0 as? NSButton }.first {
-            $0.accessibilitySubrole() == .closeButton
-        }
-        XCTAssertNotNil(close, "标题区应使用能关闭真实窗口的系统按钮")
-        close?.performClick(nil)
+        let settingsClose = await waitForCloseButton(in: content)
+        let close = try XCTUnwrap(settingsClose, "标题区应使用能关闭真实窗口的自绘按钮")
+        assertHeaderPinnedToTop(close, in: content, "标题区应贴住窗口顶边，不能再叠加一条系统标题栏的空白")
+        close.performClick(nil)
         XCTAssertFalse(window.isVisible)
     }
 
@@ -76,9 +75,32 @@ final class InterfaceWindowTests: XCTestCase {
         controller.showWindow()
         await nextLayout()
         XCTAssertTrue(window.isVisible)
-        XCTAssertEqual(try XCTUnwrap(window.contentView).bounds.height, window.frame.height, accuracy: 1,
+        let content = try XCTUnwrap(window.contentView)
+        XCTAssertEqual(content.bounds.height, window.frame.height, accuracy: 1,
                        "重新打开历史窗口仍应采用原型内置标题区")
+        let historyClose = await waitForCloseButton(in: content)
+        let close = try XCTUnwrap(historyClose, "标题区应使用能关闭真实窗口的自绘按钮")
+        assertHeaderPinnedToTop(close, in: content, "重新打开历史窗口的标题区仍应贴住窗口顶边")
         window.performClose(nil)
+    }
+
+    /// SwiftUI 在窗口上屏后才挂载自绘窗口按钮，等几个主循环周期再查找。
+    private func waitForCloseButton(in content: NSView) async -> NSButton? {
+        for _ in 0..<10 {
+            content.layoutSubtreeIfNeeded()
+            if let button = descendants(content).compactMap({ $0 as? NSButton }).first(where: {
+                $0.accessibilitySubrole() == .closeButton
+            }) {
+                return button
+            }
+            await nextLayout()
+        }
+        return nil
+    }
+
+    /// NSHostingView 用翻转坐标：55 点标题区里自绘按钮中心距顶 27.5 点上下 1 点，系统标题栏的安全区会把它再推下 32 点。
+    private func assertHeaderPinnedToTop(_ close: NSButton, in content: NSView, _ message: String) {
+        XCTAssertEqual(close.convert(close.bounds, to: content).midY, 27.5, accuracy: 2, message)
     }
 
     /// 保存真实 NSHostingView 渲染供逐屏核对，不以像素常量代替视觉验收。
