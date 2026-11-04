@@ -32,7 +32,9 @@ enum AutoExecuteState: Equatable {
 final class PaletteCoordinator: ObservableObject {
     static let shared = PaletteCoordinator(settingsManager: .shared)
 
-    @Published var searchText: String = "" { didSet { refreshCommands() } }
+    @Published var searchText: String = "" {
+        didSet { rebuild(with: settingsManager.settings, resetSelection: searchText != oldValue) }
+    }
     @Published private(set) var listModel: PaletteListModel
     @Published var autoExecuteResults: [UUID: AutoExecuteState] = [:]
     /// 键盘导航请求滚动的目标索引；hover 只改选中不发请求，避免滚动与 hover 互相触发
@@ -67,12 +69,12 @@ final class PaletteCoordinator: ObservableObject {
 
     /// 触发收敛点：搜索变化 / 命令列表变化 / 面板呼出刷新都走这里；
     /// 配置发布时直接使用传入快照，不回读 settingsManager.settings
-    private func rebuild(with settings: AppSettings) {
+    private func rebuild(with settings: AppSettings, resetSelection: Bool = false) {
         let next = PaletteListModel.derive(
             commands: settings.commands,
             searchText: searchText,
             groupOrder: settings.groupOrder,
-            previousIndex: listModel.selectedIndex
+            previousIndex: resetSelection ? 0 : listModel.selectedIndex
         )
         guard next != listModel else { return }
         let selectedIndexChanged = next.selectedIndex != listModel.selectedIndex
@@ -85,15 +87,6 @@ final class PaletteCoordinator: ObservableObject {
 
     func refreshCommands() {
         rebuild(with: settingsManager.settings)
-    }
-
-    /// 搜索文本变化后由视图调用：重置到第一个命令项
-    func selectFirstCommand() {
-        guard let index = listModel.items.firstIndex(where: { $0.isCommand }) else { return }
-        if index != listModel.selectedIndex {
-            listModel = listModel.updatingSelectedIndex(index)
-            scrollRequest = index
-        }
     }
 
     /// 鼠标 hover 选中：只移动选中，不请求滚动

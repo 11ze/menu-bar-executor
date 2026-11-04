@@ -17,7 +17,6 @@ struct CommandPaletteView: View {
                     Image(systemName: "magnifyingglass").font(.system(size: 15)).foregroundColor(InterfaceStyle.muted)
                     TextField("搜索命令…", text: $coordinator.searchText)
                         .textFieldStyle(.plain).font(.system(size: 15)).focused($isSearchFocused)
-                        .onChange(of: coordinator.searchText) { _ in coordinator.selectFirstCommand() }
                     if !coordinator.searchText.isEmpty {
                         Button { coordinator.clearSearch() } label: {
                             Image(systemName: "xmark.circle.fill").frame(width: 24, height: 24).contentShape(Rectangle())

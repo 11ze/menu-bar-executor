@@ -45,7 +45,7 @@ struct PaletteListModel: Equatable {
         )
     }
 
-    /// 选中重置（搜索文本变化时经 coordinator 调用）
+    /// 替换选中索引，供键盘导航与 hover 使用
     func updatingSelectedIndex(_ index: Int) -> PaletteListModel {
         PaletteListModel(items: items, selectedIndex: index)
     }

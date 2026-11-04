@@ -71,6 +71,72 @@ final class PaletteCoordinatorTests: XCTestCase {
     }
 
     @MainActor
+    func testSearchChangeAndClear_SelectsFirstCommandWithoutView() throws {
+        var settings = AppSettings()
+        settings.commands = [
+            Command(name: "build app", command: "true", group: "开发"),
+            Command(name: "build docs", command: "true", group: "开发"),
+            Command(name: "clean", command: "true", group: "开发"),
+        ]
+        let fileURL = try writeSettings(settings, named: "settings.json")
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        let coordinator = PaletteCoordinator(settingsManager: manager)
+        coordinator.moveDown()
+        XCTAssertEqual(coordinator.listModel.items[coordinator.listModel.selectedIndex].command?.name, "build docs")
+        coordinator.scrollRequest = nil
+        var publishedSelection: [String] = []
+        let subscription = coordinator.$listModel.dropFirst().sink { model in
+            if let command = model.items[model.selectedIndex].command {
+                publishedSelection.append(command.name)
+            }
+        }
+        defer { subscription.cancel() }
+
+        coordinator.searchText = "build"
+
+        XCTAssertEqual(coordinator.listModel.items.compactMap { $0.command?.name }, ["build app", "build docs"])
+        XCTAssertEqual(coordinator.listModel.items[coordinator.listModel.selectedIndex].command?.name, "build app")
+        XCTAssertEqual(coordinator.scrollRequest, 1)
+        XCTAssertEqual(publishedSelection, ["build app"])
+
+        coordinator.moveDown()
+        coordinator.scrollRequest = nil
+        publishedSelection.removeAll()
+        coordinator.clearSearch()
+
+        XCTAssertEqual(coordinator.listModel.items.compactMap { $0.command?.name }, ["build app", "build docs", "clean"])
+        XCTAssertEqual(coordinator.listModel.items[coordinator.listModel.selectedIndex].command?.name, "build app")
+        XCTAssertEqual(coordinator.scrollRequest, 1)
+        XCTAssertEqual(publishedSelection, ["build app"])
+    }
+
+    @MainActor
+    func testNavigationAndHover_KeepTheirScrollBehaviorWhenSearchIsUnchanged() throws {
+        var settings = AppSettings()
+        settings.commands = [
+            Command(name: "first", command: "true"),
+            Command(name: "second", command: "true"),
+        ]
+        let fileURL = try writeSettings(settings, named: "settings.json")
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        let coordinator = PaletteCoordinator(settingsManager: manager)
+
+        coordinator.moveDown()
+        XCTAssertEqual(coordinator.listModel.selectedIndex, 1)
+        XCTAssertEqual(coordinator.scrollRequest, 1)
+        coordinator.scrollRequest = nil
+
+        coordinator.selectOnHover(0)
+        XCTAssertEqual(coordinator.listModel.selectedIndex, 0)
+        XCTAssertNil(coordinator.scrollRequest)
+        coordinator.selectOnHover(1)
+        coordinator.searchText = ""
+
+        XCTAssertEqual(coordinator.listModel.selectedIndex, 1)
+        XCTAssertNil(coordinator.scrollRequest)
+    }
+
+    @MainActor
     func testAutoCommands_PreviousRoundCannotOverwriteCurrentResult() throws {
         let command = Command(name: "自动命令", command: "echo auto", autoExecute: true)
         var settings = AppSettings()

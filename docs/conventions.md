@@ -7,6 +7,7 @@
 - **命令原文**: 编辑保存保留命令内容的首尾空白，避免改变 Shell 语义；仅判空时裁剪空白。
 - **命令写入**: 新建/编辑统一走 `CommandsManager.upsert`（按 id 原位替换、未知追加），勿在视图闭包里自行判别身份
 - **面板列表**: 列表派生收在 `PaletteListModel` 纯值类型，`PaletteCoordinator` 只留执行副作用，勿在 coordinator 或视图里加列表组装逻辑
+- **面板搜索**: 搜索词变化时，`PaletteCoordinator` 一次发布已选中首条命令的列表快照；视图不补选，实际滚动仍由视图执行。重复赋相同搜索词不重置选择。
 - **面板配置快照**: `PaletteCoordinator` 从同一次 `$settings` 发布中取 `commands` 与 `groupOrder`，两者任一变化都重建列表；订阅内勿回读 `settings` 属性，避免 `willSet` 期间混用新旧值
 - **面板自动执行**: `reset()` 与新一轮自动执行均使旧轮次回调失效，只接纳当前轮次结果；已启动的进程继续运行，仍经 `CommandExecutor` 的 auto 模式执行
 - **键盘监听**: 本地 keyDown 监听一律用 `KeyDownMonitor`；有 marked text 时优先交给输入法，不抢候选确认或导航；勿手写 `addLocalMonitorForEvents` 四件套
