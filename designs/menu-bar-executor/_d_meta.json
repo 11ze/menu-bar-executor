@@ -11,8 +11,22 @@
           "status": "approved"
         }
       ]
+    },
+    "自动执行结果样式": {
+      "versions": [
+        {
+          "path": "result-emphasis.html",
+          "createdAt": "2026-11-05T06:19:09.024Z",
+          "status": "changes-requested"
+        },
+        {
+          "path": "result-inline.html",
+          "createdAt": "2026-11-05T06:28:04.204Z",
+          "status": "needs-review"
+        }
+      ]
     }
   },
   "createdAt": "2026-10-29T07:21:23.348Z",
-  "updatedAt": "2026-10-29T07:42:15.338Z"
+  "updatedAt": "2026-11-05T06:28:04.205Z"
 }

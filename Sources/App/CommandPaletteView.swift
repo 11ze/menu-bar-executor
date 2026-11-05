@@ -216,7 +216,7 @@ struct CommandPaletteRow: View {
         HStack(spacing: 6) {
             Text(result.marker).font(.system(size: 9)).foregroundColor(result.color)
             Text(result.text.replacingOccurrences(of: "\n", with: " "))
-                .font(.system(size: 11, design: .monospaced)).foregroundColor(InterfaceStyle.muted).lineLimit(1)
+                .font(.system(size: 11, design: .monospaced)).foregroundColor(InterfaceStyle.text).lineLimit(1)
 
         }.help(result.text)
     }
@@ -283,7 +283,7 @@ private struct NativeResultButton: NSViewRepresentable {
         context.coordinator.onActivate = onActivate
         button.attributedTitle = NSAttributedString(string: text.replacingOccurrences(of: "\n", with: " "), attributes: [
             .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular),
-            .foregroundColor: NSColor(hovered ? InterfaceStyle.selectedText : InterfaceStyle.muted)
+            .foregroundColor: NSColor(hovered ? InterfaceStyle.selectedText : InterfaceStyle.text)
         ])
         button.image = NSImage(systemSymbolName: "circle.fill", accessibilityDescription: nil)?
             .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 6, weight: .regular))
