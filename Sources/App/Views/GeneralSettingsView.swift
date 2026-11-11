@@ -100,12 +100,12 @@ struct GeneralSettingsView: View {
             Text("导入将覆盖当前所有设置（包括命令和面板配置），确定要继续吗？")
         }
         .alert("操作失败", isPresented: Binding(
-            get: { manager.lastError != nil },
-            set: { if !$0 { manager.clearError() } }
+            get: { settings.lastError != nil },
+            set: { if !$0 { settings.lastError = nil } }
         )) {
-            Button("确定", role: .cancel) { manager.clearError() }
+            Button("确定", role: .cancel) { settings.lastError = nil }
         } message: {
-            Text(manager.lastError?.errorDescription ?? "未知错误")
+            Text(settings.lastError?.errorDescription ?? "未知错误")
         }
     }
 

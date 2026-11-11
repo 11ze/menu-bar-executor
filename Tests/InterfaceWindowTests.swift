@@ -144,7 +144,7 @@ final class InterfaceWindowTests: XCTestCase {
             }
             try await snapshot(CommandPaletteView(coordinator: coordinator), size: NSSize(width: 560, height: 508),
                                name: "palette-\(suffix)", folder: folder, appearance: appearance)
-            try await snapshot(CommandEditorView(command: sample, onSave: { _ in }, onDelete: {}),
+            try await snapshot(CommandEditorView(command: sample, onSave: { _ in true }, onDelete: { true }),
                                size: NSSize(width: 560, height: 680), name: "editor-\(suffix)", folder: folder, appearance: appearance)
             try await snapshot(VStack(spacing: 0) {
                 CommandPaletteRow(command: sample, displayIndex: 1, isSelected: true, searchText: "", autoExecuteState: .success("192.168.31.108"))

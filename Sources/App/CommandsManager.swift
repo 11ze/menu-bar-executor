@@ -7,7 +7,6 @@ final class CommandsManager: ObservableObject {
     static let shared = CommandsManager()
 
     @Published private(set) var commands: [Command] = []
-    @Published var lastError: AppError?
 
     private let settingsManager = AppSettingsManager.shared
     private var cancellables = Set<AnyCancellable>()
@@ -50,7 +49,8 @@ final class CommandsManager: ObservableObject {
     // MARK: - 命令写入（直通后镜像经 $settings 自动回流）
 
     /// 新建 / 编辑统一入口：按 id 判别身份（编辑器保存回调不再自行判别）
-    func upsert(_ command: Command) {
+    @discardableResult
+    func upsert(_ command: Command) -> Bool {
         settingsManager.saveCommands(Self.upserted(command, in: commands))
     }
 
@@ -64,14 +64,9 @@ final class CommandsManager: ObservableObject {
         return updated
     }
 
-    func deleteCommand(id: UUID) {
+    @discardableResult
+    func deleteCommand(id: UUID) -> Bool {
         settingsManager.saveCommands(commands.filter { $0.id != id })
-    }
-
-    func reorderCommands(from source: IndexSet, to destination: Int) {
-        var reordered = commands
-        reordered.move(fromOffsets: source, toOffset: destination)
-        settingsManager.saveCommands(reordered)
     }
 
     func canMoveUp(_ command: Command) -> Bool {
@@ -93,25 +88,22 @@ final class CommandsManager: ObservableObject {
         return reordered
     }
 
-    func clearError() {
-        lastError = nil
-    }
-
     // MARK: - 导入导出（真错误路径，失败落 lastError）
 
     func importSettings(from url: URL) {
         do {
             try settingsManager.importSettings(from: url)
         } catch {
-            lastError = .configSaveFailed(error)
+            settingsManager.lastError = .configSaveFailed(error)
         }
     }
 
     func exportSettings(to url: URL) {
         do {
             try settingsManager.exportSettings(to: url)
+            settingsManager.lastError = nil
         } catch {
-            lastError = .configExportFailed(error)
+            settingsManager.lastError = .configExportFailed(error)
         }
     }
 }

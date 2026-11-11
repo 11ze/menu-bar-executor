@@ -199,9 +199,12 @@ final class AppSettingsManager: ObservableObject {
 
     /// 对外只读：写入必须走 intent 方法，编译器强制收口
     @Published private(set) var settings: AppSettings = AppSettings()
+    @Published var lastError: AppError?
 
     /// 配置是否已成功从磁盘加载（防止加载失败时空默认值覆盖真实配置）
     private var isLoaded = false
+    /// 最近一次加载失败的原因：未加载成功时拒写，用它报告真实原因，避免虚构“文件损坏”
+    private var loadError: Error?
 
     private let filePath: URL
     private let resolvedFilePath: URL
@@ -210,7 +213,8 @@ final class AppSettingsManager: ObservableObject {
     // MARK: - 文件监听
 
     private var fileMonitorSource: DispatchSourceFileSystemObject?
-    private var monitorFileDescriptor: Int32 = -1
+    private var directoryMonitorSource: DispatchSourceFileSystemObject?
+    private let enableFileMonitoring: Bool
     private var debounceTask: Task<Void, Never>?
     /// reloadSilent 乱序守卫：并发发起多次后台重载时，只应用最新一次的结果
     private var reloadToken = 0
@@ -218,11 +222,15 @@ final class AppSettingsManager: ObservableObject {
     /// 注入文件路径与监听、错误通知开关；shared 走默认配置，测试走临时目录
     init(filePath: URL, enableFileMonitoring: Bool = true, notifyLoadError: Bool = true) {
         self.filePath = filePath
-        // 初始化时一次性解析软链接
-        if let resolved = try? FileManager.default.destinationOfSymbolicLink(atPath: filePath.path) {
-            resolvedFilePath = URL(fileURLWithPath: resolved)
+        self.enableFileMonitoring = enableFileMonitoring
+        // resolvingSymlinksInPath 对目标不存在的链接会返回链接自身，必须先读目的地。
+        if let destination = try? FileManager.default.destinationOfSymbolicLink(atPath: filePath.path) {
+            let target = destination.hasPrefix("/")
+                ? URL(fileURLWithPath: destination)
+                : filePath.deletingLastPathComponent().appendingPathComponent(destination)
+            resolvedFilePath = target.standardizedFileURL.resolvingSymlinksInPath()
         } else {
-            resolvedFilePath = filePath
+            resolvedFilePath = filePath.resolvingSymlinksInPath()
         }
         load(notifyError: notifyLoadError)
         if enableFileMonitoring {
@@ -232,48 +240,41 @@ final class AppSettingsManager: ObservableObject {
 
     deinit {
         fileMonitorSource?.cancel()
-        fileMonitorSource = nil
-        if monitorFileDescriptor >= 0 {
-            close(monitorFileDescriptor)
-        }
+        directoryMonitorSource?.cancel()
         debounceTask?.cancel()
     }
 
     private func startFileMonitoring() {
-        // 先清掉旧监听（init 迁移路径会 save 后再 start，不清会泄漏 fd 和 source）
+        guard enableFileMonitoring else { return }
         stopFileMonitoring()
-        let fd = open(resolvedFilePath.path, O_EVTONLY)
-        guard fd >= 0 else { return }
-        monitorFileDescriptor = fd
+        if directoryMonitorSource == nil {
+            let directory = resolvedFilePath.deletingLastPathComponent()
+            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            // 目录监听覆盖文件不存在、删除后重建及原子替换；文件监听覆盖就地修改。
+            directoryMonitorSource = makeMonitor(at: directory, events: .write)
+        }
+        fileMonitorSource = makeMonitor(at: resolvedFilePath, events: [.write, .delete, .rename])
+    }
 
-        fileMonitorSource = DispatchSource.makeFileSystemObjectSource(
+    private func makeMonitor(at url: URL, events: DispatchSource.FileSystemEvent) -> DispatchSourceFileSystemObject? {
+        let fd = open(url.path, O_EVTONLY)
+        guard fd >= 0 else { return nil }
+        let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fd,
-            // .delete/.rename 覆盖外部编辑器的原子替换写（rename 覆盖不产生 .write）
-            eventMask: [.write, .delete, .rename],
+            eventMask: events,
             queue: DispatchQueue(label: "com.menu-bar-executor.settings-monitor")
         )
-
-        fileMonitorSource?.setEventHandler { [weak self] in
-            Task { @MainActor in
-                self?.handleFileChange()
-            }
+        source.setEventHandler { [weak self] in
+            Task { @MainActor [weak self] in self?.handleFileChange() }
         }
-
-        fileMonitorSource?.resume()
+        source.setCancelHandler { close(fd) }
+        source.resume()
+        return source
     }
 
     private func stopFileMonitoring() {
         fileMonitorSource?.cancel()
         fileMonitorSource = nil
-        if monitorFileDescriptor >= 0 {
-            close(monitorFileDescriptor)
-            monitorFileDescriptor = -1
-        }
-    }
-
-    private func restartFileMonitoring() {
-        stopFileMonitoring()
-        startFileMonitoring()
     }
 
     private func handleFileChange() {
@@ -289,7 +290,7 @@ final class AppSettingsManager: ObservableObject {
     }
 
     /// 统一解码入口：iso8601 日期策略是所有读盘路径（load / reloadSilent / importSettings）的共同契约
-    private static func decodeSettings(from data: Data) throws -> AppSettings {
+    nonisolated private static func decodeSettings(from data: Data) throws -> AppSettings {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode(AppSettings.self, from: data)
@@ -312,151 +313,152 @@ final class AppSettingsManager: ObservableObject {
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             // 读盘或解码失败也要回主线程重建监听：外部原子替换写坏文件后旧 fd 已失效，
-            // 不重建则坏文件期间的后续外部修改全部丢失（restart 幂等，文件不存在时自动 no-op）
+            // 不重建则坏文件期间的后续外部修改全部丢失（重建幂等，文件不存在时自动 no-op）
             guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
                   let decoded = try? Self.decodeSettings(from: data) else {
                 Task { @MainActor [weak self] in
-                    self?.restartFileMonitoring()
+                    self?.startFileMonitoring()
                 }
                 return
             }
 
             Task { @MainActor [weak self] in
                 guard let self, token == self.reloadToken else { return }
-                self.settings = decoded
-                self.isLoaded = true
-                if AppSettings.migrateIfNeeded(&self.settings) {
-                    self.save()
+                var candidate = decoded
+                if AppSettings.migrateIfNeeded(&candidate) {
+                    do { try self.save(candidate) }
+                    catch { self.lastError = .configSaveFailed(error) }
                 } else {
-                    self.restartFileMonitoring()
+                    if self.settings != candidate { self.settings = candidate }
+                    self.isLoaded = true
                 }
+                self.startFileMonitoring()
             }
         }
     }
 
     // MARK: - 加载
 
-    func load(notifyError: Bool = true) {
+    @discardableResult
+    func load(notifyError: Bool = true) -> Bool {
         guard FileManager.default.fileExists(atPath: filePath.path) else {
-            // 文件不存在，视为首次安装，允许保存
+            // 仅首次安装允许使用空默认值；已有配置丢失时保留最后成功的快照。
+            reloadToken += 1
+            if isLoaded {
+                if notifyError { notificationManager.showConfigLoadError(CocoaError(.fileNoSuchFile)) }
+                return false
+            }
             isLoaded = true
-            return
+            return true
         }
         do {
             let data = try Data(contentsOf: filePath)
-            settings = try Self.decodeSettings(from: data)
-            isLoaded = true
-            // 使在飞的后台 reloadSilent 结果失效，防止旧快照覆盖本次同步结果
-            reloadToken += 1
-            if AppSettings.migrateIfNeeded(&settings) {
-                save()
+            var decoded = try Self.decodeSettings(from: data)
+            if AppSettings.migrateIfNeeded(&decoded) {
+                try save(decoded)
+            } else {
+                reloadToken += 1
+                settings = decoded
+                isLoaded = true
             }
+            return true
         } catch {
-            if notifyError {
-                notificationManager.showConfigLoadError(error)
-            }
+            loadError = error
+            if notifyError { notificationManager.showConfigLoadError(error) }
+            return false
         }
     }
 
     // MARK: - 保存
 
-    /// 保存策略（isLoaded 守卫 + 原子写入 + 重建监听）是内部事务，不对外暴露
-    private func save() {
-        // 配置未加载成功时拒绝写入，防止空默认值覆盖真实配置
-        guard isLoaded else { return }
-        // 内存已改（所有调用方先改后存）：统一失效在飞的 reloadSilent，
-        // 防其旧盘快照覆盖本次内存结果（isLoaded 拒绝路径除外，此时在飞读反而是自愈）
+    /// 先写盘，成功后发布配置；失败保留原快照。
+    private func save(_ candidate: AppSettings) throws {
         reloadToken += 1
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(at: resolvedFilePath.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let data = try Self.encodeSettings(candidate)
+        try data.write(to: resolvedFilePath, options: .atomic)
+        settings = candidate
+        isLoaded = true
+        lastError = nil
+        startFileMonitoring()
+    }
+
+    @discardableResult
+    private func commit(_ change: (inout AppSettings) -> Void) -> Bool {
+        guard isLoaded else {
+            lastError = .configSaveFailed(loadError ?? CocoaError(.fileReadCorruptFile))
+            return false
+        }
+        var candidate = settings
+        change(&candidate)
         do {
-            try AppPaths.ensureDirectoryExists()
-            let data = try Self.encodeSettings(settings)
-
-            // 原子写入
-            let fileManager = FileManager.default
-            let tempPath = resolvedFilePath.appendingPathExtension("tmp")
-            try data.write(to: tempPath, options: .atomic)
-
-            if fileManager.fileExists(atPath: resolvedFilePath.path) {
-                try fileManager.replaceItem(at: resolvedFilePath, withItemAt: tempPath, backupItemName: nil, resultingItemURL: nil)
-            } else {
-                try fileManager.moveItem(at: tempPath, to: resolvedFilePath)
-            }
-
-            // 原子写入会替换 inode，旧文件描述符失效，需要重建监听
-            restartFileMonitoring()
+            try save(candidate)
+            return true
         } catch {
-            print("AppSettingsManager save failed: \(error)")
+            lastError = .configSaveFailed(error)
+            return false
         }
     }
 
-    /// 更新面板帧（位置和尺寸）：内存即真相，外部修改由增强后的文件监听同步进内存
-    func updatePaletteFrame(origin: CGPoint?, size: NSSize?) {
-        var changed = false
-        if let origin = origin, settings.palettePosition != origin {
-            settings.palettePosition = origin
-            changed = true
-        }
-        if let size = size, settings.paletteSize != size {
-            settings.paletteSize = size
-            changed = true
-        }
-        if changed {
-            save()
+    @discardableResult
+    func updatePaletteFrame(origin: CGPoint?, size: NSSize?) -> Bool {
+        guard (origin != nil && origin != settings.palettePosition)
+                || (size != nil && size != settings.paletteSize) else { return true }
+        return commit {
+            if let origin { $0.palettePosition = origin }
+            if let size { $0.paletteSize = size }
         }
     }
 
-    // MARK: - 设置项写入（intent 方法：改字段 + 保存一体）
+    // MARK: - 设置项写入
 
-    /// 设置开机自启：写配置 + 保存 + 同步系统登录项
-    func setLaunchAtLogin(_ enabled: Bool) {
-        guard settings.launchAtLogin != enabled else { return }
-        settings.launchAtLogin = enabled
-        save()
+    @discardableResult
+    func setLaunchAtLogin(_ enabled: Bool) -> Bool {
+        guard settings.launchAtLogin != enabled else { return true }
+        guard commit({ $0.launchAtLogin = enabled }) else { return false }
         LaunchAtLoginManager.shared.isEnabled = enabled
+        return true
     }
 
-    /// 启动时对齐开机自启状态：配置与系统不一致时以系统为准（用户可能在系统设置里改过）
     func reconcileLaunchAtLogin() {
         let systemState = LaunchAtLoginManager.shared.isEnabled
         if settings.launchAtLogin != systemState {
-            settings.launchAtLogin = systemState
-            save()
+            commit { $0.launchAtLogin = systemState }
         }
     }
 
-    func setDefaultInputSource(_ sourceID: String?) {
-        settings.defaultInputSourceID = sourceID
-        save()
+    @discardableResult
+    func setDefaultInputSource(_ sourceID: String?) -> Bool {
+        commit { $0.defaultInputSourceID = sourceID }
     }
 
-    func setAutoCheckUpdates(_ enabled: Bool) {
-        settings.autoCheckUpdates = enabled
-        save()
+    @discardableResult
+    func setAutoCheckUpdates(_ enabled: Bool) -> Bool {
+        commit { $0.autoCheckUpdates = enabled }
     }
 
-    func touchUpdateCheckDate() {
-        settings.lastUpdateCheckDate = Date()
-        save()
+    @discardableResult
+    func touchUpdateCheckDate() -> Bool {
+        commit { $0.lastUpdateCheckDate = Date() }
     }
 
-    func setSkippedVersion(_ version: String?) {
-        settings.skippedVersion = version
-        save()
+    @discardableResult
+    func setSkippedVersion(_ version: String?) -> Bool {
+        commit { $0.skippedVersion = version }
     }
 
     // MARK: - 命令管理
 
-    /// 命令列表写入（save 内部自吞错误，无失败路径对外暴露）
-    func saveCommands(_ commands: [Command]) {
-        settings.commands = commands
-        save()
+    @discardableResult
+    func saveCommands(_ commands: [Command]) -> Bool {
+        commit { $0.commands = commands }
     }
 
     // MARK: - 重载
 
     func reload() {
-        load()
-        notificationManager.showReloadSuccess()
+        if load() { notificationManager.showReloadSuccess() }
     }
 
     // MARK: - 导入导出
@@ -468,11 +470,8 @@ final class AppSettingsManager: ObservableObject {
 
     func importSettings(from url: URL) throws {
         let data = try Data(contentsOf: url)
-        settings = try Self.decodeSettings(from: data)
-        // 导入即一次成功加载：isLoaded 置位，否则启动时坏 JSON（isLoaded=false）
-        // 会让 save() 静默拒写，导入内容重启即丢
-        isLoaded = true
-        _ = AppSettings.migrateIfNeeded(&settings)
-        save()
+        var candidate = try Self.decodeSettings(from: data)
+        AppSettings.migrateIfNeeded(&candidate)
+        try save(candidate)
     }
 }

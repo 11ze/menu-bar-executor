@@ -131,6 +131,126 @@ final class AppSettingsManagerTests: XCTestCase {
         XCTAssertEqual(contents, ["settings.json"])
     }
 
+    @MainActor
+    func testImportSaveFailure_PreservesPreviousSettingsAndThrows() throws {
+        let fileURL = makeFileURL()
+        try Data(#"{"commands": [], "skippedVersion": "before"}"#.utf8).write(to: fileURL)
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        let imported = tempDirectory.appendingPathComponent("import.json")
+        try Data(#"{"commands": [], "skippedVersion": "after"}"#.utf8).write(to: imported)
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: tempDirectory.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: tempDirectory.path) }
+
+        XCTAssertThrowsError(try manager.importSettings(from: imported))
+        XCTAssertEqual(manager.settings.skippedVersion, "before")
+        let restarted = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        XCTAssertEqual(restarted.settings.skippedVersion, "before")
+    }
+
+    @MainActor
+    func testFileCreatedAfterStartup_ReloadsAutomatically() async throws {
+        let fileURL = makeFileURL()
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: true)
+        try Data(#"{"commands": [], "skippedVersion": "created"}"#.utf8).write(to: fileURL)
+        try await waitUntil(timeout: 3) { manager.settings.skippedVersion == "created" }
+    }
+
+    @MainActor
+    func testLoadFailureReportsFailureAndKeepsLastGoodSettings() throws {
+        let fileURL = makeFileURL()
+        try Data(#"{"commands": [], "skippedVersion": "good"}"#.utf8).write(to: fileURL)
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        try Data("broken".utf8).write(to: fileURL)
+        XCTAssertFalse(manager.load(notifyError: false))
+        XCTAssertEqual(manager.settings.skippedVersion, "good")
+    }
+
+    @MainActor
+    func testCommandSaveFailureKeepsSnapshotAndCanRetry() throws {
+        let fileURL = makeFileURL()
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        let before = Command(name: "原命令", command: "true")
+        XCTAssertTrue(manager.saveCommands([before]))
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: tempDirectory.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: tempDirectory.path) }
+        let after = Command(name: "新命令", command: "false")
+        XCTAssertFalse(manager.saveCommands([after]))
+        XCTAssertNotNil(manager.lastError)
+        XCTAssertEqual(manager.settings.commands, [before])
+        XCTAssertEqual(AppSettingsManager(filePath: fileURL, enableFileMonitoring: false).settings.commands, [before])
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: tempDirectory.path)
+        XCTAssertTrue(manager.saveCommands([after]))
+        XCTAssertNil(manager.lastError)
+        XCTAssertEqual(AppSettingsManager(filePath: fileURL, enableFileMonitoring: false).settings.commands, [after])
+    }
+
+    @MainActor
+    func testCommitBeforeSuccessfulLoadReportsActualLoadError() throws {
+        let fileURL = makeFileURL()
+        try Data(#"{"commands": []}"#.utf8).write(to: fileURL)
+        // 无读权限导致加载失败：此时拒写应重放真实原因，而不是虚构“文件损坏”
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: fileURL.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: fileURL.path) }
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false, notifyLoadError: false)
+        XCTAssertFalse(manager.saveCommands([Command(name: "新命令", command: "true")]))
+        guard case .configSaveFailed(let underlying)? = manager.lastError,
+              let cocoa = underlying as? CocoaError, cocoa.code == .fileReadNoPermission else {
+            return XCTFail("应报告真实的加载失败原因，实际: \(String(describing: manager.lastError))")
+        }
+    }
+
+    @MainActor
+    func testDeletedFileCanBeRecreatedAndThenEditedInPlace() async throws {
+        let fileURL = makeFileURL()
+        try Data(#"{"commands": []}"#.utf8).write(to: fileURL)
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: true)
+        try FileManager.default.removeItem(at: fileURL)
+        try await Task.sleep(nanoseconds: 600_000_000)
+        try Data(#"{"commands": [], "skippedVersion": "recreated"}"#.utf8).write(to: fileURL)
+        try await waitUntil(timeout: 3) { manager.settings.skippedVersion == "recreated" }
+        try Data(#"{"commands": [], "skippedVersion": "edited"}"#.utf8).write(to: fileURL)
+        try await waitUntil(timeout: 3) { manager.settings.skippedVersion == "edited" }
+    }
+
+    @MainActor
+    func testDisabledMonitoringStaysDisabledAfterSaveAndReload() async throws {
+        let fileURL = makeFileURL()
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        manager.setSkippedVersion("saved")
+        manager.reloadSilent()
+        try await Task.sleep(nanoseconds: 400_000_000)
+        try Data(#"{"commands": [], "skippedVersion": "external"}"#.utf8).write(to: fileURL)
+        try await Task.sleep(nanoseconds: 700_000_000)
+        XCTAssertEqual(manager.settings.skippedVersion, "saved")
+    }
+
+    @MainActor
+    func testRelativeSymlinkPreservesLinkAndMonitorsTarget() async throws {
+        let targetDirectory = tempDirectory.appendingPathComponent("target")
+        try FileManager.default.createDirectory(at: targetDirectory, withIntermediateDirectories: true)
+        let target = targetDirectory.appendingPathComponent("settings.json")
+        try Data(#"{"commands": []}"#.utf8).write(to: target)
+        let link = makeFileURL()
+        try FileManager.default.createSymbolicLink(atPath: link.path, withDestinationPath: "target/settings.json")
+        let manager = AppSettingsManager(filePath: link, enableFileMonitoring: true)
+        XCTAssertTrue(manager.setSkippedVersion("saved"))
+        XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: link.path), "target/settings.json")
+        XCTAssertEqual(AppSettingsManager(filePath: target, enableFileMonitoring: false).settings.skippedVersion, "saved")
+        try atomicallyReplace(fileURL: target, with: Data(#"{"commands": [], "skippedVersion": "external"}"#.utf8))
+        try await waitUntil(timeout: 3) { manager.settings.skippedVersion == "external" }
+    }
+
+    @MainActor
+    func testSymlinkToMissingTargetSurvivesFirstSave() throws {
+        let target = tempDirectory.appendingPathComponent("target/settings.json")
+        let link = makeFileURL()
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: target)
+        let manager = AppSettingsManager(filePath: link, enableFileMonitoring: true)
+        XCTAssertTrue(manager.setSkippedVersion("first-save"))
+        XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: link.path), target.path)
+        XCTAssertEqual(AppSettingsManager(filePath: target, enableFileMonitoring: false).settings.skippedVersion, "first-save")
+    }
+
     // MARK: - 文件监听
 
     /// 外部就地写文件，等待防抖后配置被重载

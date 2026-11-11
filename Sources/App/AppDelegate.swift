@@ -162,9 +162,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func checkForUpdates() {
         Task {
             let updateManager = UpdateManager.shared
-            let updateInfo = await updateManager.checkForUpdate(force: true)
+            let result = await updateManager.checkForUpdate(force: true)
 
-            if let info = updateInfo {
+            switch result {
+            case .available(let info):
                 // 有新版本
                 let alert = NSAlert()
                 alert.messageText = "发现新版本 \(info.latestVersion)"
@@ -180,7 +181,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 } else if response == .alertSecondButtonReturn {
                     updateManager.skipVersion(info.latestVersion)
                 }
-            } else if let error = updateManager.lastError {
+            case .failed(let error):
                 // 检查失败
                 let alert = NSAlert()
                 alert.messageText = "检查更新失败"
@@ -201,7 +202,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         checkForUpdates()
                     }
                 }
-            } else {
+            case .upToDate:
                 // 已是最新版本
                 let alert = NSAlert()
                 alert.messageText = "已是最新版本"
@@ -209,6 +210,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 alert.alertStyle = .informational
                 alert.addButton(withTitle: "确定")
                 alert.runModal()
+            case .skipped:
+                break
             }
         }
     }

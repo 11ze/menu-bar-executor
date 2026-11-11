@@ -76,6 +76,14 @@ struct CommandsListView: View {
             }.font(.system(size: 11)).foregroundColor(InterfaceStyle.muted).padding(.horizontal, 20).padding(.vertical, 10)
                 .background(InterfaceStyle.chrome)
         }
+        .alert("操作失败", isPresented: Binding(
+            get: { editingCommand == nil && settings.lastError != nil },
+            set: { if !$0 { settings.lastError = nil } }
+        )) {
+            Button("确定", role: .cancel) { settings.lastError = nil }
+        } message: {
+            Text(settings.lastError?.errorDescription ?? "未知错误")
+        }
         .sheet(item: $editingCommand) { command in
             CommandEditorView(command: command, onSave: { manager.upsert($0) }, onDelete: manager.commands.contains(where: { $0.id == command.id }) ? {
                 manager.deleteCommand(id: command.id)

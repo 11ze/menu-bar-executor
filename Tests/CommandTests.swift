@@ -37,7 +37,8 @@ final class CommandTests: XCTestCase {
         let command = try JSONDecoder().decode(Command.self, from: json)
         XCTAssertEqual(command.name, "Legacy Command")
         XCTAssertEqual(command.command, "ls -la")
-        XCTAssertNotNil(command.id)
+        let another = try JSONDecoder().decode(Command.self, from: json)
+        XCTAssertNotEqual(command.id, another.id, "缺失或无效 ID 的独立记录应获得不同身份")
     }
 
     func testCommandWithWorkingDirectory() throws {
@@ -123,7 +124,8 @@ final class CommandTests: XCTestCase {
         """.data(using: .utf8)!
 
         let command = try JSONDecoder().decode(Command.self, from: json)
-        XCTAssertNotNil(command.id)
+        let another = try JSONDecoder().decode(Command.self, from: json)
+        XCTAssertNotEqual(command.id, another.id, "缺失或无效 ID 的独立记录应获得不同身份")
     }
 
     func testDecoding_MissingNotification() throws {

@@ -14,7 +14,7 @@ enum ExecutionResult {
     case success(String?)
     /// 命令运行了但以非零退出码结束
     case exitedAbnormally(code: Int32, output: String?)
-    /// 命令没跑起来：超时或启动失败
+    /// 无法正常完成：超时或启动失败
     case failed(AppError)
 }
 
@@ -125,7 +125,7 @@ final class CommandExecutor {
         return false
     }
 
-    /// 落账输出：命令跑了用命令输出，没跑起来用错误消息
+    /// 落账输出：成功与非零退出用命令输出，无法正常完成用错误消息
     private func historyOutput(_ result: ExecutionResult) -> String? {
         switch result {
         case .success(let output), .exitedAbnormally(_, let output):

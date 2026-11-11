@@ -3,6 +3,7 @@ import SwiftUI
 struct CommandEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var manager = CommandsManager.shared
+    @ObservedObject private var settings = AppSettingsManager.shared
     let command: Command?
     @State private var name: String
     @State private var commandText: String
@@ -14,10 +15,10 @@ struct CommandEditorView: View {
     @State private var showingDeleteConfirmation = false
     @FocusState private var nameFocused: Bool
 
-    let onSave: (Command) -> Void
-    var onDelete: (() -> Void)?
+    let onSave: (Command) -> Bool
+    var onDelete: (() -> Bool)?
 
-    init(command: Command?, onSave: @escaping (Command) -> Void, onDelete: (() -> Void)? = nil) {
+    init(command: Command?, onSave: @escaping (Command) -> Bool, onDelete: (() -> Bool)? = nil) {
         self.command = command
         self.onSave = onSave
         self.onDelete = onDelete
@@ -74,7 +75,7 @@ struct CommandEditorView: View {
                     Button(role: .destructive) { showingDeleteConfirmation = true } label: { Text("删除命令…").foregroundColor(InterfaceStyle.failure) }.buttonStyle(CompactQuietButtonStyle())
                 }
                 Spacer()
-                Button("保存命令", action: saveCommand)
+                Button("保存命令") { saveCommand() }
                     .buttonStyle(InterfaceButtonStyle(prominent: true, height: 30)).keyboardShortcut(.defaultAction)
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || commandText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }.font(.system(size: 12)).padding(.horizontal, 20).padding(.vertical, 14).frame(minHeight: 59).background(InterfaceStyle.chrome)
@@ -83,9 +84,17 @@ struct CommandEditorView: View {
         .buttonStyle(InterfaceButtonStyle(height: 30))
         .frame(width: 560, height: min(680, (NSScreen.main?.visibleFrame.height ?? 638) - 48))
         .onAppear { nameFocused = true }
+        .alert("操作失败", isPresented: Binding(
+            get: { settings.lastError != nil },
+            set: { if !$0 { settings.lastError = nil } }
+        )) {
+            Button("确定", role: .cancel) { settings.lastError = nil }
+        } message: {
+            Text(settings.lastError?.errorDescription ?? "未知错误")
+        }
         .alert("删除命令？", isPresented: $showingDeleteConfirmation) {
             Button("取消", role: .cancel) {}
-            Button("删除命令", role: .destructive) { onDelete?(); dismiss() }
+            Button("删除命令", role: .destructive) { if onDelete?() == true { dismiss() } }
         } message: {
             Text("将删除「\(command?.name ?? "")」。此操作无法撤销。")
         }
@@ -130,8 +139,9 @@ struct CommandEditorView: View {
         if panel.runModal() == .OK, let url = panel.url { workingDirectory = url.path }
     }
 
-    func saveCommand() {
-        onSave(Command(
+    @discardableResult
+    func saveCommand() -> Bool {
+        let saved = onSave(Command(
             id: command?.id ?? UUID(),
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
             command: commandText,
@@ -139,7 +149,8 @@ struct CommandEditorView: View {
             notification: notification, autoExecute: autoExecute,
             group: group.isEmpty ? nil : group, directExecution: directExecution
         ))
-        dismiss()
+        if saved { dismiss() }
+        return saved
     }
 }
 

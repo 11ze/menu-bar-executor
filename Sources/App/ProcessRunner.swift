@@ -1,8 +1,6 @@
 import Foundation
 
-/// 进程运行编排：把一个进程跑到出 ExecutionResult。
-/// 只认进程参数，对 Command 一无所知（Command → 进程的翻译在 CommandExecutor）；
-/// 不落历史、不发通知，副作用归调用方
+/// 同时等待进程退出与输出结束；期限覆盖整个执行，超时后释放读取资源。
 enum ProcessRunner {
     static func run(
         executableURL: URL,
@@ -11,69 +9,108 @@ enum ProcessRunner {
         timeout: TimeInterval,
         completion: @escaping @MainActor (ExecutionResult) -> Void
     ) {
-        let process = Process()
-        let pipe = Pipe()
-
-        process.standardOutput = pipe
-        process.standardError = pipe
-        process.executableURL = executableURL
-        process.arguments = arguments
-        if let workingDirectory {
-            process.currentDirectoryURL = workingDirectory
-        }
-
-        // 超时和正常退出两个来源竞争，加锁保证回调只触发一次
-        let finishOnce = Once()
-
-        do {
-            try process.run()
-
-            DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + timeout) { [weak process] in
-                guard let process = process, process.isRunning else { return }
-                finishOnce.run {
-                    process.terminate()
-                    let result = ExecutionResult.failed(.commandTimeout(seconds: Int(timeout.rounded(.up))))
-                    Task { @MainActor in completion(result) }
-                }
-            }
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                // 先排空管道再等退出：读阻塞到子进程退出关闭写端时自然返回 EOF。
-                // 若先 waitUntilExit，输出超过管道缓冲（约 64KB）时子进程阻塞在写、
-                // 父进程互等，卡满超时误报 commandTimeout 且输出丢弃
-                let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                process.waitUntilExit()
-
-                finishOnce.run {
-                    let output = String(data: data, encoding: .utf8)
-
-                    let result: ExecutionResult = process.terminationStatus == 0
-                        ? .success(output)
-                        : .exitedAbnormally(code: process.terminationStatus, output: output)
-
-                    Task { @MainActor in completion(result) }
-                }
-            }
-        } catch {
-            finishOnce.run {
-                let result = ExecutionResult.failed(.commandExecutionFailed(error.localizedDescription))
-                Task { @MainActor in completion(result) }
-            }
-        }
+        let run = ProcessRun(completion: completion)
+        run.process.executableURL = executableURL
+        run.process.arguments = arguments
+        run.process.currentDirectoryURL = workingDirectory
+        run.start(timeout: timeout)
     }
 }
 
-/// 一次性执行守卫
-private final class Once: @unchecked Sendable {
-    private let lock = NSLock()
-    private var done = false
+private final class ProcessRun: @unchecked Sendable {
+    let process = Process()
+    private let pipe = Pipe()
+    private let queue = DispatchQueue(label: "com.menu-bar-executor.process")
+    private let completion: @MainActor (ExecutionResult) -> Void
+    private var reader: DispatchSourceRead?
+    private var timer: DispatchSourceTimer?
+    private var data = Data()
+    private var exitCode: Int32?
+    private var reachedEOF = false
+    private var finished = false
 
-    func run(_ body: () -> Void) {
-        lock.lock()
-        let first = !done
-        done = true
-        lock.unlock()
+    init(completion: @escaping @MainActor (ExecutionResult) -> Void) {
+        self.completion = completion
+        process.standardOutput = pipe
+        process.standardError = pipe
+    }
 
-        if first { body() }
+    func start(timeout: TimeInterval) {
+        queue.async {
+            let handle = self.pipe.fileHandleForReading
+            let fd = handle.fileDescriptor
+            _ = fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK)
+            let reader = DispatchSource.makeReadSource(fileDescriptor: fd, queue: self.queue)
+            reader.setEventHandler { self.readOutput() }
+            reader.setCancelHandler { try? handle.close() }
+            self.reader = reader
+            reader.resume()
+
+            self.process.terminationHandler = { process in
+                self.queue.async {
+                    self.exitCode = process.terminationStatus
+                    self.completeIfReady()
+                }
+            }
+
+            do {
+                try self.process.run()
+                self.pipe.fileHandleForWriting.closeFile()
+                let timer = DispatchSource.makeTimerSource(queue: self.queue)
+                timer.schedule(deadline: .now() + timeout)
+                timer.setEventHandler {
+                    guard !self.finished else { return }
+                    // Foundation 为子进程建立独立进程组；同时终止仍持有管道的组内子进程。
+                    kill(-self.process.processIdentifier, SIGKILL)
+                    if self.process.isRunning { kill(self.process.processIdentifier, SIGKILL) }
+                    self.finish(.failed(.commandTimeout(seconds: Int(timeout.rounded(.up)))))
+                }
+                self.timer = timer
+                timer.resume()
+            } catch {
+                self.pipe.fileHandleForWriting.closeFile()
+                self.finish(.failed(.commandExecutionFailed(error.localizedDescription)))
+            }
+        }
+    }
+
+    private func readOutput() {
+        guard !finished else { return }
+        var buffer = [UInt8](repeating: 0, count: 16_384)
+        for _ in 0..<64 {
+            let count = read(pipe.fileHandleForReading.fileDescriptor, &buffer, buffer.count)
+            if count > 0 {
+                data.append(contentsOf: buffer.prefix(count))
+            } else if count == 0 {
+                reachedEOF = true
+                reader?.cancel()
+                completeIfReady()
+                return
+            } else if errno == EINTR {
+                continue
+            } else if errno == EAGAIN {
+                return
+            } else {
+                finish(.failed(.commandExecutionFailed(String(cString: strerror(errno)))))
+                return
+            }
+        }
+    }
+
+    private func completeIfReady() {
+        guard reachedEOF, let exitCode else { return }
+        let output = String(data: data, encoding: .utf8)
+        finish(exitCode == 0 ? .success(output) : .exitedAbnormally(code: exitCode, output: output))
+    }
+
+    private func finish(_ result: ExecutionResult) {
+        guard !finished else { return }
+        finished = true
+        reader?.cancel()
+        reader = nil
+        timer?.cancel()
+        timer = nil
+        process.terminationHandler = nil
+        Task { @MainActor [completion] in completion(result) }
     }
 }

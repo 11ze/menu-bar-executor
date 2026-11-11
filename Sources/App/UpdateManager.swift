@@ -28,7 +28,7 @@ enum UpdateConfig {
 // MARK: - GitHub Release 响应模型
 
 /// GitHub Release API 响应
-private struct GitHubRelease: Decodable {
+struct GitHubRelease: Decodable {
     let tagName: String
     let htmlURL: URL
     let body: String?
@@ -38,6 +38,13 @@ private struct GitHubRelease: Decodable {
         case htmlURL = "html_url"
         case body
     }
+}
+
+enum UpdateCheckResult {
+    case available(UpdateInfo)
+    case upToDate
+    case skipped
+    case failed(UpdateError)
 }
 
 // MARK: - UpdateManager
@@ -50,84 +57,67 @@ final class UpdateManager: ObservableObject {
     /// 是否正在检查更新
     @Published private(set) var isChecking = false
 
-    /// 上次检查的错误
-    @Published private(set) var lastError: UpdateError?
+    /// 合流网络请求，每个调用方分别应用自动/手动检查规则。
+    private var inFlightCheck: Task<Result<GitHubRelease, UpdateError>, Never>?
 
-    /// 在飞的检查任务：后来的调用（典型：启动自动检查在飞时用户手动点「检查更新」）
-    /// 合流等它拿同一份网络结果，而不是早退 nil——早退会被调用方误读成「已是最新版本」
-    private var inFlightCheck: Task<UpdateInfo?, Never>?
-
-    private let settingsManager = AppSettingsManager.shared
+    private let settingsManager: AppSettingsManager
+    private let currentVersion: String?
+    private let fetchRelease: () async throws -> GitHubRelease
     private let notificationManager = NotificationManager.shared
 
-    private init() {}
+    init(
+        settingsManager: AppSettingsManager = .shared,
+        currentVersion: String? = nil,
+        fetchRelease: @escaping () async throws -> GitHubRelease = UpdateManager.fetchLatestRelease
+    ) {
+        self.settingsManager = settingsManager
+        self.currentVersion = currentVersion
+        self.fetchRelease = fetchRelease
+    }
 
     // MARK: - 公开方法
 
-    /// 检查是否有新版本
-    /// - Parameter force: 是否强制检查（忽略时间间隔）
-    /// - Returns: 更新信息，如果没有新版本则返回 nil
-    ///
-    /// 手工验证合流（无测试注入点）：断网启动 → 2 秒内点「检查更新」→
-    /// 弹「检查更新失败」而非「已是最新版本」即通过
-    func checkForUpdate(force: Bool = false) async -> UpdateInfo? {
-        if let inFlight = inFlightCheck {
-            return await inFlight.value
+    func checkForUpdate(force: Bool = false) async -> UpdateCheckResult {
+        if !force, inFlightCheck == nil,
+           let lastCheck = settingsManager.settings.lastUpdateCheckDate,
+           Date().timeIntervalSince(lastCheck) < UpdateConfig.minCheckInterval {
+            return .skipped
         }
-        let task = Task { await performCheck(force: force) }
-        inFlightCheck = task
-        defer { inFlightCheck = nil }
-        return await task.value
+
+        switch await fetchReleaseOnce() {
+        case .success(let release):
+            let latestVersion = release.tagName.cleanVersionString
+            let info = UpdateInfo(currentVersion: getCurrentVersion(), latestVersion: latestVersion,
+                                  releaseURL: release.htmlURL, releaseNotes: release.body)
+            guard info.hasUpdate else { return .upToDate }
+            if !force, settingsManager.settings.skippedVersion == latestVersion { return .skipped }
+            return .available(info)
+        case .failure(let error):
+            return .failed(error)
+        }
     }
 
-    private func performCheck(force: Bool) async -> UpdateInfo? {
-        // 检查时间间隔
-        if !force, let lastCheck = settingsManager.settings.lastUpdateCheckDate {
-            let elapsed = Date().timeIntervalSince(lastCheck)
-            if elapsed < UpdateConfig.minCheckInterval {
-                return nil
-            }
-        }
-
+    private func fetchReleaseOnce() async -> Result<GitHubRelease, UpdateError> {
+        if let inFlightCheck { return await inFlightCheck.value }
         isChecking = true
-        if lastError != nil {
-            lastError = nil
+        let task = Task { () -> Result<GitHubRelease, UpdateError> in
+            do { return .success(try await fetchRelease()) }
+            catch { return .failure(error as? UpdateError ?? .networkError(error)) }
         }
-        defer { isChecking = false }
-
-        do {
-            let release = try await fetchLatestRelease()
-            let currentVersion = getCurrentVersion()
-            let latestVersion = release.tagName.cleanVersionString
-
-            let updateInfo = UpdateInfo(
-                currentVersion: currentVersion,
-                latestVersion: latestVersion,
-                releaseURL: release.htmlURL,
-                releaseNotes: release.body
-            )
-
-            // 更新检查时间（只在成功时保存）
-            settingsManager.touchUpdateCheckDate()
-
-            // 检查是否跳过该版本
-            if let skipped = settingsManager.settings.skippedVersion,
-               skipped == latestVersion {
-                return nil
-            }
-
-            return updateInfo.hasUpdate ? updateInfo : nil
-
-        } catch {
-            lastError = error as? UpdateError ?? .networkError(error)
-            return nil
+        inFlightCheck = task
+        defer {
+            inFlightCheck = nil
+            isChecking = false
         }
+        let result = await task.value
+        if case .success = result { settingsManager.touchUpdateCheckDate() }
+        return result
     }
 
     /// 获取当前版本号
     /// - Returns: 从 Info.plist 读取的版本号
     func getCurrentVersion() -> String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        currentVersion ?? Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
     }
 
     /// 打开 GitHub Releases 页面
@@ -144,7 +134,7 @@ final class UpdateManager: ObservableObject {
     // MARK: - 私有方法
 
     /// 获取最新 Release 信息
-    private func fetchLatestRelease() async throws -> GitHubRelease {
+    nonisolated private static func fetchLatestRelease() async throws -> GitHubRelease {
         var request = URLRequest(url: UpdateConfig.apiURL)
         request.timeoutInterval = UpdateConfig.requestTimeout
         request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
@@ -193,7 +183,7 @@ extension UpdateManager {
             try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 秒
 
             guard settingsManager.settings.autoCheckUpdates else { return }
-            guard let updateInfo = await checkForUpdate(),
+            guard case .available(let updateInfo) = await checkForUpdate(),
                   settingsManager.settings.autoCheckUpdates else { return }
 
             // 显示系统通知
