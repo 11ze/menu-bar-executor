@@ -87,7 +87,7 @@ struct GeneralSettingsView: View {
                 Text("MenuBarExecutor")
                 Spacer()
                 Text("命令执行超时：30 秒")
-            }.font(.system(size: 11)).foregroundColor(InterfaceStyle.muted).padding(.horizontal, 20).padding(.vertical, 10).background(InterfaceStyle.chrome)
+            }.font(.system(size: 12)).foregroundColor(InterfaceStyle.muted).padding(.horizontal, 20).padding(.vertical, 10).background(InterfaceStyle.chrome)
         }.font(.system(size: 13)).buttonStyle(InterfaceButtonStyle(height: 29))
         .onAppear { inputSources = InputSourceHelper.availableInputSources(forceRefresh: true) }
         .alert("确认导入", isPresented: $showingImportConfirmation) {
@@ -111,7 +111,7 @@ struct GeneralSettingsView: View {
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.system(size: 11, weight: .medium)).padding(.leading, 4).foregroundColor(InterfaceStyle.muted)
+            Text(title).font(.system(size: 12, weight: .medium)).padding(.leading, 4).foregroundColor(InterfaceStyle.muted)
             VStack(spacing: 0, content: content)
                 .padding(.horizontal, 16)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -125,10 +125,10 @@ struct GeneralSettingsView: View {
         HStack(spacing: 24) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                if let detail { Text(detail).font(.system(size: 11)).foregroundColor(InterfaceStyle.muted).fixedSize(horizontal: false, vertical: true) }
+                if let detail { Text(detail).font(.system(size: 12)).foregroundColor(InterfaceStyle.muted).fixedSize(horizontal: false, vertical: true) }
             }
             Spacer(minLength: 12)
-            content().font(.system(size: 11))
+            content().font(.system(size: 12))
         }.padding(.vertical, 13).frame(minHeight: 63)
     }
     private func exportConfig() {

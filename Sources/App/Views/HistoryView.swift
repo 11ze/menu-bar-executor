@@ -33,7 +33,7 @@ struct HistoryView: View {
                             }.buttonStyle(.plain).accessibilityLabel("清空搜索")
                         }
                     }.modifier(ToolbarSearchStyle(focused: searchFocused))
-                    Toggle("仅失败", isOn: $onlyFailed).font(.system(size: 10)).foregroundColor(InterfaceStyle.muted)
+                    Toggle("仅失败", isOn: $onlyFailed).font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
                     Button("清空历史") { showingClearConfirmation = true }.disabled(history.records.isEmpty)
                 }.font(.system(size: 13)).padding(.horizontal, 20).padding(.vertical, 15).background(InterfaceStyle.material)
                 Divider()
@@ -49,7 +49,7 @@ struct HistoryView: View {
                                                 Text(item.commandName).font(.system(size: 12, weight: .medium)).lineLimit(1).foregroundColor(InterfaceStyle.text)
                                                 Spacer(minLength: 0)
                                             }
-                                            (Text(item.executedAt, style: .date) + Text(" ") + Text(item.executedAt, style: .time)).font(.system(size: 10)).padding(.leading, 14)
+                                            (Text(item.executedAt, style: .date) + Text(" ") + Text(item.executedAt, style: .time)).font(.system(size: 12)).padding(.leading, 14)
                                         }.font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
                                             .padding(.horizontal, 12).padding(.vertical, 13).frame(maxWidth: .infinity, alignment: .leading)
                                             .background(item.id == record.id ? InterfaceStyle.selection : .clear)
@@ -66,20 +66,20 @@ struct HistoryView: View {
                                     HStack(spacing: 12) {
                                         Text(record.success ? "执行成功" : "执行失败").foregroundColor(record.success ? InterfaceStyle.success : InterfaceStyle.failure)
                                         Text(record.executedAt, style: .date) + Text(" ") + Text(record.executedAt, style: .time)
-                                    }.font(.system(size: 11)).foregroundColor(InterfaceStyle.muted)
+                                    }.font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
                                 }
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text("执行内容").font(.system(size: 10)).foregroundColor(InterfaceStyle.muted)
+                                    Text("执行内容").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
                                     Text(record.commandText).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
                                 }.padding(.top, 24)
                                 HStack {
-                                    Text("输出结果").font(.system(size: 10)).foregroundColor(InterfaceStyle.muted)
+                                    Text("输出结果").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
                                     Spacer()
                                     Button(copied ? "已复制" : "复制输出") {
                                         NSPasteboard.general.clearContents()
                                         NSPasteboard.general.setString(record.output ?? "", forType: .string)
                                         copied = true
-                                    }.font(.system(size: 10)).buttonStyle(CompactQuietButtonStyle()).disabled(record.output?.isEmpty != false)
+                                    }.font(.system(size: 12)).buttonStyle(CompactQuietButtonStyle()).disabled(record.output?.isEmpty != false)
                                 }.padding(.top, 24).padding(.bottom, 8)
                                 ScrollView {
                                     Text(record.output.flatMap { $0.isEmpty ? nil : $0 } ?? "（无输出）")
@@ -89,7 +89,7 @@ struct HistoryView: View {
                                     .background(InterfaceStyle.subtle)
                                     .overlay(RoundedRectangle(cornerRadius: 7).stroke(InterfaceStyle.line, lineWidth: 1))
                                     .cornerRadius(7)
-                                Text("每条记录最多保存 500 字符输出。").font(.system(size: 10)).foregroundColor(InterfaceStyle.muted).padding(.top, 8)
+                                Text("每条记录最多保存 500 字符输出。").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted).padding(.top, 8)
                             }.frame(maxWidth: .infinity, alignment: .leading).padding(24)
                         }
                     }
@@ -109,7 +109,7 @@ struct HistoryView: View {
                     Text("\(records.count) 条记录")
                     Spacer()
                     Text("最近 100 条 · 不含自动执行")
-                }.font(.system(size: 11)).foregroundColor(InterfaceStyle.muted).padding(.horizontal, 20).padding(.vertical, 10)
+                }.font(.system(size: 12)).foregroundColor(InterfaceStyle.muted).padding(.horizontal, 20).padding(.vertical, 10)
                     .background(InterfaceStyle.chrome)
             }
         }

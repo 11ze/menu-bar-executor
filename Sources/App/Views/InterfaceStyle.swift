@@ -73,7 +73,7 @@ struct CommandRowButtonStyle: ButtonStyle {
 
         var body: some View {
             let highlighted = enabled && (hovered || pressed)
-            label.font(.system(size: 11)).foregroundColor(highlighted ? InterfaceStyle.selectedText : InterfaceStyle.text)
+            label.font(.system(size: 12)).foregroundColor(highlighted ? InterfaceStyle.selectedText : InterfaceStyle.text)
                 .padding(.horizontal, 8).frame(height: 26)
                 .background(highlighted ? InterfaceStyle.selection : InterfaceStyle.surface)
                 .overlay(RoundedRectangle(cornerRadius: 7).stroke(focused ? InterfaceStyle.selectedText : InterfaceStyle.line, lineWidth: focused ? 2 : 1))
@@ -120,7 +120,7 @@ struct PaletteFooterButtonStyle: ButtonStyle {
         @Environment(\.isFocused) private var focused
 
         var body: some View {
-            label.font(.system(size: 11))
+            label.font(.system(size: 12))
                 .foregroundColor(hovered ? InterfaceStyle.selectedText : InterfaceStyle.text)
                 .padding(.horizontal, 8).frame(height: 24)
                 .background(hovered || pressed ? InterfaceStyle.selection : InterfaceStyle.surface)

@@ -39,7 +39,7 @@ struct CommandsListView: View {
                 Text("\(listModel.items.filter(\.isCommand).count) 条命令")
                 Spacer()
                 Text("按分组显示")
-            }.font(.system(size: 10)).foregroundColor(InterfaceStyle.muted).padding(.horizontal, 20).padding(.vertical, 9)
+            }.font(.system(size: 12)).foregroundColor(InterfaceStyle.muted).padding(.horizontal, 20).padding(.vertical, 9)
 
             InterfaceStyle.line.frame(height: 1)
             if listModel.items.isEmpty {
@@ -58,7 +58,7 @@ struct CommandsListView: View {
                         ForEach(listModel.items) { item in
                             switch item {
                             case .groupHeader(let name):
-                                Text(name).font(.system(size: 11, weight: .semibold)).foregroundColor(InterfaceStyle.muted)
+                                Text(name).font(.system(size: 12, weight: .semibold)).foregroundColor(InterfaceStyle.muted)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(.horizontal, 22).padding(.top, 16).padding(.bottom, 5)
                             case .command(let command, _):
@@ -73,7 +73,7 @@ struct CommandsListView: View {
                 Text("在组内调整顺序，与命令面板同步")
                 Spacer()
                 Text("\(manager.commands.filter(\.autoExecute).count) 条自动执行")
-            }.font(.system(size: 11)).foregroundColor(InterfaceStyle.muted).padding(.horizontal, 20).padding(.vertical, 10)
+            }.font(.system(size: 12)).foregroundColor(InterfaceStyle.muted).padding(.horizontal, 20).padding(.vertical, 10)
                 .background(InterfaceStyle.chrome)
         }
         .alert("操作失败", isPresented: Binding(
@@ -97,7 +97,7 @@ struct CommandsListView: View {
                 HStack(spacing: 8) {
                     Text(command.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
                     if command.autoExecute {
-                        Text("自动执行").font(.system(size: 10)).foregroundColor(InterfaceStyle.muted)
+                        Text("自动执行").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
                             .padding(.horizontal, 5).padding(.vertical, 1)
                             .overlay(RoundedRectangle(cornerRadius: 4).stroke(InterfaceStyle.line, lineWidth: 1))
                             .background(InterfaceStyle.chrome).cornerRadius(4)

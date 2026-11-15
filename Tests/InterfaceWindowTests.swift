@@ -144,8 +144,29 @@ final class InterfaceWindowTests: XCTestCase {
             }
             try await snapshot(CommandPaletteView(coordinator: coordinator), size: NSSize(width: 560, height: 508),
                                name: "palette-\(suffix)", folder: folder, appearance: appearance)
+            for (label, size) in [
+                ("narrow", NSSize(width: 360, height: 508)),
+                ("short", NSSize(width: 560, height: 250)),
+                ("minimum", NSSize(width: 360, height: 250))
+            ] {
+                try await snapshot(CommandPaletteView(coordinator: coordinator), size: size,
+                                   name: "palette-\(suffix)-\(label)", folder: folder, appearance: appearance)
+            }
             try await snapshot(CommandEditorView(command: sample, onSave: { _ in true }, onDelete: { true }),
                                size: NSSize(width: 560, height: 680), name: "editor-\(suffix)", folder: folder, appearance: appearance)
+            for hovered in [false, true] {
+                try await snapshot(CommandPaletteRow(command: sample, displayIndex: 1, isSelected: true,
+                    searchText: "", autoExecuteState: .success("192.168.31.108")),
+                    size: NSSize(width: 560, height: 36),
+                    name: "palette-result-\(hovered ? "hover" : "focus")-\(suffix)", folder: folder, appearance: appearance) { host in
+                        guard let button = self.descendants(host).compactMap({ $0 as? PaletteResultButton }).first else {
+                            XCTFail("结果查看入口必须存在")
+                            return
+                        }
+                        if hovered { button.updateResult(text: "192.168.31.108", hovered: true) }
+                        else { XCTAssertTrue(button.window?.makeFirstResponder(button) == true) }
+                    }
+            }
             try await snapshot(VStack(spacing: 0) {
                 CommandPaletteRow(command: sample, displayIndex: 1, isSelected: true, searchText: "", autoExecuteState: .success("192.168.31.108"))
                 CommandPaletteRow(command: sample, displayIndex: 2, isSelected: false, searchText: "", autoExecuteState: .loading)
@@ -157,22 +178,26 @@ final class InterfaceWindowTests: XCTestCase {
         print("Native interface snapshots: \(folder.path)")
     }
 
-    private func snapshot<Content: View>(_ content: Content, size: NSSize, name: String, folder: URL, appearance: NSAppearance.Name) async throws {
+    private func snapshot<Content: View>(_ content: Content, size: NSSize, name: String, folder: URL, appearance: NSAppearance.Name, prepare: ((NSView) -> Void)? = nil) async throws {
         let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless], backing: .buffered, defer: false)
         window.appearance = NSAppearance(named: appearance)
         window.isReleasedWhenClosed = false
+        defer {
+            window.orderOut(nil)
+            window.contentView = nil
+        }
         let host = NSHostingView(rootView: content)
         window.contentView = host
         window.setContentSize(size)
         window.orderFront(nil)
         await nextLayout()
         host.layoutSubtreeIfNeeded()
+        prepare?(host)
         let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
         host.cacheDisplay(in: host.bounds, to: bitmap)
         let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
         XCTAssertGreaterThan(data.count, 1000, "不能把空图片当作界面渲染成功")
         try data.write(to: folder.appendingPathComponent(name + ".png"))
-        window.orderOut(nil)
     }
 
     private func nextLayout() async {

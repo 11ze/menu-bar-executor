@@ -76,7 +76,7 @@ struct CommandPaletteView: View {
                         CommandPaletteWindowController.shared.hide()
                         SettingsWindowController.shared.showWindow()
                     }
-                }.font(.system(size: 10)).foregroundColor(InterfaceStyle.muted)
+                }.font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
                     .buttonStyle(PaletteFooterButtonStyle())
                     .padding(.horizontal, 12).frame(height: 41)
                     .background(WindowDragArea()).background(InterfaceStyle.chrome)
@@ -108,7 +108,7 @@ struct GroupHeaderRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Text(title).font(.system(size: 10, weight: .semibold)).foregroundColor(InterfaceStyle.muted)
+            Text(title).font(.system(size: 12, weight: .semibold)).foregroundColor(InterfaceStyle.muted)
             Rectangle().fill(InterfaceStyle.line).frame(height: 1)
         }.padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 7).frame(height: 32)
     }
@@ -149,7 +149,7 @@ struct CommandPaletteRow: View {
                         NativeResultButton(text: result.text, color: result.color, name: command.name, hovered: resultHovered) { button in
                             resultButton = button
                             openResult()
-                        }.frame(width: resultWidth(for: result.text, in: geometry.size.width)).frame(height: 36)
+                        }.frame(width: resultWidth(for: result.text, in: geometry.size.width, canView: result.canView)).frame(height: 36)
                             .onHover { resultHovered = $0 }
                             .popover(isPresented: $showingResult, arrowEdge: .bottom) {
                                 VStack(alignment: .leading, spacing: 12) {
@@ -185,7 +185,7 @@ struct CommandPaletteRow: View {
                                     CommandPaletteWindowController.shared.closeIfInactive()
                                 }
                             }
-                    } else { resultLabel(result).frame(width: resultWidth(for: result.text, in: geometry.size.width), alignment: .trailing) }
+                    } else { resultLabel(result).frame(width: resultWidth(for: result.text, in: geometry.size.width, canView: result.canView), alignment: .trailing) }
                 }
                 if displayIndex <= PaletteConfig.maxQuickSelectCount { Text("⌘\(displayIndex)").font(.system(size: 11)).foregroundColor(InterfaceStyle.muted) }
             }
@@ -195,14 +195,14 @@ struct CommandPaletteRow: View {
         }.frame(height: 36)
     }
 
-    private func resultWidth(for text: String, in rowWidth: CGFloat) -> CGFloat {
+    private func resultWidth(for text: String, in rowWidth: CGFloat, canView: Bool) -> CGFloat {
         let titleWidth = ceil((command.name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 13)]).width)
         let shortcutWidth = displayIndex <= PaletteConfig.maxQuickSelectCount
             ? ceil(("⌘\(displayIndex)" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 11)]).width) + 8 : 0
         let available = max(17, rowWidth - 20 - titleWidth - 12 - shortcutWidth - 10)
         let inlineText = text.replacingOccurrences(of: "\n", with: " ")
-        let textWidth = ceil((inlineText as NSString).size(withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)]).width)
-        return min(textWidth + 17, available)
+        let textWidth = ceil((inlineText as NSString).size(withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)]).width)
+        return min(textWidth + 17 + (canView ? 14 : 0), available)
     }
 
     private func openResult() {
@@ -216,7 +216,7 @@ struct CommandPaletteRow: View {
         HStack(spacing: 6) {
             Text(result.marker).font(.system(size: 9)).foregroundColor(result.color)
             Text(result.text.replacingOccurrences(of: "\n", with: " "))
-                .font(.system(size: 11, design: .monospaced)).foregroundColor(InterfaceStyle.text).lineLimit(1)
+                .font(.system(size: 12, design: .monospaced)).foregroundColor(InterfaceStyle.text).lineLimit(1)
 
         }.help(result.text)
     }
@@ -263,6 +263,7 @@ private struct NativeResultButton: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(onActivate: onActivate) }
     func makeNSView(context: Context) -> PaletteResultButton {
         let button = PaletteResultButton()
+        button.cell = PaletteResultButtonCell(textCell: "")
         button.target = context.coordinator
         button.action = #selector(Coordinator.activate(_:))
         button.isBordered = false
@@ -281,14 +282,11 @@ private struct NativeResultButton: NSViewRepresentable {
     }
     func updateNSView(_ button: PaletteResultButton, context: Context) {
         context.coordinator.onActivate = onActivate
-        button.attributedTitle = NSAttributedString(string: text.replacingOccurrences(of: "\n", with: " "), attributes: [
-            .font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular),
-            .foregroundColor: NSColor(hovered ? InterfaceStyle.selectedText : InterfaceStyle.text)
-        ])
+        button.updateResult(text: text, hovered: hovered)
         button.image = NSImage(systemSymbolName: "circle.fill", accessibilityDescription: nil)?
             .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 6, weight: .regular))
         button.contentTintColor = NSColor(color)
-        button.toolTip = "查看完整结果"
+        button.toolTip = "查看结果"
         button.setAccessibilityLabel("\(name)：查看完整结果")
     }
 
@@ -300,6 +298,39 @@ private struct NativeResultButton: NSViewRepresentable {
 }
 
 final class PaletteResultButton: NSButton {
+    private var resultText = ""
+    private var resultHovered = false
+    private var resultFocused = false
+
+    fileprivate var showsViewingHint: Bool { resultHovered || resultFocused }
+
+    func updateResult(text: String, hovered: Bool) {
+        resultText = text.replacingOccurrences(of: "\n", with: " ")
+        resultHovered = hovered
+        updateViewingHint()
+    }
+
+    private func updateViewingHint() {
+        attributedTitle = NSAttributedString(string: resultText, attributes: [
+            .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular),
+            .foregroundColor: NSColor(showsViewingHint ? InterfaceStyle.selectedText : InterfaceStyle.text),
+            .underlineStyle: showsViewingHint ? NSUnderlineStyle.single.rawValue : 0
+        ])
+        needsDisplay = true
+    }
+
+    override func becomeFirstResponder() -> Bool {
+        let accepted = super.becomeFirstResponder()
+        if accepted { resultFocused = true; updateViewingHint() }
+        return accepted
+    }
+
+    override func resignFirstResponder() -> Bool {
+        let accepted = super.resignFirstResponder()
+        if accepted { resultFocused = false; updateViewingHint() }
+        return accepted
+    }
+
     override var acceptsFirstResponder: Bool { true }
     override var canBecomeKeyView: Bool { true }
     override func keyDown(with event: NSEvent) {
@@ -308,4 +339,24 @@ final class PaletteResultButton: NSButton {
     }
     override var focusRingMaskBounds: NSRect { bounds }
     override func drawFocusRingMask() { NSBezierPath(roundedRect: bounds, xRadius: 4, yRadius: 4).fill() }
+}
+
+/// 为查看提示预留位置；极窄结果区域只保留状态标记。
+private final class PaletteResultButtonCell: NSButtonCell {
+    override func titleRect(forBounds rect: NSRect) -> NSRect {
+        var title = super.titleRect(forBounds: rect)
+        if rect.width >= 44 { title.size.width = max(0, title.width - 14) }
+        return title
+    }
+
+    override func drawInterior(withFrame cellFrame: NSRect, in controlView: NSView) {
+        super.drawInterior(withFrame: cellFrame, in: controlView)
+        guard let button = controlView as? PaletteResultButton,
+              button.showsViewingHint, cellFrame.width >= 44 else { return }
+        let image = NSImage(systemSymbolName: "chevron.right", accessibilityDescription: nil)?
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 9, weight: .regular)
+                .applying(NSImage.SymbolConfiguration(paletteColors: [NSColor(InterfaceStyle.selectedText)])))
+        image?.draw(in: NSRect(x: cellFrame.maxX - 10, y: cellFrame.midY - 5, width: 6, height: 10),
+                    from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+    }
 }

@@ -37,11 +37,11 @@ struct CommandEditorView: View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(isExisting ? "编辑命令" : "添加命令").font(.system(size: 16, weight: .semibold))
-                Text("名称用于搜索，命令内容交给 zsh 执行。").font(.system(size: 11)).foregroundColor(InterfaceStyle.muted)
-            }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 24).padding(.vertical, 20).frame(minHeight: 85.5).background(InterfaceStyle.material)
+                Text("名称用于搜索，命令内容交给 zsh 执行。").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 24).padding(.vertical, 16).background(InterfaceStyle.material)
             Divider()
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 12) {
                     field("命令名称") {
                         TextField("例如：启动 Docker 服务", text: $name).focused($nameFocused)
                     }
@@ -58,15 +58,15 @@ struct CommandEditorView: View {
                                 TextField("默认工作目录", text: $workingDirectory)
                                 Button("选择…", action: chooseDirectory)
                             }
-                            Text("支持 ~，留空使用默认目录。").font(.system(size: 10)).foregroundColor(InterfaceStyle.muted)
+                            Text("支持 ~，留空使用默认目录。").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
                         }
                     }
                     Divider()
                     option("打开面板时自动执行", detail: "每次打开都会运行；结果显示在行内，不计入历史、不通知。", isOn: $autoExecute)
                     option("直接执行", detail: "跳过 ~/.zshrc；其中的 alias、函数和环境变量不可用。", isOn: $directExecution)
                     Toggle("手动执行完成后通知", isOn: $notification).font(.system(size: 12))
-                    Text("命令超过 30 秒会终止。").font(.system(size: 10)).foregroundColor(InterfaceStyle.muted)
-                }.padding(.horizontal, 24).padding(.vertical, 20).textFieldStyle(InterfaceTextFieldStyle())
+                    Text("命令超过 30 秒会终止。").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
+                }.padding(.horizontal, 24).padding(.vertical, 16).textFieldStyle(InterfaceTextFieldStyle())
             }
             Divider()
             HStack(spacing: 8) {
@@ -107,15 +107,17 @@ struct CommandEditorView: View {
             } else {
                 TextEditor(text: $commandText)
             }
-        }.font(.system(size: 12, design: .monospaced)).frame(height: 76).padding(5)
+        }.font(.system(size: 12, design: .monospaced)).frame(height: 62).padding(5)
             .background(InterfaceStyle.surface)
             .overlay(RoundedRectangle(cornerRadius: 7).stroke(InterfaceStyle.line, lineWidth: 1))
     }
 
     private func field<Content: View>(_ title: String, optional: Bool = false, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 7) {
-            Text(title).font(.system(size: 11, weight: .medium))
-            if optional { Text("可选").font(.system(size: 11)).foregroundColor(InterfaceStyle.muted) }
+            HStack(spacing: 4) {
+                Text(title).font(.system(size: 12, weight: .medium))
+                if optional { Text("（可选）").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted) }
+            }
             content()
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -123,7 +125,7 @@ struct CommandEditorView: View {
     private func option(_ title: String, detail: String, isOn: Binding<Bool>) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Toggle(title, isOn: isOn).font(.system(size: 12))
-            Text(detail).font(.system(size: 10)).foregroundColor(InterfaceStyle.muted).padding(.leading, 20)
+            Text(detail).font(.system(size: 12)).foregroundColor(InterfaceStyle.muted).padding(.leading, 20)
         }
     }
 
