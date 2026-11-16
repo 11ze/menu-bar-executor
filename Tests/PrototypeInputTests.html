@@ -13,7 +13,7 @@
         try {
             await new Promise(resolve => {
                 frame.onload = resolve;
-                frame.src = '../designs/menu-bar-executor/index.html?case=' + page + '&run=' + Date.now() + '#' + page;
+                frame.src = '../.ryugi/artifacts/html/menu-bar-executor/index.html?case=' + page + '&run=' + Date.now() + '#' + page;
             });
             const win = frame.contentWindow;
             const doc = frame.contentDocument;

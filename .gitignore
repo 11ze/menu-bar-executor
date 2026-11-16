@@ -36,3 +36,14 @@ Logs/
 *.profraw
 
 .zcode/
+
+# Ryugi：仅跟踪正式交互原型及其忽略规则
+/.ryugi/*
+!/.ryugi/.gitignore
+!/.ryugi/artifacts/
+/.ryugi/artifacts/*
+!/.ryugi/artifacts/html/
+/.ryugi/artifacts/html/*
+!/.ryugi/artifacts/html/menu-bar-executor/
+/.ryugi/artifacts/html/menu-bar-executor/*
+!/.ryugi/artifacts/html/menu-bar-executor/index.html

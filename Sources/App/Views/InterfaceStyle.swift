@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 与 designs/menu-bar-executor/style.css 的表面、文字和分隔线角色对应。
+/// 与 .ryugi/artifacts/html/menu-bar-executor/index.html 的表面、文字和分隔线角色对应。
 enum InterfaceStyle {
     static let surface = color(light: 0xfdfdfe, dark: 0x292b30)
     static let chrome = color(light: 0xeff1f4, dark: 0x25272c)

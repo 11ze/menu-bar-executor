@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - designs/menu-bar-executor/**
+      - .ryugi/artifacts/html/menu-bar-executor/**
       - .github/workflows/pages.yml
   workflow_dispatch:
 
@@ -31,6 +31,6 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: designs/menu-bar-executor
+          path: .ryugi/artifacts/html/menu-bar-executor
       - uses: actions/deploy-pages@v4
         id: deployment

@@ -2,7 +2,7 @@
 
 把常用 Shell 命令放进 macOS 菜单栏。按快捷键打开面板，输入名称，回车执行。
 
-[下载](https://github.com/11ze/menu-bar-executor/releases/latest) · [在线预览](https://11ze.github.io/menu-bar-executor/)
+[下载](https://github.com/11ze/menu-bar-executor/releases/latest) · [交互原型](https://11ze.github.io/menu-bar-executor/)
 
 - 按名称搜索命令，支持键盘导航与 `⌘1` 至 `⌘9` 执行。
 - 打开面板时自动执行指定命令，行内查看与复制结果。
@@ -43,7 +43,7 @@ xcodebuild test -project menu-bar-executor.xcodeproj \
   -derivedDataPath /tmp/menu-bar-executor-build
 ```
 
-开发约定见 [开发规范](docs/conventions.md) 与 [领域词汇表](CONTEXT.md)。交互预览的发布方式见 [设计说明](designs/menu-bar-executor/README.md#在线预览与发布)。
+开发约定见 [开发规范](docs/conventions.md) 与 [领域词汇表](CONTEXT.md)。最新版交互原型使用 Ryugi HTML，发布方式见 [设计说明](docs/interface.md#在线预览与发布)。
 
 ## 许可证
 

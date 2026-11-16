@@ -24,7 +24,7 @@ xcodebuild test -project menu-bar-executor.xcodeproj \
 
 ## 界面修改
 
-软件界面以 [HTML 设计稿](designs/menu-bar-executor/index.html) 及 [设计说明与验收步骤](designs/menu-bar-executor/README.md) 为准。修改界面时先核对设计稿；实现偏离设计稿时按稿修复，需要调整设计时先更新设计稿及说明，再修改软件并按稿验收。
+软件界面以 [Ryugi 交互原型](.ryugi/artifacts/html/menu-bar-executor/index.html) 及 [设计说明与验收步骤](docs/interface.md) 为准。Ryugi HTML 是唯一原型源，GitHub Pages 展示 main 分支发布的最新版交互原型；评审画板不作为正式稿。修改界面时先核对设计稿；实现偏离设计稿时按稿修复，需要调整设计时先更新设计稿及说明，再修改软件并按稿验收。
 
 ## 深入了解
 

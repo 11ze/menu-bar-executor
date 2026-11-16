@@ -1,0 +1,8 @@
+config.json
+artifacts/*
+
+!artifacts/html/
+artifacts/html/*
+!artifacts/html/menu-bar-executor/
+artifacts/html/menu-bar-executor/*
+!artifacts/html/menu-bar-executor/index.html
