@@ -42,6 +42,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             CommandPaletteWindowController.prewarm()
         }
 
+        guard !TestEnvironment.isRunning() else { return }
+
         // 静默检查辅助功能权限
         let hasPermission = AXIsProcessTrusted()
         let hasShownPrompt = UserDefaults.standard.bool(forKey: hasShownAccessibilityPromptKey)

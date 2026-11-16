@@ -13,11 +13,29 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
     /// 更新通知点击后的回调
     private var updateActionHandler: (() -> Void)?
+    private let policy: NotificationPolicy
 
     private override init() {
+        policy = NotificationPolicy(environment: ProcessInfo.processInfo.environment)
         super.init()
+        configure(
+            requestAuthorizationAction: { [weak self] in self?.requestAuthorization() }
+        )
+    }
+
+    init(
+        policy: NotificationPolicy,
+        requestAuthorizationAction: () -> Void
+    ) {
+        self.policy = policy
+        super.init()
+        configure(requestAuthorizationAction: requestAuthorizationAction)
+    }
+
+    private func configure(requestAuthorizationAction: () -> Void) {
+        guard policy.requestsAuthorizationOnLaunch else { return }
         UNUserNotificationCenter.current().delegate = self
-        requestAuthorization()
+        requestAuthorizationAction()
         registerUpdateNotificationCategory()
     }
 
@@ -155,6 +173,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     }
 
     private func showPermissionAlert() {
+        guard policy.showsAlerts else { return }
         let alert = NSAlert()
         alert.messageText = "通知权限未授权"
         alert.informativeText = "请在「系统设置 > 通知」中允许 MenuBarExecutor 发送通知。"
@@ -168,6 +187,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     }
 
     private func showErrorAlert(_ message: String) {
+        guard policy.showsAlerts else { return }
         let alert = NSAlert()
         alert.messageText = "通知错误"
         alert.informativeText = message
