@@ -13,6 +13,7 @@ struct CommandEditorView: View {
     @State private var group: String
     @State private var directExecution: Bool
     @State private var showingDeleteConfirmation = false
+    @State private var formHeight: CGFloat = 476
     @FocusState private var nameFocused: Bool
 
     let onSave: (Command) -> Bool
@@ -38,7 +39,8 @@ struct CommandEditorView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(isExisting ? "编辑命令" : "添加命令").font(.system(size: 16, weight: .semibold))
                 Text("名称用于搜索，命令内容交给 zsh 执行。").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
-            }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 24).padding(.vertical, 16).background(InterfaceStyle.material)
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 24).padding(.vertical, 16)
+                .frame(height: 79).background(InterfaceStyle.material)
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
@@ -52,22 +54,29 @@ struct CommandEditorView: View {
                         field("分组", optional: true) {
                             CommandGroupField(text: $group, groups: CommandsManager.sortedGroupNames(from: manager.commands, groupOrder: nil).compactMap { $0 })
                         }
-                        .frame(width: (560 - 24 * 2 - 16) / 2.4)
+                        .frame(width: (620 - 24 * 2 - 16) / 2.4)
                         field("工作目录", optional: true) {
                             HStack {
                                 TextField("默认工作目录", text: $workingDirectory)
                                 Button("选择…", action: chooseDirectory)
                             }
                             Text("支持 ~，留空使用默认目录。").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
+                                .frame(minHeight: 18, alignment: .leading)
                         }
                     }
                     Divider()
                     option("打开面板时自动执行", detail: "每次打开都会运行；结果显示在行内，不计入历史、不通知。", isOn: $autoExecute)
                     option("直接执行", detail: "跳过 ~/.zshrc；其中的 alias、函数和环境变量不可用。", isOn: $directExecution)
-                    Toggle("手动执行完成后通知", isOn: $notification).font(.system(size: 12))
+                    Toggle("手动执行完成后通知", isOn: $notification).font(.system(size: 12)).frame(minHeight: 18)
                     Text("命令超过 30 秒会终止。").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
+                        .frame(minHeight: 18, alignment: .leading)
                 }.padding(.horizontal, 24).padding(.vertical, 16).textFieldStyle(InterfaceTextFieldStyle())
+                    .background(GeometryReader { geometry in
+                        Color.clear.onAppear { formHeight = geometry.size.height }
+                            .onChange(of: geometry.size.height) { formHeight = $0 }
+                    })
             }
+            .frame(height: min(formHeight, max(0, min(740, (NSScreen.main?.visibleFrame.height ?? 780) - 40) - 140)))
             Divider()
             HStack(spacing: 8) {
                 Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
@@ -78,11 +87,11 @@ struct CommandEditorView: View {
                 Button("保存命令") { saveCommand() }
                     .buttonStyle(InterfaceButtonStyle(prominent: true, height: 30)).keyboardShortcut(.defaultAction)
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || commandText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }.font(.system(size: 12)).padding(.horizontal, 20).padding(.vertical, 14).frame(minHeight: 59).background(InterfaceStyle.chrome)
+            }.font(.system(size: 12)).padding(.horizontal, 20).padding(.vertical, 14).frame(height: 59).background(InterfaceStyle.chrome)
         }
         .font(.system(size: 13)).foregroundColor(InterfaceStyle.text).background(InterfaceStyle.surface)
         .buttonStyle(InterfaceButtonStyle(height: 30))
-        .frame(width: 560, height: min(680, (NSScreen.main?.visibleFrame.height ?? 638) - 48))
+        .frame(width: 620)
         .onAppear { nameFocused = true }
         .alert("操作失败", isPresented: Binding(
             get: { settings.lastError != nil },
@@ -117,15 +126,16 @@ struct CommandEditorView: View {
             HStack(spacing: 4) {
                 Text(title).font(.system(size: 12, weight: .medium))
                 if optional { Text("（可选）").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted) }
-            }
+            }.frame(minHeight: 18, alignment: .leading)
             content()
-        }.frame(maxWidth: .infinity, alignment: .leading)
+        }.font(.system(size: 12)).frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func option(_ title: String, detail: String, isOn: Binding<Bool>) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Toggle(title, isOn: isOn).font(.system(size: 12))
+            Toggle(title, isOn: isOn).font(.system(size: 12)).frame(minHeight: 18)
             Text(detail).font(.system(size: 12)).foregroundColor(InterfaceStyle.muted).padding(.leading, 20)
+                .frame(minHeight: 18, alignment: .leading)
         }
     }
 
@@ -166,7 +176,7 @@ private struct CommandGroupField: NSViewRepresentable {
         box.isEditable = true
         box.completes = true
         box.placeholderString = "选择或输入分组"
-        box.font = .systemFont(ofSize: 13)
+        box.font = .systemFont(ofSize: 12)
         box.delegate = context.coordinator
         box.setAccessibilityLabel("分组")
         return box

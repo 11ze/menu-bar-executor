@@ -70,7 +70,7 @@ struct HistoryView: View {
                                 }
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("执行内容").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
-                                    Text(record.commandText).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+                                    Text(record.commandText).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
                                 }.padding(.top, 24)
                                 HStack {
                                     Text("输出结果").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
@@ -83,7 +83,7 @@ struct HistoryView: View {
                                 }.padding(.top, 24).padding(.bottom, 8)
                                 ScrollView {
                                     Text(record.output.flatMap { $0.isEmpty ? nil : $0 } ?? "（无输出）")
-                                        .font(.system(size: 11, design: .monospaced)).lineSpacing(6).textSelection(.enabled)
+                                        .font(.system(size: 12, design: .monospaced)).lineSpacing(6).textSelection(.enabled)
                                         .frame(maxWidth: .infinity, alignment: .leading).padding(15)
                                 }.frame(minHeight: 143, maxHeight: 260)
                                     .background(InterfaceStyle.subtle)

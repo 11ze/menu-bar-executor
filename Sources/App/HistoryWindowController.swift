@@ -43,7 +43,7 @@ final class HistoryWindowController: NSObject {
         let hostingView = NSHostingView(rootView: contentView)
 
         window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 840, height: 566),
+            contentRect: NSRect(x: 0, y: 0, width: 960, height: 680),
             styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false

@@ -301,13 +301,14 @@ final class CommandPaletteWindowController: NSWindowController {
         let available = screen?.visibleFrame ?? panel.frame
         let listHeight = items.isEmpty ? CGFloat(160) : items.enumerated().reduce(CGFloat(21)) { height, entry in
             switch entry.element {
-            case .groupHeader: return height + 32
+            case .groupHeader: return height + 35
             case .command: return height + 36
             }
         }
-        let fixedHeight: CGFloat = 48 + 41 + 2
+        let fixedHeight: CGFloat = 48 + 43 + 2
         let contentHeight = fixedHeight + min(listHeight, 410)
-        let height = min(max(preferredHeight ?? contentHeight, PaletteConfig.minHeight), PaletteConfig.maxHeight, available.height)
+        let availableHeight = preferredHeight == nil ? max(0, available.height - 40) : available.height
+        let height = min(max(preferredHeight ?? contentHeight, PaletteConfig.minHeight), PaletteConfig.maxHeight, availableHeight)
         let width = min(max(panel.frame.width, PaletteConfig.minWidth), PaletteConfig.maxWidth, available.width)
         var frame = panel.frame
         frame.origin.y += frame.height - height

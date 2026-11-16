@@ -5,6 +5,134 @@ import XCTest
 
 @MainActor
 final class InterfaceWindowTests: XCTestCase {
+    func testResultPopoverDoesNotUseGraySystemButtonFills() async throws {
+        for appearance in [NSAppearance.Name.aqua, .darkAqua] {
+            try await assertResultPopoverActionColors(appearance: appearance)
+        }
+    }
+
+    private func assertResultPopoverActionColors(appearance: NSAppearance.Name) async throws {
+        let command = Command(name: "当前分支", command: "printf test", autoExecute: true)
+        let window = NSWindow(contentRect: NSRect(x: 200, y: 400, width: 600, height: 36),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.appearance = NSAppearance(named: appearance)
+        window.isReleasedWhenClosed = false
+        defer { window.orderOut(nil) }
+        let host = NSHostingView(rootView: CommandPaletteRow(command: command, displayIndex: 1,
+            isSelected: false, searchText: "", autoExecuteState: .success("feature/my_branch")))
+        window.contentView = host
+        window.setContentSize(NSSize(width: 600, height: 36))
+        window.makeKeyAndOrderFront(nil)
+        for _ in 0..<10 {
+            host.layoutSubtreeIfNeeded()
+            if descendants(host).contains(where: { $0 is PaletteResultButton }) { break }
+            await nextLayout()
+        }
+        let result = try XCTUnwrap(descendants(host).compactMap { $0 as? PaletteResultButton }.first)
+        result.performClick(nil)
+        var popover: NSWindow?
+        for _ in 0..<20 {
+            await nextLayout()
+            popover = NSApp.windows.first { $0.isVisible && String(describing: type(of: $0)).contains("Popover") }
+            if popover != nil { break }
+        }
+        let popoverWindow = try XCTUnwrap(popover)
+        defer { popoverWindow.close() }
+        let content = try XCTUnwrap(popoverWindow.contentView)
+        content.layoutSubtreeIfNeeded()
+        let folder = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("menu-bar-executor-native-reference")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let bitmap = try XCTUnwrap(content.bitmapImageRepForCachingDisplay(in: content.bounds))
+        content.cacheDisplay(in: content.bounds, to: bitmap)
+        let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+        XCTAssertGreaterThan(data.count, 1000, "结果浮层不能是空截图")
+        let suffix = appearance == .aqua ? "light" : "dark"
+        try data.write(to: folder.appendingPathComponent("result-popover-actions-\(suffix).png"))
+        for (name, area) in [
+            ("关闭", NSRect(x: content.bounds.width - 100, y: 20, width: 80, height: 45)),
+            ("复制结果", NSRect(x: 20, y: content.bounds.height - 60, width: 110, height: 45))
+        ] {
+            XCTAssertLessThan(longestGrayFill(in: bitmap, area: area, viewSize: content.bounds.size), 20,
+                              "\(name) 应使用设计稿的透明或表面色，不能出现连续的系统灰色填充")
+        }
+    }
+
+    private func longestGrayFill(in bitmap: NSBitmapImageRep, area: NSRect, viewSize: NSSize) -> CGFloat {
+        let scaleX = CGFloat(bitmap.pixelsWide) / viewSize.width
+        let scaleY = CGFloat(bitmap.pixelsHigh) / viewSize.height
+        var longest = 0
+        for y in Int(area.minY * scaleY)..<min(bitmap.pixelsHigh, Int(area.maxY * scaleY)) {
+            var run = 0
+            for x in Int(area.minX * scaleX)..<min(bitmap.pixelsWide, Int(area.maxX * scaleX)) {
+                let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB)
+                let gray = color.map {
+                    let components = [$0.redComponent, $0.greenComponent, $0.blueComponent]
+                    return $0.alphaComponent > 0.99 && components.min()! > 0.3 && components.max()! < 0.9
+                        && components.max()! - components.min()! < 0.015
+                } ?? false
+                run = gray ? run + 1 : 0
+                longest = max(longest, run)
+            }
+        }
+        return CGFloat(longest) / scaleX
+    }
+
+    func testShortCommandEditorFitsContentInsteadOfFillingItsHeightLimit() async {
+        let command = Command(name: "启动 Docker 服务", command: "open -a Docker", group: "开发工具")
+        let host = NSHostingView(rootView: CommandEditorView(command: command,
+            onSave: { _ in true }, onDelete: { true }))
+        host.frame = NSRect(x: 0, y: 0, width: 620, height: 740)
+        for _ in 0..<5 {
+            host.layoutSubtreeIfNeeded()
+            await nextLayout()
+        }
+        XCTAssertLessThan(host.fittingSize.height, 650,
+                          "短命令应接近设计稿的内容高度，不能把 740 点上限当成固定高度")
+        XCTAssertGreaterThan(host.fittingSize.height, 500,
+                             "表单及底部操作不能在测量期间折叠")
+    }
+
+    func testAutoResultNeverUnderlinesItsTextWhenHoveredOrFocused() async throws {
+        let command = Command(name: "当前分支", command: "printf test", autoExecute: true)
+        let output = "feature/my_branch"
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 36),
+                              styleMask: [.borderless], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.orderOut(nil) }
+        let host = NSHostingView(rootView: CommandPaletteRow(command: command, displayIndex: 1,
+            isSelected: false, searchText: "", autoExecuteState: .success(output)))
+        window.contentView = host
+        window.setContentSize(NSSize(width: 600, height: 36))
+        window.orderFront(nil)
+        var resultButton: PaletteResultButton?
+        for _ in 0..<10 {
+            host.layoutSubtreeIfNeeded()
+            resultButton = descendants(host).compactMap { $0 as? PaletteResultButton }.first
+            if resultButton != nil { break }
+            await nextLayout()
+        }
+        let button = try XCTUnwrap(resultButton)
+
+        for appearance in [NSAppearance.Name.aqua, .darkAqua] {
+            window.appearance = NSAppearance(named: appearance)
+            for state in ["normal", "hovered", "focused", "blurred"] {
+                window.makeFirstResponder(nil)
+                button.updateResult(text: output, hovered: state == "hovered")
+                if state == "focused" { XCTAssertTrue(window.makeFirstResponder(button)) }
+                if state == "blurred" {
+                    XCTAssertTrue(window.makeFirstResponder(button))
+                    window.makeFirstResponder(nil)
+                }
+                XCTAssertEqual(button.attributedTitle.string, output, "不能移除结果原文中的下划线字符")
+                button.attributedTitle.enumerateAttribute(.underlineStyle,
+                    in: NSRange(location: 0, length: button.attributedTitle.length)) { value, _, _ in
+                    XCTAssertEqual((value as? NSNumber)?.intValue ?? 0, 0,
+                                   "\(appearance.rawValue) / \(state)：自动执行结果不能添加下划线装饰")
+                }
+            }
+        }
+    }
+
     func testLongAutoResultUsesSpaceBesideShortTitle() async throws {
         let command = Command(name: "IP", command: "printf test", autoExecute: true)
         let output = String(repeating: "192.168.31.108 / ", count: 8)
@@ -37,7 +165,7 @@ final class InterfaceWindowTests: XCTestCase {
         let output = "192.168.31.108 / en0 / 当前网络连接正常，以下内容超出行内显示范围"
         for appearance in [NSAppearance.Name.aqua, .darkAqua] {
             let suffix = appearance == .aqua ? "light" : "dark"
-            for width in [360, 560, 800] {
+            for width in [360, 600, 800] {
                 try await snapshot(VStack(spacing: 0) {
                     CommandPaletteRow(command: short, displayIndex: 1, isSelected: true, searchText: "", autoExecuteState: .success(output))
                     CommandPaletteRow(command: long, displayIndex: 2, isSelected: false, searchText: "", autoExecuteState: .success(output))
@@ -131,33 +259,33 @@ final class InterfaceWindowTests: XCTestCase {
         for appearance in [NSAppearance.Name.aqua, .darkAqua] {
             let suffix = appearance == .aqua ? "light" : "dark"
             for (label, size) in [
-                ("normal", NSSize(width: 840, height: 549)),
-                ("narrow", NSSize(width: 640, height: 549)),
-                ("short", NSSize(width: 840, height: 420)),
+                ("normal", NSSize(width: 900, height: 640)),
+                ("narrow", NSSize(width: 640, height: 640)),
+                ("short", NSSize(width: 900, height: 420)),
                 ("minimum", NSSize(width: 640, height: 420))
             ] {
                 try await snapshot(SettingsView(), size: size, name: "commands-\(suffix)-\(label)", folder: folder, appearance: appearance)
                 try await snapshot(VStack(spacing: 0) { WindowHeader(title: "设置"); GeneralSettingsView() }, size: size,
                                    name: "general-\(suffix)-\(label)", folder: folder, appearance: appearance)
-                try await snapshot(HistoryView(), size: NSSize(width: size.width, height: size.height == 549 ? 566 : 420),
+                try await snapshot(HistoryView(), size: NSSize(width: label == "normal" || label == "short" ? 960 : 640, height: size.height == 640 ? 680 : 420),
                                    name: "history-\(suffix)-\(label)", folder: folder, appearance: appearance)
             }
-            try await snapshot(CommandPaletteView(coordinator: coordinator), size: NSSize(width: 560, height: 508),
+            try await snapshot(CommandPaletteView(coordinator: coordinator), size: NSSize(width: 600, height: 503),
                                name: "palette-\(suffix)", folder: folder, appearance: appearance)
             for (label, size) in [
-                ("narrow", NSSize(width: 360, height: 508)),
-                ("short", NSSize(width: 560, height: 250)),
+                ("narrow", NSSize(width: 360, height: 503)),
+                ("short", NSSize(width: 600, height: 250)),
                 ("minimum", NSSize(width: 360, height: 250))
             ] {
                 try await snapshot(CommandPaletteView(coordinator: coordinator), size: size,
                                    name: "palette-\(suffix)-\(label)", folder: folder, appearance: appearance)
             }
             try await snapshot(CommandEditorView(command: sample, onSave: { _ in true }, onDelete: { true }),
-                               size: NSSize(width: 560, height: 680), name: "editor-\(suffix)", folder: folder, appearance: appearance)
+                               size: NSSize(width: 620, height: 740), name: "editor-\(suffix)", folder: folder, appearance: appearance, fitHeight: true)
             for hovered in [false, true] {
                 try await snapshot(CommandPaletteRow(command: sample, displayIndex: 1, isSelected: true,
                     searchText: "", autoExecuteState: .success("192.168.31.108")),
-                    size: NSSize(width: 560, height: 36),
+                    size: NSSize(width: 600, height: 36),
                     name: "palette-result-\(hovered ? "hover" : "focus")-\(suffix)", folder: folder, appearance: appearance) { host in
                         guard let button = self.descendants(host).compactMap({ $0 as? PaletteResultButton }).first else {
                             XCTFail("结果查看入口必须存在")
@@ -172,13 +300,13 @@ final class InterfaceWindowTests: XCTestCase {
                 CommandPaletteRow(command: sample, displayIndex: 2, isSelected: false, searchText: "", autoExecuteState: .loading)
                 CommandPaletteRow(command: sample, displayIndex: 3, isSelected: false, searchText: "", autoExecuteState: .failure("执行失败"))
                 CommandPaletteRow(command: sample, displayIndex: 4, isSelected: false, searchText: "", autoExecuteState: .success(""))
-            }.padding(8).background(InterfaceStyle.surface), size: NSSize(width: 560, height: 160),
+            }.padding(8).background(InterfaceStyle.surface), size: NSSize(width: 600, height: 160),
             name: "palette-results-\(suffix)", folder: folder, appearance: appearance)
         }
         print("Native interface snapshots: \(folder.path)")
     }
 
-    private func snapshot<Content: View>(_ content: Content, size: NSSize, name: String, folder: URL, appearance: NSAppearance.Name, prepare: ((NSView) -> Void)? = nil) async throws {
+    private func snapshot<Content: View>(_ content: Content, size: NSSize, name: String, folder: URL, appearance: NSAppearance.Name, fitHeight: Bool = false, prepare: ((NSView) -> Void)? = nil) async throws {
         let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless], backing: .buffered, defer: false)
         window.appearance = NSAppearance(named: appearance)
         window.isReleasedWhenClosed = false
@@ -192,6 +320,14 @@ final class InterfaceWindowTests: XCTestCase {
         window.orderFront(nil)
         await nextLayout()
         host.layoutSubtreeIfNeeded()
+        if fitHeight {
+            for _ in 0..<5 {
+                await nextLayout()
+                host.layoutSubtreeIfNeeded()
+            }
+            window.setContentSize(NSSize(width: size.width, height: host.fittingSize.height))
+            host.layoutSubtreeIfNeeded()
+        }
         prepare?(host)
         let bitmap = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
         host.cacheDisplay(in: host.bounds, to: bitmap)

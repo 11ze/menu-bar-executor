@@ -2,15 +2,15 @@ import SwiftUI
 
 /// 与 designs/menu-bar-executor/style.css 的表面、文字和分隔线角色对应。
 enum InterfaceStyle {
-    static let surface = color(light: 0xfdfdfe, dark: 0x2c3037)
-    static let chrome = color(light: 0xeff1f4, dark: 0x2f343d)
-    static let subtle = color(light: 0xf5f6f8, dark: 0x272b32)
-    static let material = color(light: 0xf6f8fb, dark: 0x2d333d)
-    static let line = color(light: 0xdce0e6, dark: 0x434a55)
+    static let surface = color(light: 0xfdfdfe, dark: 0x292b30)
+    static let chrome = color(light: 0xeff1f4, dark: 0x25272c)
+    static let subtle = color(light: 0xf5f6f8, dark: 0x222429)
+    static let material = color(light: 0xf6f8fb, dark: 0x25272c)
+    static let line = color(light: 0xdce0e6, dark: 0x404249)
     static let text = color(light: 0x24262b, dark: 0xf0f1f4)
-    static let muted = color(light: 0x626772, dark: 0xb1b7c2)
+    static let muted = color(light: 0x626772, dark: 0xacb1ba)
     static let selectedText = color(light: 0x0068e8, dark: 0x83b9ff)
-    static let selection = color(light: 0xe1edfc, dark: 0x344e6e)
+    static let selection = color(light: 0xe4edfa, dark: 0x30455f)
 
     static let success = color(light: 0x267748, dark: 0x8cd9ac)
     static let failure = color(light: 0xbe3c36, dark: 0xff9d97)
@@ -123,8 +123,8 @@ struct PaletteFooterButtonStyle: ButtonStyle {
             label.font(.system(size: 12))
                 .foregroundColor(hovered ? InterfaceStyle.selectedText : InterfaceStyle.text)
                 .padding(.horizontal, 8).frame(height: 24)
-                .background(hovered || pressed ? InterfaceStyle.selection : InterfaceStyle.surface)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(focused ? Color.accentColor : (hovered ? InterfaceStyle.selectedText.opacity(0.35) : InterfaceStyle.line), lineWidth: focused ? 2 : 1))
+                .background(hovered || pressed ? InterfaceStyle.selection : .clear)
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(focused ? InterfaceStyle.selectedText : .clear, lineWidth: 2))
                 .cornerRadius(6)
                 .onHover { hovered = $0 }
         }
@@ -162,7 +162,7 @@ struct InterfaceButtonStyle: ButtonStyle {
 
 struct InterfaceTextFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
-        configuration.textFieldStyle(.plain).padding(.horizontal, 10).padding(.vertical, 8).frame(minHeight: 35)
+        configuration.textFieldStyle(.plain).padding(.horizontal, 10).padding(.vertical, 8).frame(minHeight: 36)
             .background(InterfaceStyle.surface)
             .overlay(RoundedRectangle(cornerRadius: 7).stroke(InterfaceStyle.line, lineWidth: 1))
             .cornerRadius(7)

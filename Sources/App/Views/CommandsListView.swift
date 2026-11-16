@@ -41,7 +41,7 @@ struct CommandsListView: View {
                 Text("按分组显示")
             }.font(.system(size: 12)).foregroundColor(InterfaceStyle.muted).padding(.horizontal, 20).padding(.vertical, 9)
 
-            InterfaceStyle.line.frame(height: 1)
+            Color.clear.frame(height: 1)
             if listModel.items.isEmpty {
                 VStack(spacing: 12) {
                     Text("›_").font(.system(size: 30, design: .monospaced)).opacity(0.55)
@@ -99,11 +99,10 @@ struct CommandsListView: View {
                     if command.autoExecute {
                         Text("自动执行").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
                             .padding(.horizontal, 5).padding(.vertical, 1)
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(InterfaceStyle.line, lineWidth: 1))
-                            .background(InterfaceStyle.chrome).cornerRadius(4)
+                            .background(InterfaceStyle.subtle).cornerRadius(4)
                     }
                 }
-                Text(command.command).font(.system(size: 11, design: .monospaced)).foregroundColor(InterfaceStyle.muted).lineLimit(1)
+                Text(command.command).font(.system(size: 12, design: .monospaced)).foregroundColor(InterfaceStyle.muted).lineLimit(1)
             }
             Spacer(minLength: 8)
             HStack(spacing: 8) {
@@ -117,7 +116,7 @@ struct CommandsListView: View {
         }
         .padding(.horizontal, 22).frame(height: 67)
         .background(hoveredCommandID == command.id ? InterfaceStyle.subtle : .clear)
-        .overlay(alignment: .bottom) { Divider().opacity(0.5) }
+        .overlay(alignment: .bottom) { InterfaceStyle.line.opacity(0.32).frame(height: 1) }
         .onHover { hovered in
             if hovered { hoveredCommandID = command.id }
             else if hoveredCommandID == command.id { hoveredCommandID = nil }

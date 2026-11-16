@@ -6,8 +6,8 @@ enum PaletteConfig {
     /// 焦点设置延迟（确保窗口完全显示）
     static let focusDelay: TimeInterval = 0.05
     /// 默认尺寸
-    static let defaultWidth: CGFloat = 560
-    static let defaultHeight: CGFloat = 480
+    static let defaultWidth: CGFloat = 600
+    static let defaultHeight: CGFloat = 503
     /// 尺寸范围
     static let minWidth: CGFloat = 360
     static let minHeight: CGFloat = 250

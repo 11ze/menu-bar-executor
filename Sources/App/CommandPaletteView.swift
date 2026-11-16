@@ -78,8 +78,8 @@ struct CommandPaletteView: View {
                     }
                 }.font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
                     .buttonStyle(PaletteFooterButtonStyle())
-                    .padding(.horizontal, 12).frame(height: 41)
-                    .background(WindowDragArea()).background(InterfaceStyle.chrome)
+                    .padding(.horizontal, 12).frame(height: 43)
+                    .background(WindowDragArea()).background(InterfaceStyle.material)
             }
         }
         .foregroundColor(InterfaceStyle.text)
@@ -108,9 +108,9 @@ struct GroupHeaderRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Text(title).font(.system(size: 12, weight: .semibold)).foregroundColor(InterfaceStyle.muted)
-            Rectangle().fill(InterfaceStyle.line).frame(height: 1)
-        }.padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 7).frame(height: 32)
+            Text(title).font(.system(size: 12, weight: .medium)).foregroundColor(InterfaceStyle.muted)
+            Spacer(minLength: 0)
+        }.padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 7).frame(height: 35)
     }
 }
 
@@ -156,7 +156,10 @@ struct CommandPaletteRow: View {
                                     HStack {
                                         Text(command.name).font(.system(size: 13, weight: .semibold))
                                         Spacer()
-                                        Button("关闭") { showingResult = false }.keyboardShortcut(.cancelAction)
+                                        Button { showingResult = false } label: {
+                                            Image(systemName: "xmark")
+                                        }.buttonStyle(CompactQuietButtonStyle()).keyboardShortcut(.cancelAction)
+                                            .accessibilityLabel("关闭结果").help("关闭结果")
                                     }
                                     ScrollView {
                                         Text(result.text).font(.system(size: 12, design: .monospaced))
@@ -166,8 +169,9 @@ struct CommandPaletteRow: View {
                                         NSPasteboard.general.clearContents()
                                         NSPasteboard.general.setString(result.text, forType: .string)
                                         copied = true
-                                    }
+                                    }.buttonStyle(InterfaceButtonStyle(height: 30))
                                 }.padding(16).frame(width: 328)
+                                .font(.system(size: 12))
                                 .foregroundColor(InterfaceStyle.text).background(InterfaceStyle.surface)
                             }
                             .onChange(of: showingResult) { visible in
@@ -313,8 +317,7 @@ final class PaletteResultButton: NSButton {
     private func updateViewingHint() {
         attributedTitle = NSAttributedString(string: resultText, attributes: [
             .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular),
-            .foregroundColor: NSColor(showsViewingHint ? InterfaceStyle.selectedText : InterfaceStyle.text),
-            .underlineStyle: showsViewingHint ? NSUnderlineStyle.single.rawValue : 0
+            .foregroundColor: NSColor(showsViewingHint ? InterfaceStyle.selectedText : InterfaceStyle.text)
         ])
         needsDisplay = true
     }

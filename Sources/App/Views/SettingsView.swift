@@ -13,7 +13,7 @@ struct SettingsView: View {
         .foregroundColor(InterfaceStyle.text)
         .background(InterfaceStyle.surface)
         .clipShape(RoundedRectangle(cornerRadius: 15))
-        .frame(minWidth: 640, idealWidth: 840, minHeight: 420, idealHeight: 549)
+        .frame(minWidth: 640, idealWidth: 900, minHeight: 420, idealHeight: 640)
         .ignoresSafeArea(edges: .top)
     }
 }
