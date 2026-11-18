@@ -4,6 +4,8 @@ import SwiftUI
 struct HighlightedText: View {
     let text: String
     let search: String
+    /// 命中片段的颜色；由调用方按所在行的底色给出，避免和行文字色冲突。
+    let highlight: Color
 
     var body: some View {
         if search.isEmpty {
@@ -29,7 +31,7 @@ struct HighlightedText: View {
             // 高亮匹配部分
             let matched = text[range]
             result = result + Text(String(matched))
-                .foregroundColor(.accentColor)
+                .foregroundColor(highlight)
                 .fontWeight(.medium)
 
             currentIndex = range.upperBound

@@ -60,7 +60,7 @@ struct CommandsListView: View {
                             case .groupHeader(let name):
                                 Text(name).font(.system(size: 12, weight: .semibold)).foregroundColor(InterfaceStyle.muted)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.horizontal, 22).padding(.top, 16).padding(.bottom, 5)
+                                    .padding(.horizontal, 22).padding(.top, 12).padding(.bottom, 4)
                             case .command(let command, _):
                                 commandRow(command)
                             }
@@ -93,7 +93,7 @@ struct CommandsListView: View {
 
     private func commandRow(_ command: Command) -> some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 8) {
                     Text(command.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
                     if command.autoExecute {
@@ -112,9 +112,9 @@ struct CommandsListView: View {
                 Button { manager.moveUp(command) } label: { Text("↑") }
                     .disabled(!searchText.isEmpty || !manager.canMoveUp(command))
                     .accessibilityLabel("在组内上移\(command.name)")
-            }.buttonStyle(CommandRowButtonStyle())
+            }.buttonStyle(CommandRowButtonStyle(revealed: hoveredCommandID == command.id))
         }
-        .padding(.horizontal, 22).frame(height: 67)
+        .padding(.horizontal, 22).frame(height: 56)
         .background(hoveredCommandID == command.id ? InterfaceStyle.subtle : .clear)
         .overlay(alignment: .bottom) { InterfaceStyle.line.opacity(0.32).frame(height: 1) }
         .onHover { hovered in

@@ -291,10 +291,15 @@ final class InterfaceWindowTests: XCTestCase {
                             XCTFail("结果查看入口必须存在")
                             return
                         }
-                        if hovered { button.updateResult(text: "192.168.31.108", hovered: true) }
+                        if hovered { button.updateResult(text: "192.168.31.108", hovered: true, selected: true) }
                         else { XCTAssertTrue(button.window?.makeFirstResponder(button) == true) }
                     }
             }
+            try await snapshot(VStack(spacing: 0) {
+                CommandPaletteRow(command: sample, displayIndex: 1, isSelected: true, searchText: "Docker", autoExecuteState: nil)
+                CommandPaletteRow(command: sample, displayIndex: 2, isSelected: false, searchText: "Docker", autoExecuteState: nil)
+            }, size: NSSize(width: 600, height: 72),
+            name: "palette-search-\(suffix)", folder: folder, appearance: appearance)
             try await snapshot(VStack(spacing: 0) {
                 CommandPaletteRow(command: sample, displayIndex: 1, isSelected: true, searchText: "", autoExecuteState: .success("192.168.31.108"))
                 CommandPaletteRow(command: sample, displayIndex: 2, isSelected: false, searchText: "", autoExecuteState: .loading)

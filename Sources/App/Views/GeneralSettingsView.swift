@@ -8,6 +8,7 @@ struct GeneralSettingsView: View {
     @State private var inputSources = InputSourceHelper.availableInputSources()
     @State private var importURL: URL?
     @State private var showingImportConfirmation = false
+    @State private var paletteShortcut: KeyboardShortcuts.Shortcut?
 
     private static let exportDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -18,11 +19,11 @@ struct GeneralSettingsView: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 14) {
                     section("呼出与输入") {
                         settingRow("全局快捷键", detail: "在任何应用中打开或关闭命令面板。") {
                             KeyboardShortcuts.Recorder(for: .commandPalette)
-                            Button("清除") { KeyboardShortcuts.setShortcut(nil, for: .commandPalette) }.buttonStyle(CompactQuietButtonStyle())
+                            Button("清除") { KeyboardShortcuts.setShortcut(nil, for: .commandPalette) }.buttonStyle(CompactQuietButtonStyle()).disabled(paletteShortcut == nil)
                         }
                         Divider()
                         settingRow("面板输入法", detail: "打开时切换，关闭后恢复原输入法。") {
@@ -54,7 +55,7 @@ struct GeneralSettingsView: View {
                             Divider()
                         }
                         settingRow("系统通知", detail: "每条命令可单独设置完成通知。") {
-                            Button("查看说明 ↗") {
+                            Button("打开系统设置 ↗") {
                                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.notifications")!)
                             }
                         }
@@ -79,7 +80,7 @@ struct GeneralSettingsView: View {
                             .padding(.vertical, 14)
                     }
                 }
-                .padding(.horizontal, 30).padding(.vertical, 24)
+                .padding(.horizontal, 30).padding(.vertical, 18)
             }
             .background(InterfaceStyle.subtle)
             Divider()
@@ -89,7 +90,13 @@ struct GeneralSettingsView: View {
                 Text("命令执行超时：30 秒")
             }.font(.system(size: 12)).foregroundColor(InterfaceStyle.muted).padding(.horizontal, 20).padding(.vertical, 10).background(InterfaceStyle.chrome)
         }.font(.system(size: 13)).buttonStyle(InterfaceButtonStyle(height: 29))
-        .onAppear { inputSources = InputSourceHelper.availableInputSources(forceRefresh: true) }
+        .onAppear {
+            inputSources = InputSourceHelper.availableInputSources(forceRefresh: true)
+            paletteShortcut = KeyboardShortcuts.getShortcut(for: .commandPalette)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            paletteShortcut = KeyboardShortcuts.getShortcut(for: .commandPalette)
+        }
         .alert("确认导入", isPresented: $showingImportConfirmation) {
             Button("导入", role: .destructive) {
                 if let url = importURL { manager.importSettings(from: url) }
@@ -110,7 +117,7 @@ struct GeneralSettingsView: View {
     }
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(title).font(.system(size: 12, weight: .medium)).padding(.leading, 4).foregroundColor(InterfaceStyle.muted)
             VStack(spacing: 0, content: content)
                 .padding(.horizontal, 16)
@@ -129,7 +136,7 @@ struct GeneralSettingsView: View {
             }
             Spacer(minLength: 12)
             content().font(.system(size: 12))
-        }.padding(.vertical, 13).frame(minHeight: 63)
+        }.padding(.vertical, 8).frame(minHeight: 52)
     }
     private func exportConfig() {
         let timestamp = Self.exportDateFormatter.string(from: Date())

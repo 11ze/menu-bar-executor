@@ -15,7 +15,7 @@ struct CommandPaletteView: View {
             VStack(spacing: 0) {
                 HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass").font(.system(size: 15)).foregroundColor(InterfaceStyle.muted)
-                    TextField("搜索命令…", text: $coordinator.searchText)
+                    TextField("搜索命令名称", text: $coordinator.searchText)
                         .textFieldStyle(.plain).font(.system(size: 15)).focused($isSearchFocused)
                     if !coordinator.searchText.isEmpty {
                         Button { coordinator.clearSearch() } label: {
@@ -138,15 +138,16 @@ struct CommandPaletteRow: View {
         GeometryReader { geometry in
             HStack(spacing: 8) {
                 Button { PaletteCoordinator.shared.execute(command) } label: {
-                    HighlightedText(text: command.name, search: searchText)
-                        .font(.system(size: 13)).foregroundColor(isSelected ? InterfaceStyle.selectedText : InterfaceStyle.text)
+                    HighlightedText(text: command.name, search: searchText,
+                                    highlight: isSelected ? InterfaceStyle.selectedRowText : InterfaceStyle.selectedText)
+                        .font(.system(size: 13)).foregroundColor(isSelected ? InterfaceStyle.selectedRowText : InterfaceStyle.text)
                         .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
                         .frame(height: 36).padding(.leading, 20)
                         .contentShape(Rectangle())
                 }.buttonStyle(.plain).padding(.trailing, result == nil ? 0 : 4)
                 if let result {
                     if result.canView {
-                        NativeResultButton(text: result.text, color: result.color, name: command.name, hovered: resultHovered) { button in
+                        NativeResultButton(text: result.text, color: result.color, name: command.name, hovered: resultHovered, selected: isSelected) { button in
                             resultButton = button
                             openResult()
                         }.frame(width: resultWidth(for: result.text, in: geometry.size.width, canView: result.canView)).frame(height: 36)
@@ -262,6 +263,7 @@ private struct NativeResultButton: NSViewRepresentable {
     let color: Color
     let name: String
     let hovered: Bool
+    let selected: Bool
     let onActivate: (NSButton) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(onActivate: onActivate) }
@@ -286,7 +288,7 @@ private struct NativeResultButton: NSViewRepresentable {
     }
     func updateNSView(_ button: PaletteResultButton, context: Context) {
         context.coordinator.onActivate = onActivate
-        button.updateResult(text: text, hovered: hovered)
+        button.updateResult(text: text, hovered: hovered, selected: selected)
         button.image = NSImage(systemSymbolName: "circle.fill", accessibilityDescription: nil)?
             .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 6, weight: .regular))
         button.contentTintColor = NSColor(color)
@@ -305,19 +307,22 @@ final class PaletteResultButton: NSButton {
     private var resultText = ""
     private var resultHovered = false
     private var resultFocused = false
+    private var resultSelected = false
 
     fileprivate var showsViewingHint: Bool { resultHovered || resultFocused }
+    fileprivate var viewingHintColor: NSColor { NSColor(resultSelected ? InterfaceStyle.selectedRowText : InterfaceStyle.selectedText) }
 
-    func updateResult(text: String, hovered: Bool) {
+    func updateResult(text: String, hovered: Bool, selected: Bool = false) {
         resultText = text.replacingOccurrences(of: "\n", with: " ")
         resultHovered = hovered
+        resultSelected = selected
         updateViewingHint()
     }
 
     private func updateViewingHint() {
         attributedTitle = NSAttributedString(string: resultText, attributes: [
             .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular),
-            .foregroundColor: NSColor(showsViewingHint ? InterfaceStyle.selectedText : InterfaceStyle.text)
+            .foregroundColor: showsViewingHint ? viewingHintColor : NSColor(InterfaceStyle.text)
         ])
         needsDisplay = true
     }
@@ -358,7 +363,7 @@ private final class PaletteResultButtonCell: NSButtonCell {
               button.showsViewingHint, cellFrame.width >= 44 else { return }
         let image = NSImage(systemSymbolName: "chevron.right", accessibilityDescription: nil)?
             .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 9, weight: .regular)
-                .applying(NSImage.SymbolConfiguration(paletteColors: [NSColor(InterfaceStyle.selectedText)])))
+                .applying(NSImage.SymbolConfiguration(paletteColors: [button.viewingHintColor])))
         image?.draw(in: NSRect(x: cellFrame.maxX - 10, y: cellFrame.midY - 5, width: 6, height: 10),
                     from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
     }

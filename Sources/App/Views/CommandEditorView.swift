@@ -116,7 +116,7 @@ struct CommandEditorView: View {
             } else {
                 TextEditor(text: $commandText)
             }
-        }.font(.system(size: 12, design: .monospaced)).frame(height: 62).padding(5)
+        }.font(.system(size: 13, design: .monospaced)).frame(height: 62).padding(5)
             .background(InterfaceStyle.surface)
             .overlay(RoundedRectangle(cornerRadius: 7).stroke(InterfaceStyle.line, lineWidth: 1))
     }

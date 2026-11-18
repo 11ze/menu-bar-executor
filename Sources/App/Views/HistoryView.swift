@@ -47,6 +47,9 @@ struct HistoryView: View {
                                             HStack(spacing: 8) {
                                                 Circle().fill(item.success ? InterfaceStyle.success : InterfaceStyle.failure).frame(width: 6, height: 6)
                                                 Text(item.commandName).font(.system(size: 12, weight: .medium)).lineLimit(1).foregroundColor(InterfaceStyle.text)
+                                                if !item.success {
+                                                    Text("失败").font(.system(size: 12, weight: .medium)).foregroundColor(InterfaceStyle.failure).fixedSize()
+                                                }
                                                 Spacer(minLength: 0)
                                             }
                                             (Text(item.executedAt, style: .date) + Text(" ") + Text(item.executedAt, style: .time)).font(.system(size: 12)).padding(.leading, 14)
@@ -85,7 +88,7 @@ struct HistoryView: View {
                                     Text(record.output.flatMap { $0.isEmpty ? nil : $0 } ?? "（无输出）")
                                         .font(.system(size: 12, design: .monospaced)).lineSpacing(6).textSelection(.enabled)
                                         .frame(maxWidth: .infinity, alignment: .leading).padding(15)
-                                }.frame(minHeight: 143, maxHeight: 260)
+                                }.frame(maxHeight: 260)
                                     .background(InterfaceStyle.subtle)
                                     .overlay(RoundedRectangle(cornerRadius: 7).stroke(InterfaceStyle.line, lineWidth: 1))
                                     .cornerRadius(7)

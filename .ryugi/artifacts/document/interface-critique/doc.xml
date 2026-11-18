@@ -1,0 +1,259 @@
+<doc>
+  <h1 id="CRb_QXLp">MenuBarExecutor 界面设计评审</h1>
+  <p id="yr1As3RU">对象：<code>.ryugi/artifacts/html/menu-bar-executor/index.html</code>，2026-11-18 本地渲染。范围：五个界面、深浅色、1280 / 760 / 390 宽。方法见文末。</p>
+  <alert id="n63D1Nx6" type="note">
+    <p><b>结论：底子好，不用重做。</b>方向是“安静的 macOS 小工具”，五屏一致，深浅色都成立。问题都在细节：默认尺寸下的裁切、选中行对比度、列表密度、几处文案与状态编码。</p>
+  </alert>
+  <p id="cKGbJaW-">读到本文时，P1 和 P2 已按评审改入设计稿，并同步到原生。逐项记录见文末“已落地”。</p>
+  <h2 id="xwQ4S9hF">五屏现状</h2>
+  <img id="HIoZEU01" src="assets/palette.png" alt="命令面板 · 浅色" width="740" caption="命令面板 · 600 × 503 · 实际渲染 1:1" />
+  <p id="AmSMD8CI">搜索区 48，行高 36，列表最高 410。名称、自动执行结果、⌘1–8 排在同一行，右侧两列互相争宽度。</p>
+  <img id="hUv7GxX8" src="assets/commands.png" alt="命令管理 · 浅色" width="900" caption="命令管理 · 900 × 640" />
+  <p id="SohLT6Hc">标题区 55、工具栏 64、列表 443。行高 67，一屏只放得下 8 条里的 5 条。</p>
+  <img id="aLYMJceD" src="assets/general.png" alt="通用设置 · 浅色" width="900" caption="通用设置 · 900 × 640" />
+  <p id="Nboxs1Th">三组设置，内容区 544，可滚动。</p>
+  <img id="8egn4QHI" src="assets/editor.png" alt="命令编辑 · 浅色" width="720" caption="命令编辑 · 620 宽 · 独立 sheet" />
+  <p id="Ibv5S_rK">字段两列，三个开关带说明，底栏固定。</p>
+  <img id="MPj28Sos" src="assets/history.png" alt="执行历史 · 浅色" width="940" caption="执行历史 · 960 × 680" />
+  <p id="hyFJdfXO">左栏 280，右栏读输出。成败靠 6px 圆点加“执行成功 / 执行失败”。</p>
+  <details id="qGsqNzAA" summary="深色对照（命令面板、执行历史）" open="false"><img src="assets/palette-dark.png" alt="命令面板 · 深色" width="740" caption="命令面板 · 深色" /><img src="assets/history-dark.png" alt="执行历史 · 深色" width="940" caption="执行历史 · 深色" /></details>
+  <h2 id="23zO-cRW">先修（P1）</h2>
+  <h3 id="cyECJsiM">1. 浅色已选行的文字对比度不够</h3>
+  <p id="fANU4a1F">命令名 <code>#0068e8</code> 放在选中底 <code>#e4edfa</code> 上，13px，实测 <b>4.29:1</b>，低于 WCAG AA 的 4.5:1。深色同位置 4.83:1，合格。这一行是用户最常看的元素。</p>
+  <p id="kGvQCF5F">改法：选中文字改 <code>#005ecb</code>（5.14:1），只动一个 token；或选中底改 <code>#eef4fe</code>（4.59:1），但选中感会变弱。</p>
+  <h3 id="IsZbrUgM">2. 通用设置在默认尺寸下被切断</h3>
+  <img id="YqOJZls3" src="assets/general-clip-detail.png" alt="通用设置底部的裁切" width="900" caption="默认 900 × 640 下，“配置文件”组被底栏从中间切开；同行右侧的“导出 / 导入”也被同一条底线切断" />
+  <p id="ib4eFSuh">内容区可视 544，实际内容 642，差 <b>98px</b>。macOS 覆盖式滚动条静止时不显示，用户看不出后面还有内容。</p>
+  <p id="bScDzIzI">改法任选：行高 63 → 56、分区间距 20 → 16，把内容压进 544；或默认高度改 700；或滚动区底部加一条渐隐。同时给 <code>docs/interface.md</code> 的验收补一句“默认尺寸下三组完整可见”。</p>
+  <h3 id="gFnk_ohh">3. Tab 焦点环压在行内控件上</h3>
+  <img id="j_t4HvDF" src="assets/focus-ring.png" alt="结果按钮获得键盘焦点" width="900" caption="Tab 到结果按钮：蓝环包住结果文字，压住 ⌘1" />
+  <p id="prNKYZYr">2px 蓝环看起来像选中，不像焦点。8 行命令共 10 个停靠点，两个有结果的行各多一个结果按钮。</p>
+  <p id="m4Gm_BTZ">改法：一行只留一个停靠点，结果操作放进浮层；或焦点环改成行内描边，不包住文字。</p>
+  <h2 id="P_mxsBT5">值得改（P2）</h2>
+  <table id="QefTGvq2">
+    <tr>
+      <th>
+        <p>问题</p>
+      </th>
+      <th>
+        <p>现状</p>
+      </th>
+      <th>
+        <p>建议</p>
+      </th>
+    </tr>
+    <tr>
+      <td>
+        <p>列表密度低</p>
+      </td>
+      <td>
+        <p>443px 只显示 5/8 行，行高 67</p>
+      </td>
+      <td>
+        <p>行高 67 → 56，组头 49 → 36</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <p>行内按钮噪音</p>
+      </td>
+      <td>
+        <p>每行常驻“编辑 + ↑”，全表 16 个；组首行的 ↑ 只有 1.77:1</p>
+      </td>
+      <td>
+        <p>悬停或选中时显现，或收进“…”菜单</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <p>输出框留空</p>
+      </td>
+      <td>
+        <p>最小高 143，两行输出也占 143</p>
+      </td>
+      <td>
+        <p>内容驱动高度，上限 260 再滚动</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <p>输入字号偏小</p>
+      </td>
+      <td>
+        <p>编辑表单的名称、命令、分组、目录都是 12px</p>
+      </td>
+      <td>
+        <p>13px，与系统控件一致</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <p>状态只用颜色</p>
+      </td>
+      <td>
+        <p>历史列表只用 6px 红/绿点区分成败</p>
+      </td>
+      <td>
+        <p>失败行加“失败”字样，或用 × / ✓ 形状</p>
+      </td>
+    </tr>
+  </table>
+  <p id="saC9MxqG">另有四处文案或写法不一致：</p>
+  <ul id="W6uJuMAv">
+    <li>面板写“搜索命令…”，管理页写“搜索命令名称”，实际都只搜名称。统一成“搜索命令名称”。</li>
+    <li>“系统通知”右侧按钮写“查看说明 ↗”，实际打开系统通知设置。改“打开系统设置”。</li>
+    <li>快捷键一处写“⌃ ⌥ Space”，一处写“设置 ⌘,”，符号和英文混排。统一成一套写法。</li>
+    <li>快捷键为空时，“清除”按钮仍然可用。</li>
+  </ul>
+  <h2 id="6y125GWr">打磨（P3）</h2>
+  <img id="zby6GqZA" src="assets/palette-align-detail.png" alt="分组标题与命令名的左缘" width="840" caption="分组标题在 x=361，命令名在 x=369，差 8px" />
+  <ul id="P1T1GzGR">
+    <li>分组标题与命令名左缘差 8px，同一条左缘更容易扫读。</li>
+    <li>宽 600 以下隐藏“选择 / 执行”文字，只剩三个键帽，含义丢失。零结果和单结果时提示也不变。</li>
+    <li>配置文件路径用 10px 等宽，偏小，建议 11px。</li>
+    <li>空状态的 <code>&gt;_</code> 图形 30px，与品牌标记重复，收到 22px 或去掉。</li>
+    <li>编辑器的 textarea 有浏览器缩放手柄，原生没有。评审时别把它当设计。</li>
+  </ul>
+  <h2 id="5WdopoMN">保持</h2>
+  <p id="io-Q4Zay">这些是这套稿子的优点，改动时别丢：</p>
+  <ul id="wW1MyYQb">
+    <li>中性灰加系统蓝，不堆渐变和装饰阴影；深色用中性灰而非蓝黑，两套都成立。</li>
+    <li>标题区 / 工具栏 / 内容 / 底栏四段式，五屏一致，滚动只发生在内容区。</li>
+    <li>状态齐全：成功、失败、执行中、无输出、空结果，都有对应视觉。</li>
+    <li>键盘优先：⌘1–9、↑ ↓、Esc 两级退出、中文输入法组词保护、鼠标与键盘共用同一套选择。</li>
+    <li>宽度按用途定：面板 600、管理 900、历史 960、编辑 620，没有为了“大气”放大留白。</li>
+  </ul>
+  <h2 id="QykwNtqE">已落地</h2>
+  <p id="FX2u3oON">按提交的答案 fix-p1-p2 先改设计稿，再同步原生。原生验收图由 <code>InterfaceWindowTests</code> 渲染。</p>
+  <img id="QsRlT4IT" src="assets/general-after.png" alt="通用设置 · 修改后" width="900" caption="通用设置：三组完整可见，配置文件路径露出，底部留 40px 余量" />
+  <img id="Ioy2QSEP" src="assets/commands-after.png" alt="命令管理 · 修改后" width="900" caption="命令管理：行高 56，一屏 6 行；编辑与 ↑ 静止时无边框，悬停整行才显现" />
+  <table id="jfNwDKbP">
+    <tr>
+      <th>
+        <p>项</p>
+      </th>
+      <th>
+        <p>改动</p>
+      </th>
+      <th>
+        <p>实测</p>
+      </th>
+    </tr>
+    <tr>
+      <td>
+        <p>选中行对比度</p>
+      </td>
+      <td>
+        <p>新增 <code>--selected-text</code>，浅色 <code>#0068e8</code> → <code>#005ecb</code>；选中行里结果按钮的悬停与聚焦同色</p>
+      </td>
+      <td>
+        <p>4.29:1 → 5.14:1</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <p>通用设置裁切</p>
+      </td>
+      <td>
+        <p>行高 63 → 52、行内上下 13 → 8、分区间距 20 → 14、内容留白 24 → 18</p>
+      </td>
+      <td>
+        <p>内容 642 → 504，544 内完整可见，余 40</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <p>结果焦点环</p>
+      </td>
+      <td>
+        <p>偏移 3 → 0，圆角 6，贴合控件；仍保留 Tab 停靠点</p>
+      </td>
+      <td>
+        <p>不再压住 ⌘N</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <p>列表密度</p>
+      </td>
+      <td>
+        <p>行高 67 → 56，组头 16/5 → 12/4，原文行高 1.7 → 1.5</p>
+      </td>
+      <td>
+        <p>可见行 5 → 6</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <p>行内按钮</p>
+      </td>
+      <td>
+        <p>静止无边框、文字弱化；整行悬停或聚焦时显现，指针落在按钮上再用选中底色；禁用态不受影响</p>
+      </td>
+      <td>
+        <p>16 个常驻边框 → 0</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <p>输出框留空</p>
+      </td>
+      <td>
+        <p>去掉 143px 最小高，保留 260px 上限</p>
+      </td>
+      <td>
+        <p>两行输出 143 → 75</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <p>编辑输入字号</p>
+      </td>
+      <td>
+        <p>输入与命令文本域 12 → 13px</p>
+      </td>
+      <td>
+        <p>—</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <p>失败只用颜色</p>
+      </td>
+      <td>
+        <p>历史列表失败记录名称后加“失败”</p>
+      </td>
+      <td>
+        <p>390 宽下名称截断，“失败”仍保留</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <p>窄宽丢提示</p>
+      </td>
+      <td>
+        <p>删掉 ≤600 隐藏“选择 / 执行”的规则，540 以下收紧键帽与底栏间距</p>
+      </td>
+      <td>
+        <p>360 宽仍完整显示，底栏无溢出</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <p>文案与写法</p>
+      </td>
+      <td>
+        <p>占位统一“搜索命令名称”；“查看说明”改“打开系统设置”；快捷键统一 <code>⌃⌥Space</code>；为空时“清除”禁用</p>
+      </td>
+      <td>
+        <p>—</p>
+      </td>
+    </tr>
+  </table>
+  <p id="b2n1Bjn5">复验：设计稿在 360 / 390 / 540 / 760 / 1280 宽无回归；原生跑 215 个测试全通过，生成深浅色五屏快照，确认设置不裁切、列表 7 行、按钮静止无边框、选中行结果与搜索命中片段同色。</p>
+  <h2 id="2KUMMQ6Y">方法与边界</h2>
+  <p id="-YIj3niD">在 Chrome 1280 × 1000 下渲染 HTML 原型，取浅色、深色与 1280 / 760 / 390 三档宽度；对比度用 token 色值按 WCAG 2.1 计算；密度、裁切、对齐用 <code>getBoundingClientRect</code> 实测。</p>
+  <p id="px6hAtkt">只看设计稿，没有运行原生应用。原生是否已同步这些细节，本次没有验证。</p>
+  <p id="VA4PSlpD">下一步：<ask id="next-step" recommend="fix-p1"><option value="fix-p1">先修 P1 三项</option><option value="fix-p1-p2">P1 和 P2 一起改</option><option value="discuss">先讨论，不动稿</option></ask></p>
+</doc>
+

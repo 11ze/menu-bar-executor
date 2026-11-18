@@ -10,6 +10,7 @@ enum InterfaceStyle {
     static let text = color(light: 0x24262b, dark: 0xf0f1f4)
     static let muted = color(light: 0x626772, dark: 0xacb1ba)
     static let selectedText = color(light: 0x0068e8, dark: 0x83b9ff)
+    static let selectedRowText = color(light: 0x005ecb, dark: 0x83b9ff)
     static let selection = color(light: 0xe4edfa, dark: 0x30455f)
 
     static let success = color(light: 0x267748, dark: 0x8cd9ac)
@@ -60,23 +61,29 @@ struct ToolbarSearchStyle: ViewModifier {
 }
 
 struct CommandRowButtonStyle: ButtonStyle {
+    /// 整行悬停或聚焦时显现边框；静止时只留文字。
+    var revealed = true
+
     func makeBody(configuration: Configuration) -> some View {
-        RowLabel(label: configuration.label, pressed: configuration.isPressed)
+        RowLabel(label: configuration.label, pressed: configuration.isPressed, revealed: revealed)
     }
 
     private struct RowLabel: View {
         let label: ButtonStyleConfiguration.Label
         let pressed: Bool
+        let revealed: Bool
         @State private var hovered = false
         @Environment(\.isEnabled) private var enabled
         @Environment(\.isFocused) private var focused
 
         var body: some View {
             let highlighted = enabled && (hovered || pressed)
-            label.font(.system(size: 12)).foregroundColor(highlighted ? InterfaceStyle.selectedText : InterfaceStyle.text)
+            let visible = enabled && (revealed || hovered || pressed || focused)
+            label.font(.system(size: 12))
+                .foregroundColor(highlighted ? InterfaceStyle.selectedText : (visible ? InterfaceStyle.text : InterfaceStyle.muted))
                 .padding(.horizontal, 8).frame(height: 26)
-                .background(highlighted ? InterfaceStyle.selection : InterfaceStyle.surface)
-                .overlay(RoundedRectangle(cornerRadius: 7).stroke(focused ? InterfaceStyle.selectedText : InterfaceStyle.line, lineWidth: focused ? 2 : 1))
+                .background(highlighted ? InterfaceStyle.selection : (visible ? InterfaceStyle.surface : Color.clear))
+                .overlay(RoundedRectangle(cornerRadius: 7).stroke(focused ? InterfaceStyle.selectedText : (visible ? InterfaceStyle.line : Color.clear), lineWidth: focused ? 2 : 1))
                 .cornerRadius(7).contentShape(Rectangle())
                 .opacity(enabled ? 1 : 0.4)
                 .onHover { hovered = $0 }
