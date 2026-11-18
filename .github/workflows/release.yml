@@ -1,0 +1,137 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "已有 tag，例如 v1.7.5"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  preflight:
+    name: Check version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Compare tag and Info.plist
+        run: |
+          version="${TAG#v}"
+          configured=$(python3 -c 'import plistlib; print(plistlib.load(open("Resources/Info.plist", "rb"))["CFBundleShortVersionString"])')
+          if [ "$configured" != "$version" ]; then
+            echo "版本不一致：Resources/Info.plist 是 $configured，tag 是 $TAG" >&2
+            exit 1
+          fi
+
+  publish:
+    name: Build and publish
+    needs: preflight
+    runs-on: macos-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TAG }}
+          # 发布说明要按上一个 tag 切范围。
+          fetch-depth: 0
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen generate
+
+      # 构建前写入构建号：改安装包里的 Info.plist 会破坏代码签名。
+      - name: Stamp build number
+        run: |
+          build="$(date -u +%Y%m%d)$(printf '%02d' $((GITHUB_RUN_NUMBER % 100)))"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $build" Resources/Info.plist
+          echo "CFBundleVersion=$build"
+
+      - name: Build
+        run: |
+          xcodebuild -project menu-bar-executor.xcodeproj \
+            -scheme MenuBarExecutor \
+            -configuration Release \
+            -derivedDataPath "$RUNNER_TEMP/build" \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
+            build
+
+      - name: Package
+        run: |
+          version="${TAG#v}"
+          app="$RUNNER_TEMP/build/Build/Products/Release/MenuBarExecutor.app"
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent "$app" "dist/MenuBarExecutor-${version}.zip"
+
+      - name: Verify package
+        run: |
+          version="${TAG#v}"
+          app="$RUNNER_TEMP/build/Build/Products/Release/MenuBarExecutor.app"
+          zip="dist/MenuBarExecutor-${version}.zip"
+
+          archs=$(lipo -archs "$app/Contents/MacOS/MenuBarExecutor")
+          echo "架构：$archs"
+          for arch in arm64 x86_64; do
+            grep -qw "$arch" <<< "$archs" || { echo "缺少架构 $arch" >&2; exit 1; }
+          done
+
+          codesign --verify --deep --strict "$app"
+
+          # 解压后重启签名校验，确认打包没破坏签名。
+          rm -rf "$RUNNER_TEMP/unzipped"
+          mkdir -p "$RUNNER_TEMP/unzipped"
+          ditto -x -k "$zip" "$RUNNER_TEMP/unzipped"
+          codesign --verify --deep --strict "$RUNNER_TEMP/unzipped/MenuBarExecutor.app"
+          lipo -archs "$RUNNER_TEMP/unzipped/MenuBarExecutor.app/Contents/MacOS/MenuBarExecutor"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${TAG#v}"
+          files=("dist/MenuBarExecutor-${version}.zip")
+
+          extra=""
+          case "$TAG" in
+            *-*) extra="--prerelease" ;;
+          esac
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # 已有的 release 保留原说明，只补资产。
+            gh release upload "$TAG" "${files[@]}" --clobber
+            if [ "$(gh release view "$TAG" --json isDraft -q .isDraft)" = "true" ]; then
+              gh release edit "$TAG" --draft=false
+            fi
+          else
+            bash scripts/release-notes.sh > notes.md
+            {
+              echo
+              echo "---"
+              echo
+              echo "macOS：下载 .zip，解压后把 MenuBarExecutor.app 拖进「应用程序」。应用未签名，首次运行要右键点图标，选「打开」。包内含 Apple Silicon 与 Intel 两个架构。"
+            } >> notes.md
+            gh release create "$TAG" "${files[@]}" \
+              --title "$TAG" \
+              --notes-file notes.md \
+              $extra
+          fi

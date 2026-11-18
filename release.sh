@@ -44,20 +44,9 @@ fi
 echo "🔄 拉取最新标签..."
 git fetch --tags
 
-# 生成发布说明
+# 生成发布说明：与 CI 共用 scripts/release-notes.sh，避免两套规则漂移
 generate_release_notes() {
-    local last_tag
-    last_tag=$(git describe --tags --abbrev=0 2>/dev/null) || last_tag="0.0.0"
-
-    # 使用 awk 单次调用解析提交信息，替代多次 sed
-    git log ${last_tag}..HEAD --pretty=format:"%s" 2>/dev/null | awk -F': ' '{
-        split($1, a, "(")
-        type = a[1]
-        msg = $2
-        if (type == "feat") print "Added " msg
-        else if (type == "fix") print "Fixed " msg
-        else if (type == "style" || type == "perf" || type == "refactor") print "Improved " msg
-    }'
+    bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts/release-notes.sh"
 }
 
 echo "📦 开始构建 ${PROJECT_NAME} v${VERSION} ..."

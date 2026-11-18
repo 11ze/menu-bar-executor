@@ -22,6 +22,8 @@ xcodebuild test -project menu-bar-executor.xcodeproj \
   -destination 'platform=macOS'
 ```
 
+发版：改 `Resources/Info.plist` 版本并提交后，打 `v*` tag 推到 origin，由 [.github/workflows/release.yml](.github/workflows/release.yml) 校验版本、构建通用包（arm64 + x86_64）并发布 Release。`release.sh` 只做本地自测打包，不上传。发布说明由 [scripts/release-notes.sh](scripts/release-notes.sh) 生成，本地和 CI 共用。
+
 ## 界面修改
 
 软件界面以 [Ryugi 交互原型](.ryugi/artifacts/html/menu-bar-executor/index.html) 及 [设计说明与验收步骤](docs/interface.md) 为准。Ryugi HTML 是唯一原型源，GitHub Pages 展示 main 分支发布的最新版交互原型；评审画板不作为正式稿。修改界面时先核对设计稿；实现偏离设计稿时按稿修复，需要调整设计时先更新设计稿及说明，再修改软件并按稿验收。
