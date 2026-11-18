@@ -35,7 +35,7 @@ jobs:
           version="${TAG#v}"
           configured=$(python3 -c 'import plistlib; print(plistlib.load(open("Resources/Info.plist", "rb"))["CFBundleShortVersionString"])')
           if [ "$configured" != "$version" ]; then
-            echo "版本不一致：Resources/Info.plist 是 $configured，tag 是 $TAG" >&2
+            echo "版本不一致：Resources/Info.plist 是 ${configured}，tag 是 ${TAG}" >&2
             exit 1
           fi
 
