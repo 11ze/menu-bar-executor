@@ -1,10 +1,11 @@
 config.json
 artifacts/*
+!artifacts/document/
+artifacts/document/*/.artifact-id
+artifacts/**/comments.json
 
 !artifacts/html/
 artifacts/html/*
 !artifacts/html/menu-bar-executor/
 artifacts/html/menu-bar-executor/*
 !artifacts/html/menu-bar-executor/index.html
-!artifacts/document/
-artifacts/document/*/.artifact-id
