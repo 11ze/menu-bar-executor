@@ -2,7 +2,6 @@ config.json
 artifacts/*
 !artifacts/document/
 artifacts/document/*/.artifact-id
-artifacts/**/comments.json
 
 !artifacts/html/
 artifacts/html/*
