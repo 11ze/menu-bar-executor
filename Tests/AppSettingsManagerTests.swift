@@ -523,6 +523,18 @@ final class AppSettingsManagerTests: XCTestCase {
         XCTAssertEqual(reader.settings.groupOrder, ["B组", "A组"])
     }
 
+    @MainActor
+    func testUpdateCommandsAndGroupOrder_PersistsAtomically() throws {
+        let fileURL = makeFileURL()
+        let writer = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        let cmd = Command(name: "回声", command: "echo hi", group: "新组")
+        XCTAssertTrue(writer.updateCommandsAndGroupOrder(commands: [cmd], groupOrder: ["新组", "空组"]))
+
+        let reader = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        XCTAssertEqual(reader.settings.commands, [cmd])
+        XCTAssertEqual(reader.settings.groupOrder, ["新组", "空组"])
+    }
+
     func testLaunchAtLogin_IdempotencyDecisionPreventsRedundantSystemCalls() {
         guard #available(macOS 13.0, *) else { return }
         XCTAssertFalse(LaunchAtLoginManager.needsSystemCall(for: true, currentStatus: .enabled))

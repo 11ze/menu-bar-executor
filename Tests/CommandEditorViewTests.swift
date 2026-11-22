@@ -37,4 +37,22 @@ final class CommandEditorViewTests: XCTestCase {
         let editor = CommandEditorView(command: nil, onSave: { _ in true })
         XCTAssertFalse(editor.isExisting)
     }
+
+    func testSavingTrimsGroupWhitespaceAndConvertsBlankToNil() throws {
+        var savedTrimmed: Command?
+        let trimmedEditor = CommandEditorView(
+            command: Command(name: "带空格组", command: "true", group: "  开发工具  "),
+            onSave: { savedTrimmed = $0; return true }
+        )
+        trimmedEditor.saveCommand()
+        XCTAssertEqual(try XCTUnwrap(savedTrimmed).group, "开发工具")
+
+        var savedBlank: Command?
+        let blankEditor = CommandEditorView(
+            command: Command(name: "纯空格组", command: "true", group: "   \n "),
+            onSave: { savedBlank = $0; return true }
+        )
+        blankEditor.saveCommand()
+        XCTAssertNil(try XCTUnwrap(savedBlank).group)
+    }
 }

@@ -482,6 +482,14 @@ final class AppSettingsManager: ObservableObject {
         commit { $0.groupOrder = groupOrder }
     }
 
+    @discardableResult
+    func updateCommandsAndGroupOrder(commands: [Command], groupOrder: [String]?) -> Bool {
+        commit {
+            $0.commands = commands
+            $0.groupOrder = groupOrder
+        }
+    }
+
     // MARK: - 重载
 
     func reload() {

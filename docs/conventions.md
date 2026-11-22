@@ -1,6 +1,6 @@
 # 开发规范
 
-- **配置写入**: 外部只读 `settings`，写入走 intent 方法（`setLaunchAtLogin` / `setAutoCheckUpdates` / `setDefaultInputSource` / `touchUpdateCheckDate` / `setSkippedVersion` / `saveCommands` / `saveGroupOrder` / `updatePaletteFrame`）；先原子写盘，成功后发布新快照（`setLaunchAtLogin` 先按系统登录项状态幂等变更，写盘失败则回滚系统状态；通用设置打开时对齐系统状态）。intent 返回 `Bool`，失败保留旧快照并写入 `AppSettingsManager.lastError`；`save(_:)` 私有；`groupOrder` 非空时命名分组按其去重顺序排列、未分组固定殿后
+- **配置写入**: 外部只读 `settings`，写入走 intent 方法（`setLaunchAtLogin` / `setAutoCheckUpdates` / `setDefaultInputSource` / `touchUpdateCheckDate` / `setSkippedVersion` / `saveCommands` / `saveGroupOrder` / `updateCommandsAndGroupOrder` / `updatePaletteFrame`）；先原子写盘，成功后发布新快照（`setLaunchAtLogin` 先按系统登录项状态幂等变更，写盘失败则回滚系统状态；通用设置打开时对齐系统状态）。intent 返回 `Bool`，失败保留旧快照并写入 `AppSettingsManager.lastError`；`save(_:)` 私有；`groupOrder` 非空时命名分组按其去重顺序排列、未分组固定殿后，空命名分组仅在设置管理页显示、命令面板自动过滤
 - **错误上报**: 启动/手动重载失败走系统通知，静默重载失败保留旧快照；仅加载成功才发重载成功通知。窗口内配置写入、导入/导出失败统一走 `AppSettingsManager.lastError` → 当前视图的原生 alert；编辑保存/删除仅在成功后关闭 sheet
 - **文件监听**: 同时监听配置目标文件及其父目录，覆盖就地写、原子替换、首次创建、删除后重建；软链接在初始化时解析，保存保留链接本身。关闭监听后，保存与重载也不得启动监听。intent 方法不读盘，自身写入触发的重载按内容比较吸收，勿加跳过标志；面板打开时的 `reloadSilent` 读盘保留，作为监听漏事件时的兜底
 - **命令镜像**: `CommandsManager.commands` 唯一来源是 `$settings.map(\.commands).removeDuplicates()` 直连，勿新增同步链或通知中转

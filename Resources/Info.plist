@@ -28,5 +28,18 @@
 	<string>Copyright © 2026. All rights reserved.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>MenuBarExecutor Drag Item</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.cai.menu-bar-executor.drag-item</string>
+		</dict>
+	</array>
 </dict>
 </plist>

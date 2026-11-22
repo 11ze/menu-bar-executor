@@ -52,7 +52,7 @@ struct CommandEditorView: View {
                     }
                     HStack(alignment: .top, spacing: 16) {
                         field("分组", optional: true) {
-                            CommandGroupField(text: $group, groups: CommandsManager.sortedGroupNames(from: manager.commands, groupOrder: settings.settings.groupOrder).compactMap { $0 })
+                            CommandGroupField(text: $group, groups: CommandsManager.managedGroupNames(from: manager.commands, groupOrder: settings.settings.groupOrder))
                         }
                         .frame(width: (620 - 24 * 2 - 16) / 2.4)
                         field("工作目录", optional: true) {
@@ -153,13 +153,14 @@ struct CommandEditorView: View {
 
     @discardableResult
     func saveCommand() -> Bool {
+        let trimmedGroup = group.trimmingCharacters(in: .whitespacesAndNewlines)
         let saved = onSave(Command(
             id: command?.id ?? UUID(),
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
             command: commandText,
             workingDirectory: workingDirectory.isEmpty ? nil : workingDirectory,
             notification: notification, autoExecute: autoExecute,
-            group: group.isEmpty ? nil : group, directExecution: directExecution
+            group: trimmedGroup.isEmpty ? nil : trimmedGroup, directExecution: directExecution
         ))
         if saved { dismiss() }
         return saved

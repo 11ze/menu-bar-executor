@@ -76,7 +76,7 @@ struct PaletteListModel: Equatable {
     }
 
     private static func buildItems(from commands: [Command], groupOrder: [String]?) -> [PaletteItem] {
-        let grouped = Dictionary(grouping: commands, by: { $0.group?.isEmpty == true ? nil : $0.group })
+        let grouped = Dictionary(grouping: commands, by: { CommandsManager.normalizedGroup($0.group) })
         let sortedGroups = CommandsManager.sortedGroupNames(from: commands, groupOrder: groupOrder)
 
         var items: [PaletteItem] = []
