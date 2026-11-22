@@ -36,6 +36,13 @@ final class AppErrorTests: XCTestCase {
         XCTAssertNotNil(error.recoverySuggestion)
     }
 
+    func testAppError_LaunchAtLoginFailed() {
+        let error = AppError.launchAtLoginFailed(NSError(domain: "test", code: 4, userInfo: nil))
+        XCTAssertNotNil(error.errorDescription)
+        XCTAssertTrue(error.errorDescription!.contains("登录时启动"))
+        XCTAssertNotNil(error.recoverySuggestion)
+    }
+
     // MARK: - UpdateError
 
     func testUpdateError_NetworkError() {
@@ -83,6 +90,7 @@ final class AppErrorTests: XCTestCase {
             .configExportFailed(NSError(domain: "t", code: 0)),
             .commandTimeout(seconds: 10),
             .commandExecutionFailed("test"),
+            .launchAtLoginFailed(NSError(domain: "t", code: 0)),
         ]
         for error in cases {
             XCTAssertNotNil(error.recoverySuggestion, "\(error) 缺少 recoverySuggestion")

@@ -66,4 +66,18 @@ final class ExecutionHistoryTests: XCTestCase {
         let history = ExecutionHistory(filePath: fileURL)
         XCTAssertTrue(history.records.isEmpty)
     }
+
+    func testAddRecord_CreatesMissingParentDirectoryForInjectedFilePath() throws {
+        let nestedURL = tempDirectory
+            .appendingPathComponent("nested", isDirectory: true)
+            .appendingPathComponent("history.json")
+        let writer = ExecutionHistory(filePath: nestedURL)
+        writer.addRecord(
+            ExecutionRecord(command: Command(name: "嵌套", command: "echo ok"), success: true, output: "ok")
+        )
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: nestedURL.path))
+        let reader = ExecutionHistory(filePath: nestedURL)
+        XCTAssertEqual(reader.records.first?.commandName, "嵌套")
+    }
 }

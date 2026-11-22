@@ -171,4 +171,120 @@ final class ProcessRunnerTests: XCTestCase {
 
         wait(for: [finished], timeout: 15)
     }
+
+    @MainActor
+    func testRun_OutputExceedingLimit_TruncatesWithoutDeadlock() {
+        let finished = expectation(description: "超限输出排空并截断")
+        finished.assertForOverFulfill = true
+
+        ProcessRunner.run(
+            executableURL: URL(fileURLWithPath: "/bin/zsh"),
+            arguments: ["-c", "head -c 20000 /dev/zero | tr '\\0' 'a'"],
+            workingDirectory: nil,
+            timeout: 10,
+            maxOutputBytes: 1024
+        ) { result in
+            guard case let .success(output) = result, let output else {
+                return XCTFail("期望 .success 并保留截断后的输出，实际: \(result)")
+            }
+            XCTAssertTrue(output.hasPrefix(String(repeating: "a", count: 1024)))
+            XCTAssertTrue(output.contains("已截断"))
+            XCTAssertLessThan(output.utf8.count, 1100)
+            finished.fulfill()
+        }
+
+        wait(for: [finished], timeout: 15)
+    }
+
+    @MainActor
+    func testRun_InvalidUTF8Output_PreservesValidTextInsteadOfNil() {
+        let finished = expectation(description: "非 UTF-8 输出保留有效文本")
+        finished.assertForOverFulfill = true
+
+        ProcessRunner.run(
+            executableURL: URL(fileURLWithPath: "/usr/bin/printf"),
+            arguments: ["before\\377\\376after"],
+            workingDirectory: nil,
+            timeout: 10
+        ) { result in
+            guard case let .success(output) = result, let output else {
+                return XCTFail("非 UTF-8 字节不应导致整段输出丢失，实际: \(result)")
+            }
+            XCTAssertTrue(output.contains("before"))
+            XCTAssertTrue(output.contains("after"))
+            finished.fulfill()
+        }
+
+        wait(for: [finished], timeout: 15)
+    }
+
+    @MainActor
+    func testCancel_StopsProcessGroupAndSuppressesCompletion() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("process-cancel-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let marker = directory.appendingPathComponent("must-not-run")
+        var completed = false
+
+        let handle = ProcessRunner.run(
+            executableURL: URL(fileURLWithPath: "/bin/zsh"),
+            arguments: ["-c", "trap '' TERM; /bin/sleep 0.6; /usr/bin/touch \"$1\"", "--", marker.path],
+            workingDirectory: nil,
+            timeout: 5
+        ) { _ in
+            completed = true
+        }
+
+        try await Task.sleep(nanoseconds: 100_000_000)
+        handle.cancel()
+        try await Task.sleep(nanoseconds: 800_000_000)
+
+        XCTAssertFalse(completed, "主动取消后不应再回调")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: marker.path), "取消后的子进程组不能继续执行")
+    }
+
+    @MainActor
+    func testRun_OutputTruncation_DoesNotSplitMultiByteUTF8() {
+        let finished = expectation(description: "多字节 UTF-8 截断不劈裂字符")
+        finished.assertForOverFulfill = true
+
+        ProcessRunner.run(
+            executableURL: URL(fileURLWithPath: "/usr/bin/printf"),
+            arguments: ["中文"],
+            workingDirectory: nil,
+            timeout: 10,
+            maxOutputBytes: 4
+        ) { result in
+            guard case let .success(output) = result, let output else {
+                return XCTFail("期望 .success，实际: \(result)")
+            }
+            XCTAssertEqual(output, "中\n…（输出已截断）")
+            XCTAssertFalse(output.contains("\u{FFFD}"), "截断边界不应制造 UTF-8 替换字符")
+            finished.fulfill()
+        }
+
+        wait(for: [finished], timeout: 15)
+    }
+
+    @MainActor
+    func testRun_ZeroMaxOutputBytes_TruncatesWithoutLeadingNewline() {
+        let finished = expectation(description: "零字节上限截断不带前导换行")
+        finished.assertForOverFulfill = true
+
+        ProcessRunner.run(
+            executableURL: URL(fileURLWithPath: "/usr/bin/printf"),
+            arguments: ["abc"],
+            workingDirectory: nil,
+            timeout: 10,
+            maxOutputBytes: 0
+        ) { result in
+            guard case let .success(output) = result, let output else {
+                return XCTFail("期望 .success，实际: \(result)")
+            }
+            XCTAssertEqual(output, "…（输出已截断）")
+            finished.fulfill()
+        }
+
+        wait(for: [finished], timeout: 15)
+    }
 }

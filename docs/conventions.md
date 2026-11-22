@@ -1,6 +1,6 @@
 # 开发规范
 
-- **配置写入**: 外部只读 `settings`，写入走 intent 方法（`setLaunchAtLogin` / `setAutoCheckUpdates` / `setDefaultInputSource` / `touchUpdateCheckDate` / `setSkippedVersion` / `saveCommands` / `updatePaletteFrame`）；先原子写盘，成功后发布新快照。intent 返回 `Bool`，失败保留旧快照并写入 `AppSettingsManager.lastError`；`save(_:)` 私有
+- **配置写入**: 外部只读 `settings`，写入走 intent 方法（`setLaunchAtLogin` / `setAutoCheckUpdates` / `setDefaultInputSource` / `touchUpdateCheckDate` / `setSkippedVersion` / `saveCommands` / `saveGroupOrder` / `updatePaletteFrame`）；先原子写盘，成功后发布新快照（`setLaunchAtLogin` 先按系统登录项状态幂等变更，写盘失败则回滚系统状态；通用设置打开时对齐系统状态）。intent 返回 `Bool`，失败保留旧快照并写入 `AppSettingsManager.lastError`；`save(_:)` 私有；`groupOrder` 非空时命名分组按其去重顺序排列、未分组固定殿后
 - **错误上报**: 启动/手动重载失败走系统通知，静默重载失败保留旧快照；仅加载成功才发重载成功通知。窗口内配置写入、导入/导出失败统一走 `AppSettingsManager.lastError` → 当前视图的原生 alert；编辑保存/删除仅在成功后关闭 sheet
 - **文件监听**: 同时监听配置目标文件及其父目录，覆盖就地写、原子替换、首次创建、删除后重建；软链接在初始化时解析，保存保留链接本身。关闭监听后，保存与重载也不得启动监听。intent 方法不读盘，自身写入触发的重载按内容比较吸收，勿加跳过标志；面板打开时的 `reloadSilent` 读盘保留，作为监听漏事件时的兜底
 - **命令镜像**: `CommandsManager.commands` 唯一来源是 `$settings.map(\.commands).removeDuplicates()` 直连，勿新增同步链或通知中转
@@ -9,9 +9,9 @@
 - **面板列表**: 列表派生收在 `PaletteListModel` 纯值类型，`PaletteCoordinator` 只留执行副作用，勿在 coordinator 或视图里加列表组装逻辑
 - **面板搜索**: 搜索词变化时，`PaletteCoordinator` 一次发布已选中首条命令的列表快照；视图不补选，实际滚动仍由视图执行。重复赋相同搜索词不重置选择。
 - **面板配置快照**: `PaletteCoordinator` 从同一次 `$settings` 发布中取 `commands` 与 `groupOrder`，两者任一变化都重建列表；订阅内勿回读 `settings` 属性，避免 `willSet` 期间混用新旧值
-- **面板自动执行**: `reset()` 与新一轮自动执行均使旧轮次回调失效，只接纳当前轮次结果；已启动的进程继续运行，仍经 `CommandExecutor` 的 auto 模式执行
+- **面板自动执行**: `reset()`、面板隐藏与新一轮自动执行均取消旧轮次尚未完成的进程，并使旧轮次回调失效，只接纳当前轮次结果；仍经 `CommandExecutor` 的 auto 模式执行
 - **键盘监听**: 本地 keyDown 监听一律用 `KeyDownMonitor`；有 marked text 时优先交给输入法，不抢候选确认或导航；勿手写 `addLocalMonitorForEvents` 四件套
-- **执行**: `CommandExecutor` 是唯一执行入口；`ExecutionMode` 决定副作用——userInitiated 落历史 + 按 `notification` 发通知，auto 两者皆无；副作用 sink（`ExecutionHistoryRecording` / `ExecutionNotifying`）注入，测试接内存假件；`ProcessRunner` 非阻塞排空输出，同时等待进程退出与 EOF；期限覆盖整个执行。超时强制终止命令的进程组并关闭读取，回调仅一次；脱离该进程组的进程不保证终止。勿改回先等退出后读管道（大输出会互等死锁）
+- **执行**: `CommandExecutor` 是唯一执行入口；`ExecutionMode` 决定副作用——userInitiated 落历史 + 按 `notification` 发通知，auto 两者皆无；副作用 sink（`ExecutionHistoryRecording` / `ExecutionNotifying`）注入，测试接内存假件；非零退出通知携带退出码且不重复拼接相同正文；`ProcessRunner` 非阻塞排空输出（默认保留上限 256 KB，超限继续排空管道并标记截断，非 UTF-8 容错解码），同时等待进程退出与 EOF；期限覆盖整个执行。超时与主动取消均在校验 `pid > 0` 后强制终止命令的进程组并关闭读取，回调仅一次（主动取消不回调）；脱离该进程组的进程不保证终止。勿改回先等退出后读管道（大输出会互等死锁）
 
 - **面板快捷键**: ⌘1–9 固定对应当前搜索结果前九条，滚动不改编号；搜索、选择和列表滚动无动画。鼠标只在实际移动时同步选择，不抢搜索焦点。
 - **结果查看**: 自动执行结果浮层只读，不调用执行入口、不落历史；浮层和编辑 sheet 的键盘事件优先于面板导航与执行，取消删除保留编辑草稿。

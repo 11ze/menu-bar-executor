@@ -252,6 +252,7 @@ final class InterfaceWindowTests: XCTestCase {
         let settings = AppSettingsManager(filePath: fixtureURL, enableFileMonitoring: false)
         let coordinator = PaletteCoordinator(settingsManager: settings, runAutoCommand: { _, _ in
             XCTFail("截图验收不能运行命令")
+            return {}
         })
         coordinator.autoExecuteResults[fixture.commands[0].id] = .success("192.168.31.108")
         coordinator.autoExecuteResults[fixture.commands[1].id] = .success("main")

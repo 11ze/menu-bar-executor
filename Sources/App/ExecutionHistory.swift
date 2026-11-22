@@ -65,7 +65,10 @@ final class ExecutionHistory: ObservableObject {
 
     private func saveHistory() {
         do {
-            try AppPaths.ensureDirectoryExists()
+            try FileManager.default.createDirectory(
+                at: filePath.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
             encoder.dateEncodingStrategy = .iso8601

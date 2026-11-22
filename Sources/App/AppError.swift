@@ -3,6 +3,7 @@ import Foundation
 enum AppError: LocalizedError {
     case configSaveFailed(Error)
     case configExportFailed(Error)
+    case launchAtLoginFailed(Error)
     case commandTimeout(seconds: Int)
     case commandExecutionFailed(String)
 
@@ -12,6 +13,8 @@ enum AppError: LocalizedError {
             return "配置保存失败: \(error.localizedDescription)"
         case .configExportFailed(let error):
             return "配置导出失败: \(error.localizedDescription)"
+        case .launchAtLoginFailed(let error):
+            return "登录时启动设置失败: \(error.localizedDescription)"
         case .commandTimeout(let seconds):
             return "命令执行超时（\(seconds)秒）"
         case .commandExecutionFailed(let message):
@@ -25,6 +28,8 @@ enum AppError: LocalizedError {
             return "请检查磁盘空间和文件权限"
         case .configExportFailed:
             return "请检查目标路径是否可写"
+        case .launchAtLoginFailed:
+            return "请检查系统设置中的登录项权限，并确认应用已放在应用程序文件夹中"
         case .commandTimeout:
             return "请检查命令是否需要更长时间执行"
         case .commandExecutionFailed:

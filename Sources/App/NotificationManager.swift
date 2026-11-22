@@ -89,22 +89,23 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         postNotification(content)
     }
 
+    nonisolated static func failureBody(error: String, output: String?) -> String {
+        let trimmedError = error.trimmingCharacters(in: .whitespacesAndNewlines)
+        let truncatedError = trimmedError.truncated(to: 100)
+        let trimmedOutput = output?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        var body = "错误: \(truncatedError)"
+        if let trimmedOutput, !trimmedOutput.isEmpty, trimmedOutput != trimmedError {
+            body += "\n输出: \(trimmedOutput.truncated(to: 100))"
+        }
+        return body
+    }
+
     func showFailure(commandName: String, error: String, output: String?) {
         let content = UNMutableNotificationContent()
         content.title = Self.appName
         content.subtitle = "命令: \(commandName)"
-
-        // error 去掉首尾空白
-        let error = error.trimmingCharacters(in: .whitespacesAndNewlines)
-        // output 去掉首尾空白
-        let output = output?.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        var body = "错误: \(error)"
-        if let output = output?.truncated(to: 100), !output.isEmpty {
-            body += "\n输出: \(output)"
-        }
-
-        content.body = body
+        content.body = Self.failureBody(error: error, output: output)
         content.sound = .default
         postNotification(content)
     }

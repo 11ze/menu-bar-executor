@@ -209,6 +209,7 @@ final class AppSettingsManager: ObservableObject {
     private let filePath: URL
     private let resolvedFilePath: URL
     private let notificationManager = NotificationManager.shared
+    private let applyLaunchAtLogin: @MainActor (Bool) throws -> Void
 
     // MARK: - 文件监听
 
@@ -220,9 +221,17 @@ final class AppSettingsManager: ObservableObject {
     private var reloadToken = 0
 
     /// 注入文件路径与监听、错误通知开关；shared 走默认配置，测试走临时目录
-    init(filePath: URL, enableFileMonitoring: Bool = true, notifyLoadError: Bool = true) {
+    init(
+        filePath: URL,
+        enableFileMonitoring: Bool = true,
+        notifyLoadError: Bool = true,
+        applyLaunchAtLogin: @escaping @MainActor (Bool) throws -> Void = {
+            try LaunchAtLoginManager.shared.setEnabled($0)
+        }
+    ) {
         self.filePath = filePath
         self.enableFileMonitoring = enableFileMonitoring
+        self.applyLaunchAtLogin = applyLaunchAtLogin
         // resolvingSymlinksInPath 对目标不存在的链接会返回链接自身，必须先读目的地。
         if let destination = try? FileManager.default.destinationOfSymbolicLink(atPath: filePath.path) {
             let target = destination.hasPrefix("/")
@@ -416,8 +425,21 @@ final class AppSettingsManager: ObservableObject {
     @discardableResult
     func setLaunchAtLogin(_ enabled: Bool) -> Bool {
         guard settings.launchAtLogin != enabled else { return true }
-        guard commit({ $0.launchAtLogin = enabled }) else { return false }
-        LaunchAtLoginManager.shared.isEnabled = enabled
+        guard isLoaded else {
+            lastError = .configSaveFailed(loadError ?? CocoaError(.fileReadCorruptFile))
+            return false
+        }
+        let previous = settings.launchAtLogin
+        do {
+            try applyLaunchAtLogin(enabled)
+        } catch {
+            lastError = .launchAtLoginFailed(error)
+            return false
+        }
+        guard commit({ $0.launchAtLogin = enabled }) else {
+            try? applyLaunchAtLogin(previous)
+            return false
+        }
         return true
     }
 
@@ -453,6 +475,11 @@ final class AppSettingsManager: ObservableObject {
     @discardableResult
     func saveCommands(_ commands: [Command]) -> Bool {
         commit { $0.commands = commands }
+    }
+
+    @discardableResult
+    func saveGroupOrder(_ groupOrder: [String]?) -> Bool {
+        commit { $0.groupOrder = groupOrder }
     }
 
     // MARK: - 重载

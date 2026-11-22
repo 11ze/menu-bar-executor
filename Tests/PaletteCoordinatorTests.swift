@@ -146,6 +146,7 @@ final class PaletteCoordinatorTests: XCTestCase {
         var completions: [@MainActor (ExecutionResult) -> Void] = []
         let coordinator = PaletteCoordinator(settingsManager: manager, runAutoCommand: { _, completion in
             completions.append(completion)
+            return {}
         })
 
         coordinator.reset()
@@ -172,6 +173,7 @@ final class PaletteCoordinatorTests: XCTestCase {
         var completions: [@MainActor (ExecutionResult) -> Void] = []
         let coordinator = PaletteCoordinator(settingsManager: manager, runAutoCommand: { _, completion in
             completions.append(completion)
+            return {}
         })
 
         coordinator.executeAutoCommands()
@@ -196,6 +198,7 @@ final class PaletteCoordinatorTests: XCTestCase {
         var completion: (@MainActor (ExecutionResult) -> Void)?
         let coordinator = PaletteCoordinator(settingsManager: manager, runAutoCommand: { _, callback in
             completion = callback
+            return {}
         })
 
         coordinator.executeAutoCommands()
@@ -219,6 +222,7 @@ final class PaletteCoordinatorTests: XCTestCase {
         var completions: [UUID: @MainActor (ExecutionResult) -> Void] = [:]
         let coordinator = PaletteCoordinator(settingsManager: manager, runAutoCommand: { command, completion in
             completions[command.id] = completion
+            return {}
         })
 
         coordinator.executeAutoCommands()
@@ -260,5 +264,57 @@ final class PaletteCoordinatorTests: XCTestCase {
         coordinator.executeAutoCommands()
 
         wait(for: [finished], timeout: 10)
+    }
+
+    @MainActor
+    func testResetAndNextRound_CancelPreviousAutoCommands() throws {
+        let command = Command(name: "自动命令", command: "echo auto", autoExecute: true)
+        var settings = AppSettings()
+        settings.commands = [command]
+        let fileURL = try writeSettings(settings, named: "settings.json")
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        var cancelledRounds: [Int] = []
+        var round = 0
+        let coordinator = PaletteCoordinator(settingsManager: manager, runAutoCommand: { _, _ in
+            round += 1
+            let currentRound = round
+            return { cancelledRounds.append(currentRound) }
+        })
+
+        coordinator.executeAutoCommands()
+        XCTAssertEqual(cancelledRounds, [])
+
+        coordinator.executeAutoCommands()
+        XCTAssertEqual(cancelledRounds, [1], "新一轮自动执行应取消上一轮未完成进程")
+
+        coordinator.reset()
+        XCTAssertEqual(cancelledRounds, [1, 2], "reset 应取消当前轮次进程")
+
+        coordinator.cancelAutoCommands()
+        XCTAssertEqual(cancelledRounds, [1, 2], "重复取消不得再次触发已取消句柄")
+    }
+
+    @MainActor
+    func testCancelAutoCommands_StopsRealRunningProcess() async throws {
+        let marker = tempDirectory.appendingPathComponent("auto-must-not-run")
+        let command = Command(
+            name: "慢自动命令",
+            command: "trap '' TERM; /bin/sleep 0.6; /usr/bin/touch \"\(marker.path)\"",
+            notification: false,
+            autoExecute: true,
+            directExecution: true
+        )
+        var settings = AppSettings()
+        settings.commands = [command]
+        let fileURL = try writeSettings(settings, named: "settings.json")
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        let coordinator = PaletteCoordinator(settingsManager: manager)
+
+        coordinator.executeAutoCommands()
+        try await Task.sleep(nanoseconds: 100_000_000)
+        coordinator.cancelAutoCommands()
+        try await Task.sleep(nanoseconds: 800_000_000)
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: marker.path), "取消后真实自动执行子进程不能继续跑完")
     }
 }

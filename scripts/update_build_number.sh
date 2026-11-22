@@ -1,6 +1,6 @@
 #!/bin/bash
 # 自动更新 CFBundleVersion 为当前日期+序号
-# 用法: ./Scripts/update_build_number.sh
+# 用法: ./scripts/update_build_number.sh
 
 set -e
 

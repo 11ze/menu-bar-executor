@@ -91,6 +91,7 @@ struct GeneralSettingsView: View {
             }.font(.system(size: 12)).foregroundColor(InterfaceStyle.muted).padding(.horizontal, 20).padding(.vertical, 10).background(InterfaceStyle.chrome)
         }.font(.system(size: 13)).buttonStyle(InterfaceButtonStyle(height: 29))
         .onAppear {
+            settings.reconcileLaunchAtLogin()
             inputSources = InputSourceHelper.availableInputSources(forceRefresh: true)
             paletteShortcut = KeyboardShortcuts.getShortcut(for: .commandPalette)
         }

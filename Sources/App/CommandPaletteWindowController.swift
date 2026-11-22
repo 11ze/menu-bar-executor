@@ -72,6 +72,7 @@ final class CommandPaletteWindowController: NSWindowController {
     private var previousInputSourceID: String?
     private var preferredHeight: CGFloat?
     private var cancellables = Set<AnyCancellable>()
+    private var autoExecuteWorkItem: DispatchWorkItem?
     private let resultControls = NSHashTable<PaletteResultButton>.weakObjects()
     var resultPopoverIsPresented = false
     var isSearchFocused = true
@@ -246,15 +247,23 @@ final class CommandPaletteWindowController: NSWindowController {
 
         // 下一 runloop 执行自动命令，让面板先开始渲染
         // 不能依赖 SwiftUI .onAppear，因为 NSPanel show/hide 循环不会重复触发 .onAppear
-        DispatchQueue.main.async {
+        autoExecuteWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self, self.isPanelVisible else { return }
+            self.autoExecuteWorkItem = nil
             PaletteCoordinator.shared.executeAutoCommands()
         }
+        autoExecuteWorkItem = workItem
+        DispatchQueue.main.async(execute: workItem)
     }
 
     /// 同步 orderOut（无动画），返回后面板已从屏幕移除，调用方可立即继续后续动作
     func hide() {
         guard isPanelVisible else { return }
         keyMonitor.stop()
+        autoExecuteWorkItem?.cancel()
+        autoExecuteWorkItem = nil
+        PaletteCoordinator.shared.cancelAutoCommands()
 
         // 捕获并立即清空，防止 windowDidResignKey → hide() 重复恢复
         let restoreID = previousInputSourceID

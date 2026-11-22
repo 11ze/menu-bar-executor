@@ -64,6 +64,30 @@ final class CommandsManagerTests: XCTestCase {
         XCTAssertEqual(CommandsManager.movingUp(Command(name: "unknown", command: "true"), in: commands), commands)
     }
 
+    func testMovingGroupUp_SwapsPreviousNamedGroupAndIgnoresFirstOrUnknown() {
+        let commands = makeCommands()
+        XCTAssertEqual(CommandsManager.movingGroupUp("A组", from: commands, groupOrder: nil), ["A组", "B组"])
+        XCTAssertNil(CommandsManager.movingGroupUp("B组", from: commands, groupOrder: nil))
+        XCTAssertNil(CommandsManager.movingGroupUp("不存在", from: commands, groupOrder: nil))
+        XCTAssertEqual(
+            CommandsManager.movingGroupUp("B组", from: commands, groupOrder: ["A组", "幽灵组", "B组"]),
+            ["B组", "A组"]
+        )
+    }
+
+    func testSortedGroupNamesAndMovingGroupUp_DeduplicatesAndIgnoresEmptyGroupOrderEntries() {
+        let commands = [
+            Command(name: "empty", command: "true", group: ""),
+            Command(name: "a", command: "true", group: "A组"),
+            Command(name: "b", command: "true", group: "B组"),
+        ]
+        let dirtyOrder = ["", "A组", "A组", "B组"]
+
+        XCTAssertEqual(CommandsManager.sortedGroupNames(from: commands, groupOrder: dirtyOrder), ["A组", "B组", nil])
+        XCTAssertNil(CommandsManager.movingGroupUp("A组", from: commands, groupOrder: dirtyOrder))
+        XCTAssertEqual(CommandsManager.movingGroupUp("B组", from: commands, groupOrder: dirtyOrder), ["B组", "A组"])
+    }
+
     // MARK: - filteredCommands
 
     func testFilteredCommands_EmptySearchReturnsAll() {

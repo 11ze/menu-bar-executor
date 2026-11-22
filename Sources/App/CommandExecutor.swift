@@ -69,12 +69,13 @@ final class CommandExecutor {
         command.directExecution ? ["-l", "-c", command.command] : ["-i", "-l", "-c", command.command]
     }
 
+    @discardableResult
     func execute(
         command: Command,
         mode: ExecutionMode = .userInitiated,
         timeout customTimeout: TimeInterval? = nil,
         completion: (@MainActor (ExecutionResult) -> Void)? = nil
-    ) {
+    ) -> ProcessHandle {
         ProcessRunner.run(
             executableURL: URL(fileURLWithPath: "/bin/zsh"),
             arguments: Self.launchArguments(for: command),
@@ -106,9 +107,9 @@ final class CommandExecutor {
             switch result {
             case .success(let output):
                 notifier.showSuccess(commandName: command.name, output: output)
-            case .exitedAbnormally(_, let output):
+            case .exitedAbnormally(let code, let output):
                 notifier.showFailure(
-                    commandName: command.name, error: output ?? "未知错误", output: output
+                    commandName: command.name, error: "退出码 \(code)", output: output
                 )
             case .failed(let error):
                 notifier.showFailure(

@@ -12,11 +12,4 @@ enum AppPaths {
 
     /// 执行历史文件路径
     static var historyFile: URL { configDirectory.appendingPathComponent("history.json") }
-
-    /// 确保配置目录存在
-    static func ensureDirectoryExists() throws {
-        if !FileManager.default.fileExists(atPath: configDirectory.path) {
-            try FileManager.default.createDirectory(at: configDirectory, withIntermediateDirectories: true)
-        }
-    }
 }

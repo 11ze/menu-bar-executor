@@ -37,8 +37,13 @@ final class CommandsManager: ObservableObject {
         let appearanceOrder = commands.map { $0.group?.isEmpty == true ? nil : $0.group }.filter { seen.insert($0).inserted }
 
         if let order = groupOrder {
-            let ordered = order.filter { name in commands.contains(where: { $0.group == name }) }
-            let remaining = appearanceOrder.compactMap { $0 }.filter { !order.contains($0) }
+            var seenOrdered = Set<String>()
+            let ordered = order.filter { name in
+                !name.isEmpty
+                    && seenOrdered.insert(name).inserted
+                    && commands.contains(where: { $0.group == name })
+            }
+            let remaining = appearanceOrder.compactMap { $0 }.filter { !seenOrdered.contains($0) }
             let hasUngrouped = appearanceOrder.contains(nil)
             return ordered.map { $0 as String? } + remaining.map { $0 as String? } + (hasUngrouped ? [nil] : [])
         }
@@ -86,6 +91,28 @@ final class CommandsManager: ObservableObject {
         var reordered = commands
         reordered.swapAt(previous, index)
         return reordered
+    }
+
+    func canMoveGroupUp(_ groupName: String) -> Bool {
+        Self.movingGroupUp(groupName, from: commands, groupOrder: settingsManager.settings.groupOrder) != nil
+    }
+
+    @discardableResult
+    func moveGroupUp(_ groupName: String) -> Bool {
+        guard let nextOrder = Self.movingGroupUp(
+            groupName,
+            from: commands,
+            groupOrder: settingsManager.settings.groupOrder
+        ) else { return false }
+        return settingsManager.saveGroupOrder(nextOrder)
+    }
+
+    /// 返回将指定命名分组上移一位后的新 groupOrder；已在首位或不存在时返回 nil
+    nonisolated static func movingGroupUp(_ groupName: String, from commands: [Command], groupOrder: [String]?) -> [String]? {
+        var namedGroups = sortedGroupNames(from: commands, groupOrder: groupOrder).compactMap { $0 }
+        guard let index = namedGroups.firstIndex(of: groupName), index > 0 else { return nil }
+        namedGroups.swapAt(index - 1, index)
+        return namedGroups
     }
 
     // MARK: - 导入导出（真错误路径，失败落 lastError）

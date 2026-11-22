@@ -6,6 +6,7 @@ struct CommandsListView: View {
     @State private var editingCommand: Command?
     @State private var searchText = ""
     @State private var hoveredCommandID: UUID?
+    @State private var hoveredGroupName: String?
     @FocusState private var searchFocused: Bool
 
     private var listModel: PaletteListModel {
@@ -58,9 +59,7 @@ struct CommandsListView: View {
                         ForEach(listModel.items) { item in
                             switch item {
                             case .groupHeader(let name):
-                                Text(name).font(.system(size: 12, weight: .semibold)).foregroundColor(InterfaceStyle.muted)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.horizontal, 22).padding(.top, 12).padding(.bottom, 4)
+                                groupHeaderRow(name)
                             case .command(let command, _):
                                 commandRow(command)
                             }
@@ -70,7 +69,7 @@ struct CommandsListView: View {
             }
             Divider()
             HStack {
-                Text("在组内调整顺序，与命令面板同步")
+                Text("调整分组与组内顺序，与命令面板同步")
                 Spacer()
                 Text("\(manager.commands.filter(\.autoExecute).count) 条自动执行")
             }.font(.system(size: 12)).foregroundColor(InterfaceStyle.muted).padding(.horizontal, 20).padding(.vertical, 10)
@@ -88,6 +87,23 @@ struct CommandsListView: View {
             CommandEditorView(command: command, onSave: { manager.upsert($0) }, onDelete: manager.commands.contains(where: { $0.id == command.id }) ? {
                 manager.deleteCommand(id: command.id)
             } : nil)
+        }
+    }
+
+    private func groupHeaderRow(_ name: String) -> some View {
+        HStack(spacing: 12) {
+            Text(name).font(.system(size: 12, weight: .semibold)).foregroundColor(InterfaceStyle.muted).lineLimit(1)
+            Spacer(minLength: 8)
+            Button { manager.moveGroupUp(name) } label: { Text("↑") }
+                .buttonStyle(CommandRowButtonStyle(revealed: hoveredGroupName == name))
+                .disabled(!searchText.isEmpty || !manager.canMoveGroupUp(name))
+                .accessibilityLabel("上移分组\(name)")
+        }
+        .padding(.horizontal, 22).padding(.top, 10).padding(.bottom, 4)
+        .background(hoveredGroupName == name ? InterfaceStyle.subtle : .clear)
+        .onHover { hovered in
+            if hovered { hoveredGroupName = name }
+            else if hoveredGroupName == name { hoveredGroupName = nil }
         }
     }
 

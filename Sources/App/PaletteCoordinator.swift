@@ -42,13 +42,15 @@ final class PaletteCoordinator: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
     private let settingsManager: AppSettingsManager
-    private let runAutoCommand: @MainActor (Command, @escaping @MainActor (ExecutionResult) -> Void) -> Void
+    private let runAutoCommand: @MainActor (Command, @escaping @MainActor (ExecutionResult) -> Void) -> () -> Void
     private var autoExecuteGeneration = 0
+    private var activeAutoCancellations: [() -> Void] = []
 
     init(
         settingsManager: AppSettingsManager,
-        runAutoCommand: @escaping @MainActor (Command, @escaping @MainActor (ExecutionResult) -> Void) -> Void = { command, completion in
-            CommandExecutor.shared.execute(command: command, mode: .auto, completion: completion)
+        runAutoCommand: @escaping @MainActor (Command, @escaping @MainActor (ExecutionResult) -> Void) -> () -> Void = { command, completion in
+            let handle = CommandExecutor.shared.execute(command: command, mode: .auto, completion: completion)
+            return { handle.cancel() }
         }
     ) {
         self.settingsManager = settingsManager
@@ -123,9 +125,18 @@ final class PaletteCoordinator: ObservableObject {
         execute(cmd)
     }
 
-    func reset() {
-        // 已发出的命令继续运行，旧轮次回调不得重新写入清空后的结果。
+    func cancelAutoCommands() {
         autoExecuteGeneration += 1
+        let cancellations = activeAutoCancellations
+        activeAutoCancellations.removeAll()
+        for cancel in cancellations {
+            cancel()
+        }
+    }
+
+    func reset() {
+        // 取消尚未完成的旧轮次进程，并使任何竞态回调失效。
+        cancelAutoCommands()
         // 复刻原顺序：先清选中，再清搜索（触发 rebuild）
         listModel = PaletteListModel(items: listModel.items, selectedIndex: 0)
         searchText = ""
@@ -134,7 +145,7 @@ final class PaletteCoordinator: ObservableObject {
     }
 
     func executeAutoCommands() {
-        autoExecuteGeneration += 1
+        cancelAutoCommands()
         let generation = autoExecuteGeneration
         let autoCommands = listModel.items.compactMap { item -> Command? in
             guard case .command(let cmd, _) = item, cmd.autoExecute else { return nil }
@@ -145,7 +156,7 @@ final class PaletteCoordinator: ObservableObject {
         for command in autoCommands {
             autoExecuteResults[command.id] = .loading
 
-            runAutoCommand(command) { [weak self] result in
+            let cancel = runAutoCommand(command) { [weak self] result in
                 guard let self, generation == self.autoExecuteGeneration else { return }
                 switch result {
                 case .success(let output):
@@ -158,6 +169,7 @@ final class PaletteCoordinator: ObservableObject {
                     self.autoExecuteResults[command.id] = .failure(error.localizedDescription)
                 }
             }
+            activeAutoCancellations.append(cancel)
         }
     }
 

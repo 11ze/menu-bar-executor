@@ -9,21 +9,25 @@ final class LaunchAtLoginManager {
 
     /// 当前是否启用自启动
     var isEnabled: Bool {
-        get {
-            guard #available(macOS 13.0, *) else { return false }
-            return SMAppService.mainApp.status == .enabled
+        guard #available(macOS 13.0, *) else { return false }
+        return SMAppService.mainApp.status == .enabled
+    }
+
+    @available(macOS 13.0, *)
+    nonisolated static func needsSystemCall(for enabled: Bool, currentStatus: SMAppService.Status) -> Bool {
+        if enabled {
+            return currentStatus != .enabled
         }
-        set {
-            guard #available(macOS 13.0, *) else { return }
-            do {
-                if newValue {
-                    try SMAppService.mainApp.register()
-                } else {
-                    try SMAppService.mainApp.unregister()
-                }
-            } catch {
-                print("Failed to \(newValue ? "enable" : "disable") launch at login: \(error)")
-            }
+        return currentStatus != .notRegistered && currentStatus != .notFound
+    }
+
+    func setEnabled(_ enabled: Bool) throws {
+        guard #available(macOS 13.0, *) else { return }
+        guard Self.needsSystemCall(for: enabled, currentStatus: SMAppService.mainApp.status) else { return }
+        if enabled {
+            try SMAppService.mainApp.register()
+        } else {
+            try SMAppService.mainApp.unregister()
         }
     }
 

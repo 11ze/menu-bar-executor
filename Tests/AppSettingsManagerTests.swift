@@ -1,5 +1,6 @@
 import XCTest
 import CoreGraphics
+import ServiceManagement
 @testable import MenuBarExecutor
 
 final class AppSettingsManagerTests: XCTestCase {
@@ -471,6 +472,66 @@ final class AppSettingsManagerTests: XCTestCase {
         try await waitUntil(timeout: 3) {
             manager.settings.skippedVersion == "6.6.6"
         }
+    }
+
+    @MainActor
+    func testSetLaunchAtLogin_WhenSystemRegistrationFails_ReportsErrorAndKeepsSnapshot() throws {
+        let fileURL = makeFileURL()
+        let stubError = NSError(domain: "SMAppService", code: 1, userInfo: [NSLocalizedDescriptionKey: "未获授权"])
+        let manager = AppSettingsManager(
+            filePath: fileURL,
+            enableFileMonitoring: false,
+            applyLaunchAtLogin: { _ in throw stubError }
+        )
+
+        XCTAssertFalse(manager.setLaunchAtLogin(true))
+        XCTAssertFalse(manager.settings.launchAtLogin)
+        guard case .launchAtLoginFailed? = manager.lastError else {
+            return XCTFail("期望 .launchAtLoginFailed，实际: \(String(describing: manager.lastError))")
+        }
+        XCTAssertFalse(AppSettingsManager(filePath: fileURL, enableFileMonitoring: false).settings.launchAtLogin)
+    }
+
+    @MainActor
+    func testSetLaunchAtLogin_WhenDiskSaveFails_RollsBackSystemState() throws {
+        let fileURL = makeFileURL()
+        var applied: [Bool] = []
+        let manager = AppSettingsManager(
+            filePath: fileURL,
+            enableFileMonitoring: false,
+            applyLaunchAtLogin: { applied.append($0) }
+        )
+        XCTAssertTrue(manager.saveCommands([]))
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: tempDirectory.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: tempDirectory.path) }
+
+        XCTAssertFalse(manager.setLaunchAtLogin(true))
+        XCTAssertFalse(manager.settings.launchAtLogin)
+        XCTAssertEqual(applied, [true, false], "写盘失败后应回滚系统登录项状态")
+        guard case .configSaveFailed? = manager.lastError else {
+            return XCTFail("期望 .configSaveFailed，实际: \(String(describing: manager.lastError))")
+        }
+    }
+
+    @MainActor
+    func testSaveGroupOrder_PersistsAcrossInstances() throws {
+        let fileURL = makeFileURL()
+        let writer = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        XCTAssertTrue(writer.saveGroupOrder(["B组", "A组"]))
+
+        let reader = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        XCTAssertEqual(reader.settings.groupOrder, ["B组", "A组"])
+    }
+
+    func testLaunchAtLogin_IdempotencyDecisionPreventsRedundantSystemCalls() {
+        guard #available(macOS 13.0, *) else { return }
+        XCTAssertFalse(LaunchAtLoginManager.needsSystemCall(for: true, currentStatus: .enabled))
+        XCTAssertTrue(LaunchAtLoginManager.needsSystemCall(for: true, currentStatus: .notRegistered))
+        XCTAssertTrue(LaunchAtLoginManager.needsSystemCall(for: true, currentStatus: .requiresApproval))
+        XCTAssertFalse(LaunchAtLoginManager.needsSystemCall(for: false, currentStatus: .notRegistered))
+        XCTAssertFalse(LaunchAtLoginManager.needsSystemCall(for: false, currentStatus: .notFound))
+        XCTAssertTrue(LaunchAtLoginManager.needsSystemCall(for: false, currentStatus: .enabled))
+        XCTAssertTrue(LaunchAtLoginManager.needsSystemCall(for: false, currentStatus: .requiresApproval))
     }
 
     // MARK: - 轮询等待

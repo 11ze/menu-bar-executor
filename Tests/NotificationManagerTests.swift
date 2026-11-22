@@ -17,4 +17,19 @@ final class NotificationManagerTests: XCTestCase {
 
         XCTAssertEqual(authorizationRequestCount, 0)
     }
+
+    func testFailureBody_IncludesExitCodeAndOutputWithoutDuplication() {
+        XCTAssertEqual(
+            NotificationManager.failureBody(error: "退出码 1", output: " err-side\n"),
+            "错误: 退出码 1\n输出: err-side"
+        )
+        XCTAssertEqual(
+            NotificationManager.failureBody(error: "退出码 2", output: "  \n"),
+            "错误: 退出码 2"
+        )
+        XCTAssertEqual(
+            NotificationManager.failureBody(error: "permission denied", output: "permission denied\n"),
+            "错误: permission denied"
+        )
+    }
 }

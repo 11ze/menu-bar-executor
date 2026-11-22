@@ -52,7 +52,7 @@ struct CommandEditorView: View {
                     }
                     HStack(alignment: .top, spacing: 16) {
                         field("分组", optional: true) {
-                            CommandGroupField(text: $group, groups: CommandsManager.sortedGroupNames(from: manager.commands, groupOrder: nil).compactMap { $0 })
+                            CommandGroupField(text: $group, groups: CommandsManager.sortedGroupNames(from: manager.commands, groupOrder: settings.settings.groupOrder).compactMap { $0 })
                         }
                         .frame(width: (620 - 24 * 2 - 16) / 2.4)
                         field("工作目录", optional: true) {

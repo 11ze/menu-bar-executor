@@ -23,8 +23,6 @@ targets:
       - Sources
       - Sources/App/Views
       - Resources/Assets.xcassets
-    resources:
-      - Resources/commands.json
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cai.menu-bar-executor

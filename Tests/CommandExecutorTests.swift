@@ -126,8 +126,14 @@ final class CommandExecutorTests: XCTestCase {
 
     @MainActor
     private final class NotifierSpy: ExecutionNotifying {
+        struct FailureCall: Equatable {
+            let commandName: String
+            let error: String
+            let output: String?
+        }
         var successes: [String] = []
         var failures: [String] = []
+        var failureCalls: [FailureCall] = []
 
         func showSuccess(commandName: String, output: String?) {
             successes.append(commandName)
@@ -135,6 +141,7 @@ final class CommandExecutorTests: XCTestCase {
 
         func showFailure(commandName: String, error: String, output: String?) {
             failures.append(commandName)
+            failureCalls.append(FailureCall(commandName: commandName, error: error, output: output))
         }
     }
 
@@ -198,6 +205,8 @@ final class CommandExecutorTests: XCTestCase {
             XCTAssertFalse(history.records[0].success)
             XCTAssertEqual(history.records[0].output?.trimmingCharacters(in: .whitespacesAndNewlines), "err-side")
             XCTAssertEqual(notifier.failures, ["失败命令"])
+            XCTAssertEqual(notifier.failureCalls.first?.error, "退出码 1")
+            XCTAssertEqual(notifier.failureCalls.first?.output?.trimmingCharacters(in: .whitespacesAndNewlines), "err-side")
             XCTAssertTrue(notifier.successes.isEmpty)
             finished.fulfill()
         }
