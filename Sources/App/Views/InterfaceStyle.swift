@@ -61,17 +61,24 @@ struct ToolbarSearchStyle: ViewModifier {
 }
 
 struct CommandRowButtonStyle: ButtonStyle {
-    /// 整行悬停或聚焦时显现边框；静止时只留文字。
+    /// 整行悬停或聚焦时显现边框；静止时只留文字（或按 invisibleWhenIdle 隐藏视觉但保留焦点链）。
     var revealed = true
+    var invisibleWhenIdle = false
 
     func makeBody(configuration: Configuration) -> some View {
-        RowLabel(label: configuration.label, pressed: configuration.isPressed, revealed: revealed)
+        RowLabel(
+            label: configuration.label,
+            pressed: configuration.isPressed,
+            revealed: revealed,
+            invisibleWhenIdle: invisibleWhenIdle
+        )
     }
 
     private struct RowLabel: View {
         let label: ButtonStyleConfiguration.Label
         let pressed: Bool
         let revealed: Bool
+        let invisibleWhenIdle: Bool
         @State private var hovered = false
         @Environment(\.isEnabled) private var enabled
         @Environment(\.isFocused) private var focused
@@ -79,13 +86,14 @@ struct CommandRowButtonStyle: ButtonStyle {
         var body: some View {
             let highlighted = enabled && (hovered || pressed)
             let visible = enabled && (revealed || hovered || pressed || focused)
+            let targetOpacity: Double = !enabled ? 0.4 : (invisibleWhenIdle && !visible ? 0 : 1)
             label.font(.system(size: 12))
                 .foregroundColor(highlighted ? InterfaceStyle.selectedText : (visible ? InterfaceStyle.text : InterfaceStyle.muted))
                 .padding(.horizontal, 8).frame(height: 26)
                 .background(highlighted ? InterfaceStyle.selection : (visible ? InterfaceStyle.surface : Color.clear))
                 .overlay(RoundedRectangle(cornerRadius: 7).stroke(focused ? InterfaceStyle.selectedText : (visible ? InterfaceStyle.line : Color.clear), lineWidth: focused ? 2 : 1))
                 .cornerRadius(7).contentShape(Rectangle())
-                .opacity(enabled ? 1 : 0.4)
+                .opacity(targetOpacity)
                 .onHover { hovered = $0 }
         }
     }

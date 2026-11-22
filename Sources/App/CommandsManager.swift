@@ -1,12 +1,35 @@
 import Foundation
 import Combine
 
-/// 命令视图适配层：commands 镜像从 settings 直连派生，写入直通 settingsManager
+/// 已归一化的分组显隐快照，收口持久化层的 hiddenGroups + hideUngrouped 表示
+struct GroupVisibility: Equatable {
+    let hiddenGroups: Set<String>
+    let hideUngrouped: Bool
+
+    init(hiddenGroups: [String] = [], hideUngrouped: Bool = false) {
+        self.hiddenGroups = Set(CommandsManager.normalizedHiddenGroups(hiddenGroups))
+        self.hideUngrouped = hideUngrouped
+    }
+
+    func isGroupHidden(_ rawGroup: String?) -> Bool {
+        guard let group = CommandsManager.normalizedGroup(rawGroup) else {
+            return hideUngrouped
+        }
+        return hiddenGroups.contains(group)
+    }
+
+    func isCommandVisible(_ command: Command) -> Bool {
+        !command.hidden && !isGroupHidden(command.group)
+    }
+}
+
+/// 命令视图适配层：commands 与 groupVisibility 镜像从 settings 直连派生，写入直通 settingsManager
 @MainActor
 final class CommandsManager: ObservableObject {
     static let shared = CommandsManager()
 
     @Published private(set) var commands: [Command] = []
+    @Published private(set) var groupVisibility = GroupVisibility()
 
     private let settingsManager = AppSettingsManager.shared
     private var cancellables = Set<AnyCancellable>()
@@ -18,6 +41,14 @@ final class CommandsManager: ObservableObject {
             .removeDuplicates()
             .sink { [weak self] commands in
                 self?.commands = commands
+            }
+            .store(in: &cancellables)
+
+        settingsManager.$settings
+            .map { GroupVisibility(hiddenGroups: $0.hiddenGroups, hideUngrouped: $0.hideUngrouped) }
+            .removeDuplicates()
+            .sink { [weak self] visibility in
+                self?.groupVisibility = visibility
             }
             .store(in: &cancellables)
     }
@@ -36,6 +67,77 @@ final class CommandsManager: ObservableObject {
         return commands.filter {
             $0.name.localizedCaseInsensitiveContains(searchText)
         }
+    }
+
+    nonisolated static func normalizedHiddenGroups(_ hiddenGroups: [String]) -> [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        for raw in hiddenGroups {
+            if let name = normalizedGroup(raw), seen.insert(name).inserted {
+                result.append(name)
+            }
+        }
+        return result
+    }
+
+    nonisolated static func isGroupHidden(
+        _ rawGroup: String?,
+        hiddenGroups: [String],
+        hideUngrouped: Bool
+    ) -> Bool {
+        GroupVisibility(hiddenGroups: hiddenGroups, hideUngrouped: hideUngrouped).isGroupHidden(rawGroup)
+    }
+
+    nonisolated static func visibleCommands(
+        from commands: [Command],
+        visibility: GroupVisibility
+    ) -> [Command] {
+        commands.filter(visibility.isCommandVisible)
+    }
+
+    nonisolated static func visibleCommands(
+        from commands: [Command],
+        hiddenGroups: [String],
+        hideUngrouped: Bool
+    ) -> [Command] {
+        visibleCommands(from: commands, visibility: GroupVisibility(hiddenGroups: hiddenGroups, hideUngrouped: hideUngrouped))
+    }
+
+    /// 清理已不存在于当前管理分组中的孤儿隐藏分组，防止 groupOrder == nil 时删空分组导致后续新建同名分组天生隐藏
+    nonisolated static func prunedHiddenGroups(
+        _ hiddenGroups: [String],
+        commands: [Command],
+        groupOrder: [String]?
+    ) -> [String] {
+        let validGroups = Set(managedGroupNames(from: commands, groupOrder: groupOrder))
+        return normalizedHiddenGroups(hiddenGroups).filter { validGroups.contains($0) }
+    }
+
+    nonisolated static func settingGroupHidden(
+        _ rawGroup: String,
+        hidden: Bool,
+        in hiddenGroups: [String]
+    ) -> [String] {
+        var normalized = normalizedHiddenGroups(hiddenGroups)
+        guard let name = normalizedGroup(rawGroup) else { return normalized }
+        if hidden {
+            if !normalized.contains(name) {
+                normalized.append(name)
+            }
+        } else {
+            normalized.removeAll { $0 == name }
+        }
+        return normalized
+    }
+
+    nonisolated static func togglingCommandHidden(
+        _ commandID: UUID,
+        in commands: [Command]
+    ) -> [Command]? {
+        guard let index = commands.firstIndex(where: { $0.id == commandID }) else { return nil }
+        var updated = commands
+        updated[index].hidden.toggle()
+        return updated
     }
 
     /// 将命令按 group 分组，返回排序后的组名列表（groupOrder 存在时 nil 代表未分组，排在最后）
@@ -65,8 +167,16 @@ final class CommandsManager: ObservableObject {
         let updatedCommands = Self.upserted(command, in: commands)
         let currentOrder = settingsManager.settings.groupOrder
         let nextOrder = Self.groupOrderAfterUpserting(command, in: commands, currentGroupOrder: currentOrder)
-        if nextOrder != currentOrder {
-            return settingsManager.updateCommandsAndGroupOrder(commands: updatedCommands, groupOrder: nextOrder)
+        let currentHidden = settingsManager.settings.hiddenGroups
+        // 先按变更前快照清理孤儿隐藏项（防止新建分组撞上外部残留孤儿），再按变更后快照清理已删空分组
+        let withoutStaleOrphans = Self.prunedHiddenGroups(currentHidden, commands: commands, groupOrder: currentOrder)
+        let nextHidden = Self.prunedHiddenGroups(withoutStaleOrphans, commands: updatedCommands, groupOrder: nextOrder)
+        if nextOrder != currentOrder || nextHidden != currentHidden {
+            return settingsManager.updateCommandsAndGroups(
+                commands: updatedCommands,
+                groupOrder: nextOrder,
+                hiddenGroups: nextHidden
+            )
         }
         return settingsManager.saveCommands(updatedCommands)
     }
@@ -97,7 +207,18 @@ final class CommandsManager: ObservableObject {
 
     @discardableResult
     func deleteCommand(id: UUID) -> Bool {
-        settingsManager.saveCommands(commands.filter { $0.id != id })
+        let updatedCommands = commands.filter { $0.id != id }
+        let currentOrder = settingsManager.settings.groupOrder
+        let currentHidden = settingsManager.settings.hiddenGroups
+        let nextHidden = Self.prunedHiddenGroups(currentHidden, commands: updatedCommands, groupOrder: currentOrder)
+        if nextHidden != currentHidden {
+            return settingsManager.updateCommandsAndGroups(
+                commands: updatedCommands,
+                groupOrder: currentOrder,
+                hiddenGroups: nextHidden
+            )
+        }
+        return settingsManager.saveCommands(updatedCommands)
     }
 
     // MARK: - 分组管理（侧栏含空分组、拖拽排序、新建、重命名、解散）
@@ -156,37 +277,48 @@ final class CommandsManager: ObservableObject {
         _ oldName: String,
         to rawNewName: String,
         in commands: [Command],
-        groupOrder: [String]?
-    ) -> (commands: [Command], groupOrder: [String])? {
-        let newName = rawNewName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !newName.isEmpty, newName != oldName else { return nil }
+        groupOrder: [String]?,
+        hiddenGroups: [String] = []
+    ) -> (commands: [Command], groupOrder: [String], hiddenGroups: [String])? {
+        guard let normalizedOld = normalizedGroup(oldName),
+              let newName = normalizedGroup(rawNewName),
+              newName != normalizedOld else { return nil }
         var groups = managedGroupNames(from: commands, groupOrder: groupOrder)
-        guard let index = groups.firstIndex(of: oldName), !groups.contains(newName) else { return nil }
+        let existingGroupSet = Set(groups)
+        guard let index = groups.firstIndex(of: normalizedOld), !groups.contains(newName) else { return nil }
         groups[index] = newName
         let updatedCommands = commands.map { cmd -> Command in
-            guard cmd.group == oldName else { return cmd }
+            guard normalizedGroup(cmd.group) == normalizedOld else { return cmd }
             var copy = cmd
             copy.group = newName
             return copy
         }
-        return (updatedCommands, groups)
+        let updatedHidden = normalizedHiddenGroups(
+            normalizedHiddenGroups(hiddenGroups)
+                .filter { existingGroupSet.contains($0) }
+                .map { $0 == normalizedOld ? newName : $0 }
+        )
+        return (updatedCommands, groups, updatedHidden)
     }
 
     nonisolated static func dissolvingGroup(
         _ groupName: String,
         in commands: [Command],
-        groupOrder: [String]?
-    ) -> (commands: [Command], groupOrder: [String])? {
+        groupOrder: [String]?,
+        hiddenGroups: [String] = []
+    ) -> (commands: [Command], groupOrder: [String], hiddenGroups: [String])? {
+        guard let normalizedTarget = normalizedGroup(groupName) else { return nil }
         var groups = managedGroupNames(from: commands, groupOrder: groupOrder)
-        guard let index = groups.firstIndex(of: groupName) else { return nil }
+        guard let index = groups.firstIndex(of: normalizedTarget) else { return nil }
         groups.remove(at: index)
         let updatedCommands = commands.map { cmd -> Command in
-            guard cmd.group == groupName else { return cmd }
+            guard normalizedGroup(cmd.group) == normalizedTarget else { return cmd }
             var copy = cmd
             copy.group = nil
             return copy
         }
-        return (updatedCommands, groups)
+        let updatedHidden = normalizedHiddenGroups(hiddenGroups).filter { $0 != normalizedTarget }
+        return (updatedCommands, groups, updatedHidden)
     }
 
     /// 轻量只读校验：两条命令是否存在且同属一个分组，用于高频拖拽校验避免深拷贝
@@ -258,6 +390,15 @@ final class CommandsManager: ObservableObject {
             from: commands,
             groupOrder: settingsManager.settings.groupOrder
         ) else { return false }
+        let currentHidden = settingsManager.settings.hiddenGroups
+        let nextHidden = Self.settingGroupHidden(rawName, hidden: false, in: currentHidden)
+        if nextHidden != currentHidden {
+            return settingsManager.updateCommandsAndGroups(
+                commands: commands,
+                groupOrder: nextOrder,
+                hiddenGroups: nextHidden
+            )
+        }
         return settingsManager.saveGroupOrder(nextOrder)
     }
 
@@ -267,9 +408,14 @@ final class CommandsManager: ObservableObject {
             oldName,
             to: rawNewName,
             in: commands,
-            groupOrder: settingsManager.settings.groupOrder
+            groupOrder: settingsManager.settings.groupOrder,
+            hiddenGroups: settingsManager.settings.hiddenGroups
         ) else { return false }
-        return settingsManager.updateCommandsAndGroupOrder(commands: result.commands, groupOrder: result.groupOrder)
+        return settingsManager.updateCommandsAndGroups(
+            commands: result.commands,
+            groupOrder: result.groupOrder,
+            hiddenGroups: result.hiddenGroups
+        )
     }
 
     @discardableResult
@@ -277,9 +423,29 @@ final class CommandsManager: ObservableObject {
         guard let result = Self.dissolvingGroup(
             groupName,
             in: commands,
-            groupOrder: settingsManager.settings.groupOrder
+            groupOrder: settingsManager.settings.groupOrder,
+            hiddenGroups: settingsManager.settings.hiddenGroups
         ) else { return false }
-        return settingsManager.updateCommandsAndGroupOrder(commands: result.commands, groupOrder: result.groupOrder)
+        return settingsManager.updateCommandsAndGroups(
+            commands: result.commands,
+            groupOrder: result.groupOrder,
+            hiddenGroups: result.hiddenGroups
+        )
+    }
+
+    @discardableResult
+    func toggleCommandHidden(id: UUID) -> Bool {
+        guard let updated = Self.togglingCommandHidden(id, in: commands) else { return false }
+        return settingsManager.saveCommands(updated)
+    }
+
+    @discardableResult
+    func setGroupHidden(_ group: String?, hidden: Bool) -> Bool {
+        guard let groupName = Self.normalizedGroup(group) else {
+            return settingsManager.setUngroupedHidden(hidden)
+        }
+        let next = Self.settingGroupHidden(groupName, hidden: hidden, in: settingsManager.settings.hiddenGroups)
+        return settingsManager.saveHiddenGroups(next)
     }
 
     @discardableResult
@@ -291,6 +457,16 @@ final class CommandsManager: ObservableObject {
     @discardableResult
     func assignCommand(_ commandID: UUID, toGroup targetGroup: String?) -> Bool {
         guard let updated = Self.assigningCommand(commandID, toGroup: targetGroup, in: commands) else { return false }
+        let currentOrder = settingsManager.settings.groupOrder
+        let currentHidden = settingsManager.settings.hiddenGroups
+        let nextHidden = Self.prunedHiddenGroups(currentHidden, commands: updated, groupOrder: currentOrder)
+        if nextHidden != currentHidden {
+            return settingsManager.updateCommandsAndGroups(
+                commands: updated,
+                groupOrder: currentOrder,
+                hiddenGroups: nextHidden
+            )
+        }
         return settingsManager.saveCommands(updated)
     }
 

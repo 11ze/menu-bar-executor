@@ -44,7 +44,8 @@ final class PaletteCoordinator: ObservableObject {
     private let settingsManager: AppSettingsManager
     private let runAutoCommand: @MainActor (Command, @escaping @MainActor (ExecutionResult) -> Void) -> () -> Void
     private var autoExecuteGeneration = 0
-    private var activeAutoCancellations: [() -> Void] = []
+    private var activeAutoCancellations: [UUID: () -> Void] = [:]
+    private var visibleCommandIDs: Set<UUID> = []
 
     init(
         settingsManager: AppSettingsManager,
@@ -59,12 +60,26 @@ final class PaletteCoordinator: ObservableObject {
             commands: settingsManager.settings.commands,
             searchText: "",
             groupOrder: settingsManager.settings.groupOrder,
+            hiddenGroups: settingsManager.settings.hiddenGroups,
+            hideUngrouped: settingsManager.settings.hideUngrouped,
             previousIndex: 0
         )
+        visibleCommandIDs = Set(CommandsManager.visibleCommands(
+            from: settingsManager.settings.commands,
+            visibility: GroupVisibility(
+                hiddenGroups: settingsManager.settings.hiddenGroups,
+                hideUngrouped: settingsManager.settings.hideUngrouped
+            )
+        ).map(\.id))
 
-        // commands 和 groupOrder 必须取自同一次发布，避免 willSet 期间回读旧属性。
+        // commands、groupOrder 与显隐配置必须取自同一次发布，避免 willSet 期间回读旧属性。
         settingsManager.$settings
-            .removeDuplicates { $0.commands == $1.commands && $0.groupOrder == $1.groupOrder }
+            .removeDuplicates {
+                $0.commands == $1.commands
+                    && $0.groupOrder == $1.groupOrder
+                    && $0.hiddenGroups == $1.hiddenGroups
+                    && $0.hideUngrouped == $1.hideUngrouped
+            }
             .sink { [weak self] settings in self?.rebuild(with: settings) }
             .store(in: &cancellables)
     }
@@ -76,14 +91,35 @@ final class PaletteCoordinator: ObservableObject {
             commands: settings.commands,
             searchText: searchText,
             groupOrder: settings.groupOrder,
+            hiddenGroups: settings.hiddenGroups,
+            hideUngrouped: settings.hideUngrouped,
             previousIndex: resetSelection ? 0 : listModel.selectedIndex
         )
+        let visibleIDs = Set(CommandsManager.visibleCommands(
+            from: settings.commands,
+            visibility: GroupVisibility(hiddenGroups: settings.hiddenGroups, hideUngrouped: settings.hideUngrouped)
+        ).map(\.id))
+        visibleCommandIDs = visibleIDs
+        cancelHiddenAutoCommands(visibleIDs: visibleIDs)
+
         guard next != listModel else { return }
         let selectedIndexChanged = next.selectedIndex != listModel.selectedIndex
         listModel = next
         // derive 类的选中变化（搜索收缩 / 外部重载）请求滚回可视区；hover 不走 rebuild，保持静默
         if selectedIndexChanged {
             scrollRequest = next.selectedIndex
+        }
+    }
+
+    private func cancelHiddenAutoCommands(visibleIDs: Set<UUID>) {
+        let hiddenRunningIDs = activeAutoCancellations.keys.filter { !visibleIDs.contains($0) }
+        for id in hiddenRunningIDs {
+            if let cancel = activeAutoCancellations.removeValue(forKey: id) {
+                cancel()
+            }
+        }
+        for id in autoExecuteResults.keys where !visibleIDs.contains(id) {
+            autoExecuteResults.removeValue(forKey: id)
         }
     }
 
@@ -127,7 +163,7 @@ final class PaletteCoordinator: ObservableObject {
 
     func cancelAutoCommands() {
         autoExecuteGeneration += 1
-        let cancellations = activeAutoCancellations
+        let cancellations = Array(activeAutoCancellations.values)
         activeAutoCancellations.removeAll()
         for cancel in cancellations {
             cancel()
@@ -138,7 +174,11 @@ final class PaletteCoordinator: ObservableObject {
         // 取消尚未完成的旧轮次进程，并使任何竞态回调失效。
         cancelAutoCommands()
         // 复刻原顺序：先清选中，再清搜索（触发 rebuild）
-        listModel = PaletteListModel(items: listModel.items, selectedIndex: 0)
+        listModel = PaletteListModel(
+            items: listModel.items,
+            selectedIndex: 0,
+            hasAnyCommands: listModel.hasAnyCommands
+        )
         searchText = ""
         autoExecuteResults.removeAll()
         scrollRequest = nil
@@ -155,9 +195,18 @@ final class PaletteCoordinator: ObservableObject {
 
         for command in autoCommands {
             autoExecuteResults[command.id] = .loading
+            var completedSynchronously = false
+            var registered = false
 
             let cancel = runAutoCommand(command) { [weak self] result in
                 guard let self, generation == self.autoExecuteGeneration else { return }
+                if registered {
+                    // 已被 cancelHiddenAutoCommands 取消的旧任务即使稍后恢复可见也不得写回过期结果
+                    guard self.activeAutoCancellations.removeValue(forKey: command.id) != nil else { return }
+                } else {
+                    completedSynchronously = true
+                }
+                guard self.visibleCommandIDs.contains(command.id) else { return }
                 switch result {
                 case .success(let output):
                     let trimmed = output?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -169,7 +218,10 @@ final class PaletteCoordinator: ObservableObject {
                     self.autoExecuteResults[command.id] = .failure(error.localizedDescription)
                 }
             }
-            activeAutoCancellations.append(cancel)
+            if !completedSynchronously && generation == self.autoExecuteGeneration {
+                registered = true
+                activeAutoCancellations[command.id] = cancel
+            }
         }
     }
 

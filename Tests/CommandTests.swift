@@ -339,4 +339,30 @@ final class CommandTests: XCTestCase {
         let b = Command(id: uuid, name: "Test", command: "echo", group: "A")
         XCTAssertNotEqual(a, b)
     }
+
+    // MARK: - hidden
+
+    func testDefaultHidden_IsFalse() {
+        let command = Command(name: "Test", command: "echo")
+        XCTAssertFalse(command.hidden)
+    }
+
+    func testDecoding_MissingHiddenDefaultsToFalse() throws {
+        let json = """
+        {
+            "name": "Test",
+            "command": "echo"
+        }
+        """.data(using: .utf8)!
+
+        let command = try JSONDecoder().decode(Command.self, from: json)
+        XCTAssertFalse(command.hidden)
+    }
+
+    func testEncoding_HiddenRoundTrip() throws {
+        let command = Command(name: "Secret", command: "echo secret", hidden: true)
+        let data = try JSONEncoder().encode(command)
+        let decoded = try JSONDecoder().decode(Command.self, from: data)
+        XCTAssertTrue(decoded.hidden)
+    }
 }

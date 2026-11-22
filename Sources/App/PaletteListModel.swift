@@ -29,25 +29,37 @@ enum PaletteItem: Identifiable, Equatable {
 struct PaletteListModel: Equatable {
     let items: [PaletteItem]
     let selectedIndex: Int
+    let hasAnyCommands: Bool
 
-    /// 搜索 / 命令变化时派生新快照，选中索引从 previousIndex 回绕调整
+    init(items: [PaletteItem], selectedIndex: Int, hasAnyCommands: Bool? = nil) {
+        self.items = items
+        self.selectedIndex = selectedIndex
+        self.hasAnyCommands = hasAnyCommands ?? items.contains(where: \.isCommand)
+    }
+
+    /// 搜索 / 命令 / 显隐变化时派生新快照，选中索引从 previousIndex 回绕调整
     static func derive(
         commands: [Command],
         searchText: String,
         groupOrder: [String]?,
+        hiddenGroups: [String] = [],
+        hideUngrouped: Bool = false,
         previousIndex: Int
     ) -> PaletteListModel {
-        let filtered = CommandsManager.filteredCommands(from: commands, by: searchText)
+        let visibility = GroupVisibility(hiddenGroups: hiddenGroups, hideUngrouped: hideUngrouped)
+        let visible = CommandsManager.visibleCommands(from: commands, visibility: visibility)
+        let filtered = CommandsManager.filteredCommands(from: visible, by: searchText)
         let items = buildItems(from: filtered, groupOrder: groupOrder)
         return PaletteListModel(
             items: items,
-            selectedIndex: adjustedIndex(from: previousIndex, in: items)
+            selectedIndex: adjustedIndex(from: previousIndex, in: items),
+            hasAnyCommands: !commands.isEmpty
         )
     }
 
     /// 替换选中索引，供键盘导航与 hover 使用
     func updatingSelectedIndex(_ index: Int) -> PaletteListModel {
-        PaletteListModel(items: items, selectedIndex: index)
+        PaletteListModel(items: items, selectedIndex: index, hasAnyCommands: hasAnyCommands)
     }
 
     /// ⌘N 快选反查：当前搜索结果前九条，分组标题不占编号。

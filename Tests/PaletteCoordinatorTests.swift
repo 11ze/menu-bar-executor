@@ -317,4 +317,116 @@ final class PaletteCoordinatorTests: XCTestCase {
 
         XCTAssertFalse(FileManager.default.fileExists(atPath: marker.path), "取消后真实自动执行子进程不能继续跑完")
     }
+
+    @MainActor
+    func testAutoCommands_SkipsHiddenCommandsHiddenGroupsAndHiddenUngrouped() throws {
+        let visibleAuto = Command(name: "可见自动", command: "echo ok", autoExecute: true, group: "状态速览")
+        let hiddenSelfAuto = Command(name: "自身隐藏自动", command: "echo hidden", autoExecute: true, group: "状态速览", hidden: true)
+        let hiddenGroupAuto = Command(name: "隐藏分组自动", command: "echo grp", autoExecute: true, group: "运维排查")
+        let hiddenUngroupedAuto = Command(name: "隐藏未分组自动", command: "echo u", autoExecute: true)
+        var settings = AppSettings()
+        settings.commands = [visibleAuto, hiddenSelfAuto, hiddenGroupAuto, hiddenUngroupedAuto]
+        settings.hiddenGroups = ["运维排查"]
+        settings.hideUngrouped = true
+        let fileURL = try writeSettings(settings, named: "settings.json")
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+
+        var executedIDs: [UUID] = []
+        let coordinator = PaletteCoordinator(settingsManager: manager, runAutoCommand: { command, _ in
+            executedIDs.append(command.id)
+            return {}
+        })
+
+        coordinator.executeAutoCommands()
+
+        XCTAssertEqual(executedIDs, [visibleAuto.id], "自身隐藏、所属分组隐藏或未分组隐藏的自动执行命令均不得执行")
+        XCTAssertEqual(coordinator.autoExecuteResults[visibleAuto.id], .loading)
+        XCTAssertNil(coordinator.autoExecuteResults[hiddenSelfAuto.id])
+        XCTAssertNil(coordinator.autoExecuteResults[hiddenGroupAuto.id])
+        XCTAssertNil(coordinator.autoExecuteResults[hiddenUngroupedAuto.id])
+    }
+
+    @MainActor
+    func testHiddenGroupToggleInSettings_UpdatesPaletteListImmediately() throws {
+        let a = Command(name: "a", command: "echo a", group: "A组")
+        let b = Command(name: "b", command: "echo b", group: "B组")
+        let u = Command(name: "u", command: "echo u")
+        var settings = AppSettings()
+        settings.commands = [a, b, u]
+        let fileURL = try writeSettings(settings, named: "settings.json")
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        let coordinator = PaletteCoordinator(settingsManager: manager)
+
+        XCTAssertEqual(coordinator.listModel.items.compactMap { $0.command?.name }, ["a", "b", "u"])
+
+        XCTAssertTrue(manager.saveHiddenGroups(["B组"]))
+        XCTAssertEqual(coordinator.listModel.items.compactMap { $0.command?.name }, ["a", "u"])
+
+        XCTAssertTrue(manager.setUngroupedHidden(true))
+        XCTAssertEqual(coordinator.listModel.items.compactMap { $0.command?.name }, ["a"])
+
+        XCTAssertTrue(manager.saveHiddenGroups([]))
+        XCTAssertTrue(manager.setUngroupedHidden(false))
+        XCTAssertEqual(coordinator.listModel.items.compactMap { $0.command?.name }, ["a", "b", "u"])
+    }
+
+    @MainActor
+    func testListModelPublishesWhenSwitchingBetweenEmptyAndAllHidden() throws {
+        var settings = AppSettings()
+        settings.commands = []
+        let fileURL = try writeSettings(settings, named: "settings.json")
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+        let coordinator = PaletteCoordinator(settingsManager: manager)
+
+        XCTAssertFalse(coordinator.listModel.hasAnyCommands)
+        var publishedFlags: [Bool] = []
+        let subscription = coordinator.$listModel.dropFirst().sink { model in
+            publishedFlags.append(model.hasAnyCommands)
+        }
+        defer { subscription.cancel() }
+
+        XCTAssertTrue(manager.saveCommands([Command(name: "隐藏命令", command: "true", hidden: true)]))
+        XCTAssertTrue(coordinator.listModel.items.isEmpty)
+        XCTAssertTrue(coordinator.listModel.hasAnyCommands)
+
+        XCTAssertTrue(manager.saveCommands([]))
+        XCTAssertTrue(coordinator.listModel.items.isEmpty)
+        XCTAssertFalse(coordinator.listModel.hasAnyCommands)
+        XCTAssertEqual(publishedFlags, [true, false], "空列表与全部隐藏切换时必须触发 listModel 发布")
+    }
+
+    @MainActor
+    func testHidingRunningAutoCommand_CancelsInFlightProcessAndDropsLateResult() throws {
+        let visibleAuto = Command(name: "保持可见", command: "echo keep", autoExecute: true, group: "状态")
+        let hidingAuto = Command(name: "即将隐藏", command: "sleep 5", autoExecute: true, group: "运维")
+        var settings = AppSettings()
+        settings.commands = [visibleAuto, hidingAuto]
+        let fileURL = try writeSettings(settings, named: "settings.json")
+        let manager = AppSettingsManager(filePath: fileURL, enableFileMonitoring: false)
+
+        var completions: [UUID: @MainActor (ExecutionResult) -> Void] = [:]
+        var cancelledIDs: [UUID] = []
+        let coordinator = PaletteCoordinator(settingsManager: manager, runAutoCommand: { command, completion in
+            completions[command.id] = completion
+            return { cancelledIDs.append(command.id) }
+        })
+
+        coordinator.executeAutoCommands()
+        XCTAssertEqual(coordinator.autoExecuteResults[visibleAuto.id], .loading)
+        XCTAssertEqual(coordinator.autoExecuteResults[hidingAuto.id], .loading)
+
+        // 运行期间隐藏分组「运维」
+        XCTAssertTrue(manager.saveHiddenGroups(["运维"]))
+
+        XCTAssertEqual(cancelledIDs, [hidingAuto.id], "隐藏正在运行的自动执行命令时应立即取消其进程")
+        XCTAssertNil(coordinator.autoExecuteResults[hidingAuto.id], "隐藏后应清理对应自动执行状态")
+        XCTAssertEqual(coordinator.autoExecuteResults[visibleAuto.id], .loading, "其他可见自动命令不应受影响")
+
+        // 竞态迟到回调不得写回已隐藏命令的结果，即使之后恢复可见也一样
+        XCTAssertTrue(manager.saveHiddenGroups([]))
+        completions[hidingAuto.id]?(.success("stale"))
+        XCTAssertNil(coordinator.autoExecuteResults[hidingAuto.id], "已取消的旧任务在分组恢复可见后也不得写回过期结果")
+        completions[visibleAuto.id]?(.success("ok"))
+        XCTAssertEqual(coordinator.autoExecuteResults[visibleAuto.id], .success("ok"))
+    }
 }

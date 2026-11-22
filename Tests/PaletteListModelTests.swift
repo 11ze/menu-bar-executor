@@ -129,4 +129,59 @@ final class PaletteListModelTests: XCTestCase {
         XCTAssertEqual(filtered.command(atQuickSelectPosition: 1)?.name, "命令 10")
         XCTAssertNil(filtered.command(atQuickSelectPosition: 2))
     }
+
+    // MARK: - 显隐过滤
+
+    func testDerive_ExcludesHiddenCommandsAndHiddenGroupsAndReindexesQuickSelect() {
+        let commands = [
+            Command(name: "隐藏命令", command: "1", group: "A组", hidden: true),
+            Command(name: "可见A", command: "2", group: "A组"),
+            Command(name: "隐藏组命令", command: "3", group: "B组"),
+            Command(name: "未分组命令", command: "4"),
+        ]
+        let model = PaletteListModel.derive(
+            commands: commands,
+            searchText: "",
+            groupOrder: ["A组", "B组"],
+            hiddenGroups: ["B组"],
+            hideUngrouped: false,
+            previousIndex: 0
+        )
+        XCTAssertEqual(summarize(model.items), ["h:A组", "c:可见A:1", "c:未分组命令:2"])
+        XCTAssertEqual(model.command(atQuickSelectPosition: 1)?.name, "可见A")
+        XCTAssertEqual(model.command(atQuickSelectPosition: 2)?.name, "未分组命令")
+    }
+
+    func testDerive_SearchDoesNotMatchHiddenCommandsOrHiddenGroups() {
+        let commands = [
+            Command(name: "Git 分支", command: "1", group: "状态", hidden: true),
+            Command(name: "Git 日志", command: "2", group: "运维"),
+            Command(name: "Git 状态", command: "3", group: "开发"),
+        ]
+        let model = PaletteListModel.derive(
+            commands: commands,
+            searchText: "Git",
+            groupOrder: ["状态", "运维", "开发"],
+            hiddenGroups: ["运维"],
+            hideUngrouped: false,
+            previousIndex: 0
+        )
+        XCTAssertEqual(summarize(model.items), ["h:开发", "c:Git 状态:1"])
+    }
+
+    func testDerive_HideUngroupedExcludesOnlyUngroupedCommands() {
+        let commands = [
+            Command(name: "未分组", command: "1"),
+            Command(name: "已分组", command: "2", group: "开发"),
+        ]
+        let model = PaletteListModel.derive(
+            commands: commands,
+            searchText: "",
+            groupOrder: ["开发"],
+            hiddenGroups: [],
+            hideUngrouped: true,
+            previousIndex: 0
+        )
+        XCTAssertEqual(summarize(model.items), ["h:开发", "c:已分组:1"])
+    }
 }

@@ -86,7 +86,7 @@ final class InterfaceWindowTests: XCTestCase {
             host.layoutSubtreeIfNeeded()
             await nextLayout()
         }
-        XCTAssertLessThan(host.fittingSize.height, 650,
+        XCTAssertLessThan(host.fittingSize.height, 710,
                           "短命令应接近设计稿的内容高度，不能把 740 点上限当成固定高度")
         XCTAssertGreaterThan(host.fittingSize.height, 500,
                              "表单及底部操作不能在测量期间折叠")
@@ -193,6 +193,212 @@ final class InterfaceWindowTests: XCTestCase {
         assertHeaderPinnedToTop(close, in: content, "标题区应贴住窗口顶边，不能再叠加一条系统标题栏的空白")
         close.performClick(nil)
         XCTAssertFalse(window.isVisible)
+    }
+
+    func testInlineGroupTextFieldStaysFocusedAndHandlesSubmitCancelAndBlur() async throws {
+        var draft = "开发工具"
+        var committed: [String] = []
+        var cancelledCount = 0
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 120, y: 120, width: 320, height: 120),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        let binding = Binding(get: { draft }, set: { draft = $0 })
+        let host = NSHostingView(rootView: InlineGroupTextField(
+            placeholder: "分组名称",
+            text: binding,
+            selectAllOnFocus: true,
+            onCommit: { committed.append(draft) },
+            onCancel: { cancelledCount += 1 }
+        ).frame(width: 180, height: 24))
+        window.contentView = host
+        window.makeKeyAndOrderFront(nil)
+        defer {
+            window.orderOut(nil)
+            window.contentView = nil
+        }
+
+        for _ in 0..<10 {
+            host.layoutSubtreeIfNeeded()
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+
+        let field = try XCTUnwrap(descendants(host).compactMap { $0 as? NSTextField }.first)
+        XCTAssertTrue(committed.isEmpty, "刚进入行内编辑时不能因焦点抖动自动提交退出")
+        XCTAssertEqual(cancelledCount, 0)
+        XCTAssertTrue(
+            window.firstResponder === field || window.firstResponder === field.currentEditor(),
+            "行内输入框挂载后应自动获得窗口焦点"
+        )
+
+        // 模拟编辑并回车提交
+        field.stringValue = "核心工具"
+        field.delegate?.controlTextDidChange?(Notification(name: NSControl.textDidChangeNotification, object: field))
+        let handledReturn = field.delegate?.control?(field, textView: field.currentEditor() as? NSTextView ?? NSTextView(), doCommandBy: #selector(NSResponder.insertNewline(_:)))
+        XCTAssertEqual(handledReturn, true)
+        XCTAssertEqual(committed, ["核心工具"])
+        XCTAssertEqual(cancelledCount, 0)
+    }
+
+    func testInlineGroupTextFieldEscapeCancelsWithoutCommitting() async throws {
+        var draft = "开发工具"
+        var committedCount = 0
+        var cancelledCount = 0
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 120, y: 120, width: 320, height: 120),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        let binding = Binding(get: { draft }, set: { draft = $0 })
+        let host = NSHostingView(rootView: InlineGroupTextField(
+            placeholder: "分组名称",
+            text: binding,
+            selectAllOnFocus: true,
+            onCommit: { committedCount += 1 },
+            onCancel: { cancelledCount += 1 }
+        ).frame(width: 180, height: 24))
+        window.contentView = host
+        window.makeKeyAndOrderFront(nil)
+        defer {
+            window.orderOut(nil)
+            window.contentView = nil
+        }
+
+        for _ in 0..<10 {
+            host.layoutSubtreeIfNeeded()
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+
+        let field = try XCTUnwrap(descendants(host).compactMap { $0 as? NSTextField }.first)
+        let handledEsc = field.delegate?.control?(field, textView: field.currentEditor() as? NSTextView ?? NSTextView(), doCommandBy: #selector(NSResponder.cancelOperation(_:)))
+        XCTAssertEqual(handledEsc, true)
+        // 取消后再触发失焦不得补发 commit
+        window.makeFirstResponder(nil)
+        await nextLayout()
+        XCTAssertEqual(cancelledCount, 1)
+        XCTAssertEqual(committedCount, 0)
+    }
+
+    func testInlineGroupTextFieldBlurCommitsAfterFocus() async throws {
+        var draft = "开发工具"
+        var committed: [String] = []
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 120, y: 120, width: 320, height: 120),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        let binding = Binding(get: { draft }, set: { draft = $0 })
+        let host = NSHostingView(rootView: InlineGroupTextField(
+            placeholder: "分组名称",
+            text: binding,
+            selectAllOnFocus: true,
+            onCommit: { committed.append(draft) },
+            onCancel: {}
+        ).frame(width: 180, height: 24))
+        window.contentView = host
+        window.makeKeyAndOrderFront(nil)
+        defer {
+            window.orderOut(nil)
+            window.contentView = nil
+        }
+
+        for _ in 0..<10 {
+            host.layoutSubtreeIfNeeded()
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+
+        let field = try XCTUnwrap(descendants(host).compactMap { $0 as? NSTextField }.first)
+        field.stringValue = "改名后"
+        field.delegate?.controlTextDidChange?(Notification(name: NSControl.textDidChangeNotification, object: field))
+        window.makeFirstResponder(nil)
+        await nextLayout()
+        XCTAssertEqual(committed, ["改名后"], "真实获得焦点后再失焦应提交当前草稿")
+    }
+
+    func testInlineGroupTextFieldClickingOutsideCommitsWhileClickingInsideKeepsEditing() async throws {
+        var draft = "开发工具"
+        var committed: [String] = []
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 120, y: 120, width: 320, height: 160),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        let binding = Binding(get: { draft }, set: { draft = $0 })
+        let host = NSHostingView(rootView: VStack(spacing: 0) {
+            InlineGroupTextField(
+                placeholder: "分组名称",
+                text: binding,
+                selectAllOnFocus: true,
+                onCommit: { committed.append(draft) },
+                onCancel: {}
+            )
+            .frame(width: 180, height: 24)
+            Color.clear.frame(height: 100)
+        }.frame(width: 320, height: 160))
+        window.contentView = host
+        window.makeKeyAndOrderFront(nil)
+        defer {
+            window.orderOut(nil)
+            window.contentView = nil
+        }
+
+        for _ in 0..<10 {
+            host.layoutSubtreeIfNeeded()
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+
+        let field = try XCTUnwrap(descendants(host).compactMap { $0 as? NSTextField }.first)
+        field.stringValue = "点击外部提交"
+        field.delegate?.controlTextDidChange?(Notification(name: NSControl.textDidChangeNotification, object: field))
+
+        // 点击输入框内部不应提交
+        let fieldRectInWindow = field.convert(field.bounds, to: nil)
+        let insidePoint = NSPoint(x: fieldRectInWindow.midX, y: fieldRectInWindow.midY)
+        let insideEvent = try XCTUnwrap(NSEvent.mouseEvent(
+            with: .leftMouseDown,
+            location: insidePoint,
+            modifierFlags: [],
+            timestamp: 0,
+            windowNumber: window.windowNumber,
+            context: nil,
+            eventNumber: 1,
+            clickCount: 1,
+            pressure: 1
+        ))
+        NSApp.sendEvent(insideEvent)
+        await nextLayout()
+        XCTAssertTrue(committed.isEmpty, "点击输入框内部不应结束重命名")
+
+        // 点击窗口空白处（非可聚焦控件）必须自动确认重命名
+        let outsidePoint = NSPoint(x: 160, y: 20)
+        XCTAssertFalse(fieldRectInWindow.contains(outsidePoint))
+        let outsideEvent = try XCTUnwrap(NSEvent.mouseEvent(
+            with: .leftMouseDown,
+            location: outsidePoint,
+            modifierFlags: [],
+            timestamp: 0,
+            windowNumber: window.windowNumber,
+            context: nil,
+            eventNumber: 2,
+            clickCount: 1,
+            pressure: 1
+        ))
+        NSApp.sendEvent(outsideEvent)
+        await nextLayout()
+        XCTAssertEqual(committed, ["点击外部提交"], "点击输入框以外的窗口空白处应自动确认重命名")
     }
 
     func testHistoryWindowUsesOneTitlebarAfterReopening() async throws {

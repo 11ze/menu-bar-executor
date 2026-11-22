@@ -55,4 +55,16 @@ final class CommandEditorViewTests: XCTestCase {
         blankEditor.saveCommand()
         XCTAssertNil(try XCTUnwrap(savedBlank).group)
     }
+
+    func testSavingPreservesHiddenFlag() throws {
+        var saved: Command?
+        let editor = CommandEditorView(
+            command: Command(name: "已隐藏命令", command: "true", hidden: true),
+            onSave: { saved = $0; return true }
+        )
+
+        editor.saveCommand()
+
+        XCTAssertTrue(try XCTUnwrap(saved).hidden, "编辑已有隐藏命令保存时必须保留 hidden 状态")
+    }
 }

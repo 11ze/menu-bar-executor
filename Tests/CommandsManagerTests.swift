@@ -210,4 +210,144 @@ final class CommandsManagerTests: XCTestCase {
         let result = CommandsManager.filteredCommands(from: makeCommands(), by: "U1")
         XCTAssertEqual(result.map(\.name), ["u1"])
     }
+
+    // MARK: - 显隐控制
+
+    func testVisibleCommands_ExcludesHiddenCommandsHiddenGroupsAndHiddenUngrouped() {
+        let commands = [
+            Command(name: "可见1", command: "1", group: "状态速览"),
+            Command(name: "单条隐藏", command: "2", group: "状态速览", hidden: true),
+            Command(name: "隐藏组内可见", command: "3", group: "运维排查"),
+            Command(name: "隐藏组内也隐藏", command: "4", group: "运维排查", hidden: true),
+            Command(name: "未分组可见", command: "5"),
+            Command(name: "未分组隐藏", command: "6", hidden: true),
+        ]
+
+        let visibleWithUngrouped = CommandsManager.visibleCommands(
+            from: commands,
+            hiddenGroups: ["  运维排查  "],
+            hideUngrouped: false
+        )
+        XCTAssertEqual(visibleWithUngrouped.map(\.name), ["可见1", "未分组可见"])
+
+        let visibleWithoutUngrouped = CommandsManager.visibleCommands(
+            from: commands,
+            hiddenGroups: ["运维排查"],
+            hideUngrouped: true
+        )
+        XCTAssertEqual(visibleWithoutUngrouped.map(\.name), ["可见1"])
+    }
+
+    func testSettingGroupHidden_NormalizesDeduplicatesAndToggles() {
+        let added = CommandsManager.settingGroupHidden("  运维排查 ", hidden: true, in: ["开发工具", "运维排查"])
+        XCTAssertEqual(added, ["开发工具", "运维排查"])
+
+        let addedNew = CommandsManager.settingGroupHidden("状态速览", hidden: true, in: ["开发工具"])
+        XCTAssertEqual(addedNew, ["开发工具", "状态速览"])
+
+        let removed = CommandsManager.settingGroupHidden("运维排查", hidden: false, in: ["开发工具", "运维排查"])
+        XCTAssertEqual(removed, ["开发工具"])
+    }
+
+    func testTogglingCommandHidden_FlipsTargetInPlace() {
+        let first = Command(name: "a", command: "1", hidden: false)
+        let second = Command(name: "b", command: "2", hidden: true)
+
+        let toggledFirst = CommandsManager.togglingCommandHidden(first.id, in: [first, second])
+        XCTAssertEqual(toggledFirst?.map(\.hidden), [true, true])
+
+        let toggledSecond = CommandsManager.togglingCommandHidden(second.id, in: [first, second])
+        XCTAssertEqual(toggledSecond?.map(\.hidden), [false, false])
+
+        XCTAssertNil(CommandsManager.togglingCommandHidden(UUID(), in: [first, second]))
+    }
+
+    func testRenamingGroup_MigratesHiddenGroups() {
+        let commands = [
+            Command(name: "a1", command: "true", group: "运维排查"),
+            Command(name: "b1", command: "true", group: "开发工具"),
+        ]
+        let renamed = CommandsManager.renamingGroup(
+            "运维排查",
+            to: "线上排查",
+            in: commands,
+            groupOrder: ["运维排查", "开发工具"],
+            hiddenGroups: ["运维排查"]
+        )
+        XCTAssertEqual(renamed?.hiddenGroups, ["线上排查"])
+        XCTAssertEqual(renamed?.groupOrder, ["线上排查", "开发工具"])
+    }
+
+    func testRenamingGroup_NormalizesWhitespaceInCommandsAndHiddenGroups() {
+        let commands = [
+            Command(name: "secret", command: "echo 1", autoExecute: true, group: "  Dev  "),
+        ]
+        let renamed = CommandsManager.renamingGroup(
+            "Dev",
+            to: "Tools",
+            in: commands,
+            groupOrder: nil,
+            hiddenGroups: ["  Dev  "]
+        )
+        XCTAssertEqual(renamed?.commands.map(\.group), ["Tools"])
+        XCTAssertEqual(renamed?.groupOrder, ["Tools"])
+        XCTAssertEqual(renamed?.hiddenGroups, ["Tools"], "带首尾空白的命令分组与 hiddenGroups 在重命名后必须保持隐藏迁移")
+
+        let visibleToOrphan = CommandsManager.renamingGroup(
+            "Dev",
+            to: "Ops",
+            in: [Command(name: "a", command: "true", group: "Dev")],
+            groupOrder: nil,
+            hiddenGroups: ["Ops"]
+        )
+        XCTAssertEqual(visibleToOrphan?.hiddenGroups, [], "可见分组重命名为孤儿 hiddenGroups 名称后不得意外变为隐藏")
+    }
+
+    func testDissolvingGroup_NormalizesWhitespaceInCommandGroups() {
+        let commands = [
+            Command(name: "secret", command: "echo 1", autoExecute: true, group: "  Dev  "),
+        ]
+        let dissolved = CommandsManager.dissolvingGroup(
+            "Dev",
+            in: commands,
+            groupOrder: nil,
+            hiddenGroups: ["  Dev  "]
+        )
+        XCTAssertEqual(dissolved?.commands.map(\.group), [nil], "带首尾空白的命令分组解散后必须移入未分组")
+        XCTAssertEqual(dissolved?.hiddenGroups, [])
+    }
+
+    func testPrunedHiddenGroups_RemovesOrphansWhenGroupNoLongerExists() {
+        let commands = [Command(name: "a", command: "true", group: "保留")]
+        let pruned = CommandsManager.prunedHiddenGroups(
+            ["  保留  ", "已删空组", "已删空组"],
+            commands: commands,
+            groupOrder: nil
+        )
+        XCTAssertEqual(pruned, ["保留"])
+
+        let keptEmptyInOrder = CommandsManager.prunedHiddenGroups(
+            ["空命名组", "不存在"],
+            commands: commands,
+            groupOrder: ["空命名组", "保留"]
+        )
+        XCTAssertEqual(keptEmptyInOrder, ["空命名组"])
+    }
+
+    func testDissolvingGroup_RemovesFromHiddenGroupsAndPreservesCommandHiddenState() {
+        let commands = [
+            Command(name: "a1", command: "true", group: "运维排查", hidden: false),
+            Command(name: "a2", command: "true", group: "运维排查", hidden: true),
+            Command(name: "b1", command: "true", group: "开发工具", hidden: false),
+        ]
+        let dissolved = CommandsManager.dissolvingGroup(
+            "运维排查",
+            in: commands,
+            groupOrder: ["运维排查", "开发工具"],
+            hiddenGroups: ["运维排查", "开发工具"]
+        )
+        XCTAssertEqual(dissolved?.hiddenGroups, ["开发工具"])
+        XCTAssertEqual(dissolved?.commands.map(\.group), [nil, nil, "开发工具"])
+        XCTAssertEqual(dissolved?.commands.map(\.hidden), [false, true, false], "删除隐藏分组后应保留每条命令各自的显隐标记")
+    }
 }

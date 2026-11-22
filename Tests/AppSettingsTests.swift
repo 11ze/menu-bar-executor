@@ -224,4 +224,35 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(decoded.paletteSize?.width, 111.222)
         XCTAssertEqual(decoded.paletteSize?.height, 333.444)
     }
+
+    // MARK: - 显隐控制（hiddenGroups / hideUngrouped）
+
+    func testDecoding_MissingHiddenGroupSettings() throws {
+        let json = """
+        {"commands": []}
+        """.data(using: .utf8)!
+
+        let settings = try JSONDecoder().decode(AppSettings.self, from: json)
+        XCTAssertTrue(settings.hiddenGroups.isEmpty)
+        XCTAssertFalse(settings.hideUngrouped)
+    }
+
+    func testEncoding_HiddenGroupsAndHideUngroupedRoundTrip() throws {
+        var settings = AppSettings()
+        settings.hiddenGroups = ["运维排查", "开发工具"]
+        settings.hideUngrouped = true
+
+        let data = try JSONEncoder().encode(settings)
+        let decoded = try JSONDecoder().decode(AppSettings.self, from: data)
+        XCTAssertEqual(decoded.hiddenGroups, ["运维排查", "开发工具"])
+        XCTAssertTrue(decoded.hideUngrouped)
+    }
+
+    func testEncoding_DefaultHiddenSettingsOmitKeys() throws {
+        let settings = AppSettings()
+        let data = try JSONEncoder().encode(settings)
+        let json = String(data: data, encoding: .utf8)!
+        XCTAssertFalse(json.contains("hiddenGroups"))
+        XCTAssertFalse(json.contains("hideUngrouped"))
+    }
 }

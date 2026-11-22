@@ -49,6 +49,12 @@ struct AppSettings: Codable, Equatable {
     /// 分组显示顺序（nil 时按命令列表中首次出现顺序）
     var groupOrder: [String]?
 
+    /// 在命令面板中隐藏的命名分组
+    var hiddenGroups: [String] = []
+
+    /// 是否在命令面板中隐藏「未分组」
+    var hideUngrouped: Bool = false
+
     var autoCheckUpdates: Bool = true
 
     enum CodingKeys: String, CodingKey {
@@ -60,6 +66,8 @@ struct AppSettings: Codable, Equatable {
         case lastUpdateCheckDate
         case skippedVersion
         case groupOrder
+        case hiddenGroups
+        case hideUngrouped
         case autoCheckUpdates
     }
 
@@ -74,6 +82,8 @@ struct AppSettings: Codable, Equatable {
         lastUpdateCheckDate = try container.decodeIfPresent(Date.self, forKey: .lastUpdateCheckDate)
         skippedVersion = try container.decodeIfPresent(String.self, forKey: .skippedVersion)
         groupOrder = try container.decodeIfPresent([String].self, forKey: .groupOrder)
+        hiddenGroups = try container.decodeIfPresent([String].self, forKey: .hiddenGroups) ?? []
+        hideUngrouped = try container.decodeIfPresent(Bool.self, forKey: .hideUngrouped) ?? false
 
         if let posObj = try container.decodeIfPresent(CGPointObject.self, forKey: .palettePosition) {
             palettePosition = posObj.cgPoint
@@ -92,6 +102,12 @@ struct AppSettings: Codable, Equatable {
         try container.encodeIfPresent(lastUpdateCheckDate, forKey: .lastUpdateCheckDate)
         try container.encodeIfPresent(skippedVersion, forKey: .skippedVersion)
         try container.encodeIfPresent(groupOrder, forKey: .groupOrder)
+        if !hiddenGroups.isEmpty {
+            try container.encode(hiddenGroups, forKey: .hiddenGroups)
+        }
+        if hideUngrouped {
+            try container.encode(hideUngrouped, forKey: .hideUngrouped)
+        }
 
         if let pos = palettePosition {
             try container.encode(CGPointObject(from: pos), forKey: .palettePosition)
@@ -487,6 +503,25 @@ final class AppSettingsManager: ObservableObject {
         commit {
             $0.commands = commands
             $0.groupOrder = groupOrder
+        }
+    }
+
+    @discardableResult
+    func saveHiddenGroups(_ hiddenGroups: [String]) -> Bool {
+        commit { $0.hiddenGroups = hiddenGroups }
+    }
+
+    @discardableResult
+    func setUngroupedHidden(_ hidden: Bool) -> Bool {
+        commit { $0.hideUngrouped = hidden }
+    }
+
+    @discardableResult
+    func updateCommandsAndGroups(commands: [Command], groupOrder: [String]?, hiddenGroups: [String]) -> Bool {
+        commit {
+            $0.commands = commands
+            $0.groupOrder = groupOrder
+            $0.hiddenGroups = hiddenGroups
         }
     }
 

@@ -12,8 +12,9 @@ struct CommandEditorView: View {
     @State private var autoExecute: Bool
     @State private var group: String
     @State private var directExecution: Bool
+    @State private var hidden: Bool
     @State private var showingDeleteConfirmation = false
-    @State private var formHeight: CGFloat = 476
+    @State private var formHeight: CGFloat = 532
     @FocusState private var nameFocused: Bool
 
     let onSave: (Command) -> Bool
@@ -30,9 +31,27 @@ struct CommandEditorView: View {
         _autoExecute = State(initialValue: command?.autoExecute ?? false)
         _group = State(initialValue: command?.group ?? "")
         _directExecution = State(initialValue: command?.directExecution ?? false)
+        _hidden = State(initialValue: command?.hidden ?? false)
     }
 
     var isExisting: Bool { onDelete != nil }
+
+    private var selectedGroupIsHidden: Bool {
+        manager.groupVisibility.isGroupHidden(group)
+    }
+
+    private var autoExecutePauseMessage: String? {
+        guard autoExecute, hidden || selectedGroupIsHidden else { return nil }
+        let normalized = CommandsManager.normalizedGroup(group)
+        let groupDesc = normalized.map { "分组「\($0)」" } ?? "未分组"
+        if hidden && selectedGroupIsHidden {
+            return "当前命令及所属\(groupDesc)均已隐藏，恢复显示后才会自动执行。"
+        }
+        if hidden {
+            return "当前命令已设为隐藏，恢复显示后才会自动执行。"
+        }
+        return "所属\(groupDesc)当前已隐藏，恢复显示后才会自动执行。"
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -68,8 +87,28 @@ struct CommandEditorView: View {
                     option("打开面板时自动执行", detail: "每次打开都会运行；结果显示在行内，不计入历史、不通知。", isOn: $autoExecute)
                     option("直接执行", detail: "跳过 ~/.zshrc；其中的 alias、函数和环境变量不可用。", isOn: $directExecution)
                     Toggle("手动执行完成后通知", isOn: $notification).font(.system(size: 12)).frame(minHeight: 18)
-                    Text("命令超过 30 秒会终止。").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
-                        .frame(minHeight: 18, alignment: .leading)
+                    option("在命令面板中隐藏", detail: "隐藏后不出现在命令面板和搜索中，自动执行也会暂停。", isOn: $hidden)
+                    if let pauseMessage = autoExecutePauseMessage {
+                        HStack(alignment: .top, spacing: 6) {
+                            Image(systemName: "eye.slash")
+                                .font(.system(size: 11))
+                                .foregroundColor(InterfaceStyle.muted)
+                                .padding(.top, 2)
+                            Text("自动执行暂不生效：\(pauseMessage)")
+                                .font(.system(size: 12))
+                                .foregroundColor(InterfaceStyle.muted)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(InterfaceStyle.subtle)
+                        .overlay(RoundedRectangle(cornerRadius: 7).stroke(InterfaceStyle.line, lineWidth: 1))
+                        .cornerRadius(7)
+                    } else {
+                        Text("命令超过 30 秒会终止。").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
+                            .frame(minHeight: 18, alignment: .leading)
+                    }
                 }.padding(.horizontal, 24).padding(.vertical, 16).textFieldStyle(InterfaceTextFieldStyle())
                     .background(GeometryReader { geometry in
                         Color.clear.onAppear { formHeight = geometry.size.height }
@@ -160,7 +199,8 @@ struct CommandEditorView: View {
             command: commandText,
             workingDirectory: workingDirectory.isEmpty ? nil : workingDirectory,
             notification: notification, autoExecute: autoExecute,
-            group: trimmedGroup.isEmpty ? nil : trimmedGroup, directExecution: directExecution
+            group: trimmedGroup.isEmpty ? nil : trimmedGroup, directExecution: directExecution,
+            hidden: hidden
         ))
         if saved { dismiss() }
         return saved

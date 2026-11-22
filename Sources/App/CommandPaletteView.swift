@@ -27,13 +27,28 @@ struct CommandPaletteView: View {
                     .background(WindowDragArea()).background(InterfaceStyle.material)
                 Divider()
                 if coordinator.listModel.items.isEmpty {
+                    let isSearching = !coordinator.searchText.isEmpty
+                    let allHidden = !isSearching && coordinator.listModel.hasAnyCommands
                     VStack(spacing: 12) {
                         Text("›_").font(.system(size: 30, design: .monospaced)).foregroundColor(InterfaceStyle.muted).opacity(0.55)
-                        Text(coordinator.searchText.isEmpty ? "还没有命令" : "没有匹配的命令").font(.system(size: 15, weight: .medium))
-                        Text(coordinator.searchText.isEmpty ? "添加一条常用命令，随时呼出执行。" : "试试其他名称，或清空搜索。").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
-                        Button(coordinator.searchText.isEmpty ? "添加命令" : "清空搜索") {
-                            if coordinator.searchText.isEmpty { editingCommand = Command(name: "", command: "") }
-                            else { coordinator.clearSearch(); isSearchFocused = true }
+                        Text(isSearching ? "没有匹配的命令" : (allHidden ? "所有命令均已隐藏" : "还没有命令"))
+                            .font(.system(size: 15, weight: .medium))
+                        Text(isSearching
+                             ? "试试其他名称，或清空搜索。"
+                             : (allHidden ? "可在设置中重新显示分组或命令，隐藏的自动执行命令不会运行。" : "添加一条常用命令，随时呼出执行。"))
+                            .font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 24)
+                        Button(isSearching ? "清空搜索" : (allHidden ? "打开设置" : "添加命令")) {
+                            if isSearching {
+                                coordinator.clearSearch()
+                                isSearchFocused = true
+                            } else if allHidden {
+                                CommandPaletteWindowController.shared.hide()
+                                SettingsWindowController.shared.showWindow()
+                            } else {
+                                editingCommand = Command(name: "", command: "")
+                            }
                         }
                     }.buttonStyle(InterfaceButtonStyle()).frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {

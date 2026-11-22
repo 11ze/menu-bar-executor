@@ -39,8 +39,6 @@ struct CommandsListView: View {
     @State private var dropReceiveGroup: SelectedGroup?
     @State private var dropReorderCommandID: UUID?
     @FocusState private var searchFocused: Bool
-    @FocusState private var renameFieldFocused: Bool
-    @FocusState private var newGroupFieldFocused: Bool
 
     private var managedGroups: [String] {
         CommandsManager.managedGroupNames(from: manager.commands, groupOrder: settings.settings.groupOrder)
@@ -99,8 +97,37 @@ struct CommandsListView: View {
         manager.commands.filter { CommandsManager.normalizedGroup($0.group) == nil }.count
     }
 
+    private var footerStats: (visible: Int, activeAuto: Int, totalAuto: Int) {
+        let visible = CommandsManager.visibleCommands(from: manager.commands, visibility: manager.groupVisibility)
+        let activeAuto = visible.filter(\.autoExecute).count
+        let totalAuto = manager.commands.filter(\.autoExecute).count
+        return (visible.count, activeAuto, totalAuto)
+    }
+
+    private func isGroupHidden(_ group: String?) -> Bool {
+        manager.groupVisibility.isGroupHidden(group)
+    }
+
+    private func isGroupHidden(_ selection: SelectedGroup) -> Bool {
+        switch selection {
+        case .named(let name): return isGroupHidden(name)
+        case .ungrouped: return isGroupHidden(nil)
+        }
+    }
+
+    private func toggleGroupHidden(_ selection: SelectedGroup) {
+        clearDragState()
+        switch selection {
+        case .named(let name):
+            manager.setGroupHidden(name, hidden: !isGroupHidden(name))
+        case .ungrouped:
+            manager.setGroupHidden(nil, hidden: !isGroupHidden(nil))
+        }
+    }
+
     var body: some View {
-        GeometryReader { geometry in
+        let stats = footerStats
+        return GeometryReader { geometry in
             VStack(spacing: 0) {
                 HStack(spacing: 0) {
                     sidebarView
@@ -112,7 +139,7 @@ struct CommandsListView: View {
                 HStack {
                     Text("拖动命令可组内排序，拖到左侧分组可跨组移动")
                     Spacer()
-                    Text("共 \(manager.commands.count) 条 · \(manager.commands.filter(\.autoExecute).count) 条自动执行")
+                    Text("共 \(manager.commands.count) 条 · 可见 \(stats.visible) 条 · 自动执行 \(stats.activeAuto)/\(stats.totalAuto) 生效")
                 }
                 .font(.system(size: 12))
                 .foregroundColor(InterfaceStyle.muted)
@@ -122,16 +149,6 @@ struct CommandsListView: View {
             }
         }
         .onChange(of: searchText) { _ in clearDragState() }
-        .onChange(of: renameFieldFocused) { focused in
-            if !focused, let name = renamingGroup {
-                commitRename(oldName: name)
-            }
-        }
-        .onChange(of: newGroupFieldFocused) { focused in
-            if !focused, isCreatingGroup {
-                commitNewGroup()
-            }
-        }
         .alert("操作失败", isPresented: Binding(
             get: { editingCommand == nil && !showingDeleteGroupConfirmation && settings.lastError != nil },
             set: { if !$0 { settings.lastError = nil } }
@@ -238,30 +255,33 @@ struct CommandsListView: View {
         let isHovered = hoveredGroupKey == key
         let isReceiving = dropReceiveGroup == key
         let isReorderingTarget = dropReorderGroup == name
+        let isHidden = isGroupHidden(name)
         let count = manager.commands.filter { CommandsManager.normalizedGroup($0.group) == name }.count
 
         return Group {
             if renamingGroup == name {
                 HStack(spacing: 6) {
                     dragGrip(visible: true)
-                    TextField("分组名称", text: $renameDraft)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 12))
-                        .padding(.horizontal, 6)
-                        .frame(height: 24)
-                        .background(InterfaceStyle.surface)
-                        .overlay(RoundedRectangle(cornerRadius: 5).stroke(InterfaceStyle.selectedText, lineWidth: 1))
-                        .cornerRadius(5)
-                        .focused($renameFieldFocused)
-                        .onSubmit { commitRename(oldName: name) }
-                        .onExitCommand { cancelRenamingGroup() }
+                    InlineGroupTextField(
+                        placeholder: "分组名称",
+                        text: $renameDraft,
+                        selectAllOnFocus: true,
+                        onCommit: { commitRename(oldName: name) },
+                        onCancel: { cancelRenamingGroup() }
+                    )
+                    .frame(height: 16)
+                    .padding(.horizontal, 6)
+                    .frame(height: 24)
+                    .background(InterfaceStyle.surface)
+                    .overlay(RoundedRectangle(cornerRadius: 5).stroke(InterfaceStyle.selectedText, lineWidth: 1))
+                    .cornerRadius(5)
                 }
                 .padding(.horizontal, 8)
                 .frame(height: 34)
                 .background(isActive ? InterfaceStyle.selection : Color.clear)
                 .cornerRadius(7)
             } else {
-                HStack(spacing: 6) {
+                HStack(spacing: 5) {
                     Button {
                         selectGroup(key)
                     } label: {
@@ -270,6 +290,7 @@ struct CommandsListView: View {
                             Text(name)
                                 .font(.system(size: 12.5, weight: .medium))
                                 .foregroundColor(isActive || isReceiving ? InterfaceStyle.selectedRowText : InterfaceStyle.text)
+                                .opacity(isHidden ? 0.52 : 1)
                                 .lineLimit(1)
                             Spacer(minLength: 4)
                         }
@@ -277,10 +298,17 @@ struct CommandsListView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .help(name)
+                    .help(isHidden ? "\(name)（已隐藏）" : name)
 
                     if isHovered {
-                        HStack(spacing: 2) {
+                        HStack(spacing: 1) {
+                            sidebarMiniButton(
+                                systemImage: isHidden ? "eye.slash" : "eye",
+                                label: isHidden ? "显示分组\(name)" : "隐藏分组\(name)",
+                                highlighted: isHidden
+                            ) {
+                                toggleGroupHidden(key)
+                            }
                             sidebarMiniButton(systemImage: "pencil", label: "重命名分组\(name)") {
                                 startRenamingGroup(name)
                             }
@@ -289,10 +317,19 @@ struct CommandsListView: View {
                             }
                         }
                     } else {
+                        if isHidden {
+                            sidebarMiniButton(
+                                systemImage: "eye.slash",
+                                label: "恢复显示分组\(name)",
+                                highlighted: isActive
+                            ) {
+                                toggleGroupHidden(key)
+                            }
+                        }
                         Text("\(count)")
                             .font(.system(size: 11))
                             .foregroundColor(isActive ? InterfaceStyle.selectedRowText : InterfaceStyle.muted)
-                            .opacity(isActive ? 0.85 : 1)
+                            .opacity(isHidden ? 0.52 : (isActive ? 0.85 : 1))
                             .padding(.trailing, 4)
                     }
                 }
@@ -342,17 +379,19 @@ struct CommandsListView: View {
     private var newGroupRow: some View {
         HStack(spacing: 6) {
             dragGrip(visible: true)
-            TextField("输入新分组名称", text: $newGroupDraft)
-                .textFieldStyle(.plain)
-                .font(.system(size: 12))
-                .padding(.horizontal, 6)
-                .frame(height: 24)
-                .background(InterfaceStyle.surface)
-                .overlay(RoundedRectangle(cornerRadius: 5).stroke(InterfaceStyle.selectedText, lineWidth: 1))
-                .cornerRadius(5)
-                .focused($newGroupFieldFocused)
-                .onSubmit { commitNewGroup() }
-                .onExitCommand { cancelCreatingGroup() }
+            InlineGroupTextField(
+                placeholder: "输入新分组名称",
+                text: $newGroupDraft,
+                selectAllOnFocus: false,
+                onCommit: { commitNewGroup() },
+                onCancel: { cancelCreatingGroup() }
+            )
+            .frame(height: 16)
+            .padding(.horizontal, 6)
+            .frame(height: 24)
+            .background(InterfaceStyle.surface)
+            .overlay(RoundedRectangle(cornerRadius: 5).stroke(InterfaceStyle.selectedText, lineWidth: 1))
+            .cornerRadius(5)
         }
         .padding(.horizontal, 8)
         .frame(height: 34)
@@ -363,28 +402,53 @@ struct CommandsListView: View {
         let isActive = !isSearching && effectiveSelection == key
         let isHovered = hoveredGroupKey == key
         let isReceiving = dropReceiveGroup == key
+        let isHidden = isGroupHidden(nil)
 
-        return Button {
-            selectGroup(key)
-        } label: {
-            HStack(spacing: 6) {
-                Color.clear.frame(width: 14, height: 14)
-                Text("未分组")
-                    .font(.system(size: 12.5, weight: .medium))
-                    .foregroundColor(isActive || isReceiving ? InterfaceStyle.selectedRowText : InterfaceStyle.muted)
-                    .lineLimit(1)
-                Spacer(minLength: 4)
+        return HStack(spacing: 5) {
+            Button {
+                selectGroup(key)
+            } label: {
+                HStack(spacing: 6) {
+                    Color.clear.frame(width: 14, height: 14)
+                    Text("未分组")
+                        .font(.system(size: 12.5, weight: .medium))
+                        .foregroundColor(isActive || isReceiving ? InterfaceStyle.selectedRowText : InterfaceStyle.muted)
+                        .opacity(isHidden ? 0.52 : 1)
+                        .lineLimit(1)
+                    Spacer(minLength: 4)
+                }
+                .frame(maxHeight: .infinity)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if isHovered {
+                sidebarMiniButton(
+                    systemImage: isHidden ? "eye.slash" : "eye",
+                    label: isHidden ? "显示未分组" : "隐藏未分组",
+                    highlighted: isHidden
+                ) {
+                    toggleGroupHidden(key)
+                }
+            } else {
+                if isHidden {
+                    sidebarMiniButton(
+                        systemImage: "eye.slash",
+                        label: "恢复显示未分组",
+                        highlighted: isActive
+                    ) {
+                        toggleGroupHidden(key)
+                    }
+                }
                 Text("\(ungroupedCount)")
                     .font(.system(size: 11))
                     .foregroundColor(isActive ? InterfaceStyle.selectedRowText : InterfaceStyle.muted)
-                    .opacity(isActive ? 0.85 : 1)
+                    .opacity(isHidden ? 0.52 : (isActive ? 0.85 : 1))
                     .padding(.trailing, 4)
             }
-            .padding(.horizontal, 8)
-            .frame(height: 34)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 8)
+        .frame(height: 34)
         .background(
             isReceiving ? InterfaceStyle.selection :
                 (isActive ? InterfaceStyle.selection : (isHovered ? InterfaceStyle.subtle : Color.clear))
@@ -417,13 +481,14 @@ struct CommandsListView: View {
         systemImage: String,
         label: String,
         destructive: Bool = false,
+        highlighted: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             Image(systemName: systemImage)
                 .font(.system(size: 10.5, weight: .medium))
-                .foregroundColor(destructive ? InterfaceStyle.failure : InterfaceStyle.muted)
-                .frame(width: 22, height: 22)
+                .foregroundColor(destructive ? InterfaceStyle.failure : (highlighted ? InterfaceStyle.selectedRowText : InterfaceStyle.muted))
+                .frame(width: 21, height: 21)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -473,8 +538,35 @@ struct CommandsListView: View {
 
             Divider().opacity(0.5)
 
+            if !isSearching && isGroupHidden(effectiveSelection) {
+                groupHiddenBanner
+                Divider()
+            }
+
             commandListContent
         }
+    }
+
+    private var groupHiddenBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "eye.slash")
+                .font(.system(size: 11.5))
+                .foregroundColor(InterfaceStyle.muted)
+            Text("此分组已隐藏：组内命令不会在命令面板显示，自动执行已暂停（保留单条显隐设置）。")
+                .font(.system(size: 12))
+                .foregroundColor(InterfaceStyle.muted)
+                .lineLimit(2)
+            Spacer(minLength: 8)
+            Button("恢复显示分组") {
+                toggleGroupHidden(effectiveSelection)
+            }
+            .buttonStyle(InterfaceButtonStyle(height: 24))
+            .font(.system(size: 11.5))
+            .fixedSize()
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 8)
+        .background(InterfaceStyle.subtle)
     }
 
     private var subbarView: some View {
@@ -497,19 +589,32 @@ struct CommandsListView: View {
                     if case .named(let name) = effectiveSelection { return name }
                     return "未分组"
                 }()
+                let groupHidden = isGroupHidden(effectiveSelection)
+                let hiddenCount = currentGroupCommands.filter(\.hidden).count
+                let detailText: String = {
+                    if groupHidden { return "\(currentGroupCommands.count) 条 · 分组已隐藏" }
+                    if hiddenCount > 0 { return "\(currentGroupCommands.count) 条 · \(hiddenCount) 条隐藏" }
+                    return "\(currentGroupCommands.count) 条"
+                }()
                 HStack(spacing: 8) {
                     Text(title)
                         .font(.system(size: 12.5, weight: .semibold))
                         .lineLimit(1)
                         .help(title)
-                    Text("\(currentGroupCommands.count) 条")
+                    Text(detailText)
                         .font(.system(size: 12))
                         .foregroundColor(InterfaceStyle.muted)
                         .fixedSize()
                 }
                 Spacer(minLength: 8)
-                if case .named(let name) = effectiveSelection {
-                    HStack(spacing: 4) {
+                HStack(spacing: 4) {
+                    Button(groupHidden ? "显示分组" : "隐藏分组") {
+                        toggleGroupHidden(effectiveSelection)
+                    }
+                    .buttonStyle(CompactQuietButtonStyle())
+                    .font(.system(size: 12))
+                    .fixedSize()
+                    if case .named(let name) = effectiveSelection {
                         Button("重命名分组") { startRenamingGroup(name) }
                             .buttonStyle(CompactQuietButtonStyle())
                             .font(.system(size: 12))
@@ -523,11 +628,6 @@ struct CommandsListView: View {
                         .font(.system(size: 12))
                         .fixedSize()
                     }
-                } else {
-                    Text("拖到左侧分组可快速归类")
-                        .font(.system(size: 12))
-                        .foregroundColor(InterfaceStyle.muted)
-                        .lineLimit(1)
                 }
             }
         }
@@ -549,13 +649,24 @@ struct CommandsListView: View {
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         ForEach(searchSections) { section in
-                            Text(section.title)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(InterfaceStyle.muted)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 18)
-                                .padding(.top, 10)
-                                .padding(.bottom, 4)
+                            HStack(spacing: 6) {
+                                Text(section.title)
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(InterfaceStyle.muted)
+                                if isGroupHidden(section.group) {
+                                    Text("分组已隐藏")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(InterfaceStyle.muted)
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 1)
+                                        .background(InterfaceStyle.muted.opacity(0.14))
+                                        .cornerRadius(4)
+                                }
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.horizontal, 18)
+                            .padding(.top, 10)
+                            .padding(.bottom, 4)
                             ForEach(section.commands) { command in
                                 commandRow(command, allowDrag: false)
                             }
@@ -607,22 +718,44 @@ struct CommandsListView: View {
     private func commandRow(_ command: Command, allowDrag: Bool) -> some View {
         let isHovered = hoveredCommandID == command.id
         let isDropTarget = dropReorderCommandID == command.id
+        let groupHidden = isGroupHidden(command.group)
+        let effectiveHidden = command.hidden || groupHidden
 
         let row = HStack(spacing: 10) {
             if allowDrag {
                 dragGrip(visible: isHovered)
             }
             VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 8) {
+                HStack(spacing: 7) {
                     Text(command.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
                     if command.autoExecute {
-                        Text("自动执行")
+                        let autoLabel = command.hidden ? "自动执行 · 已暂停" : (groupHidden ? "自动执行 · 随组暂停" : "自动执行")
+                        let isPaused = command.hidden || groupHidden
+                        Text(autoLabel)
                             .font(.system(size: 11))
                             .foregroundColor(InterfaceStyle.muted)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
-                            .background(InterfaceStyle.subtle)
+                            .background(isPaused ? Color.clear : InterfaceStyle.subtle)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(
+                                        isPaused ? InterfaceStyle.line : Color.clear,
+                                        style: StrokeStyle(lineWidth: 1, dash: [3, 2])
+                                    )
+                            )
                             .cornerRadius(4)
+                            .fixedSize()
+                    }
+                    if command.hidden {
+                        Text("已隐藏")
+                            .font(.system(size: 11))
+                            .foregroundColor(InterfaceStyle.muted)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(InterfaceStyle.muted.opacity(0.14))
+                            .cornerRadius(4)
+                            .fixedSize()
                     }
                 }
                 Text(command.command)
@@ -630,14 +763,27 @@ struct CommandsListView: View {
                     .foregroundColor(InterfaceStyle.muted)
                     .lineLimit(1)
             }
+            .opacity(effectiveHidden ? 0.52 : 1)
             Spacer(minLength: 8)
-            Button {
-                clearDragState()
-                editingCommand = command
-            } label: {
-                Text("编辑")
+            HStack(spacing: 6) {
+                Button {
+                    clearDragState()
+                    manager.toggleCommandHidden(id: command.id)
+                } label: {
+                    Image(systemName: command.hidden ? "eye.slash" : "eye")
+                        .font(.system(size: 11.5))
+                }
+                .buttonStyle(CommandRowButtonStyle(revealed: isHovered, invisibleWhenIdle: !command.hidden))
+                .accessibilityLabel(command.hidden ? "恢复显示「\(command.name)」" : "在命令面板中隐藏「\(command.name)」")
+                .help(command.hidden ? "点击恢复在命令面板中显示" : "在命令面板中隐藏此命令")
+                Button {
+                    clearDragState()
+                    editingCommand = command
+                } label: {
+                    Text("编辑")
+                }
+                .buttonStyle(CommandRowButtonStyle(revealed: isHovered))
             }
-            .buttonStyle(CommandRowButtonStyle(revealed: isHovered))
         }
         .padding(.leading, allowDrag ? 14 : 18)
         .padding(.trailing, 18)
@@ -711,7 +857,6 @@ struct CommandsListView: View {
         if let oldName = renamingGroup { commitRename(oldName: oldName) }
         newGroupDraft = ""
         isCreatingGroup = true
-        DispatchQueue.main.async { newGroupFieldFocused = true }
     }
 
     private func commitNewGroup() {
@@ -735,7 +880,6 @@ struct CommandsListView: View {
         if isCreatingGroup { commitNewGroup() }
         renameDraft = name
         renamingGroup = name
-        DispatchQueue.main.async { renameFieldFocused = true }
     }
 
     private func commitRename(oldName: String) {
@@ -908,6 +1052,211 @@ struct CommandsListView: View {
             guard info.hasItemsConforming(to: [dragUTType]),
                   case .command(let sourceID) = draggingItem else { return false }
             return manager.moveCommand(sourceID, to: targetCommandID)
+        }
+    }
+}
+
+/// 原生行内分组输入框：规避 SwiftUI @FocusState 挂载期焦点回弹导致输入框闪退的问题，
+/// 挂载到窗口后自动获取焦点（可选全选），仅在真正获得过焦点后失焦、或按回车时提交，按 Esc 取消。
+struct InlineGroupTextField: NSViewRepresentable {
+    let placeholder: String
+    @Binding var text: String
+    let selectAllOnFocus: Bool
+    let onCommit: () -> Void
+    let onCancel: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text, onCommit: onCommit, onCancel: onCancel)
+    }
+
+    func makeNSView(context: Context) -> AutoFocusTextField {
+        let field = AutoFocusTextField()
+        field.placeholderString = placeholder
+        field.stringValue = text
+        field.font = .systemFont(ofSize: 12)
+        field.textColor = NSColor(InterfaceStyle.text)
+        field.isBordered = false
+        field.isBezeled = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.cell?.usesSingleLineMode = true
+        field.cell?.isScrollable = true
+        field.lineBreakMode = .byTruncatingTail
+        field.selectAllOnFocus = selectAllOnFocus
+        field.onBecameFirstResponder = { [weak coordinator = context.coordinator] in
+            coordinator?.hasFocused = true
+        }
+        field.onOutsideInteraction = { [weak field, weak coordinator = context.coordinator] in
+            guard let field, let coordinator else { return }
+            coordinator.commitFromOutsideInteraction(field: field)
+        }
+        field.delegate = context.coordinator
+        return field
+    }
+
+    func updateNSView(_ field: AutoFocusTextField, context: Context) {
+        context.coordinator.text = $text
+        context.coordinator.onCommit = onCommit
+        context.coordinator.onCancel = onCancel
+        field.placeholderString = placeholder
+        field.selectAllOnFocus = selectAllOnFocus
+        if field.currentEditor() == nil && field.stringValue != text {
+            field.stringValue = text
+        }
+    }
+
+    final class AutoFocusTextField: NSTextField {
+        var selectAllOnFocus = false
+        var onBecameFirstResponder: (() -> Void)?
+        var onOutsideInteraction: (() -> Void)?
+        private var didRequestInitialFocus = false
+        private var mouseMonitor: Any?
+        private var windowResignObserver: NSObjectProtocol?
+
+        deinit {
+            removeDismissMonitors()
+        }
+
+        override func viewWillMove(toWindow newWindow: NSWindow?) {
+            super.viewWillMove(toWindow: newWindow)
+            if newWindow == nil {
+                removeDismissMonitors()
+            }
+        }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            guard window != nil, !didRequestInitialFocus else { return }
+            didRequestInitialFocus = true
+            requestInitialFocus(remainingAttempts: 3)
+        }
+
+        private func requestInitialFocus(remainingAttempts: Int) {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, let window = self.window else { return }
+                self.installDismissMonitors(for: window)
+                if window.firstResponder === self || window.firstResponder === self.currentEditor() {
+                    self.onBecameFirstResponder?()
+                    return
+                }
+                if window.makeFirstResponder(self) {
+                    self.onBecameFirstResponder?()
+                    if self.selectAllOnFocus {
+                        self.currentEditor()?.selectAll(nil)
+                    }
+                } else if remainingAttempts > 1 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) { [weak self] in
+                        self?.requestInitialFocus(remainingAttempts: remainingAttempts - 1)
+                    }
+                }
+            }
+        }
+
+        private func installDismissMonitors(for window: NSWindow) {
+            if mouseMonitor == nil {
+                mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+                    guard let self, let myWindow = self.window else { return event }
+                    if event.window !== myWindow {
+                        self.onOutsideInteraction?()
+                        return event
+                    }
+                    let point = self.convert(event.locationInWindow, from: nil)
+                    // 扩展外框 padding（左右 6pt、上下 4pt），避免点在输入框边框内缘时误提交
+                    if !self.bounds.insetBy(dx: -6, dy: -4).contains(point) {
+                        self.onOutsideInteraction?()
+                    }
+                    return event
+                }
+            }
+            if windowResignObserver == nil {
+                windowResignObserver = NotificationCenter.default.addObserver(
+                    forName: NSWindow.didResignKeyNotification,
+                    object: window,
+                    queue: .main
+                ) { [weak self] _ in
+                    self?.onOutsideInteraction?()
+                }
+            }
+        }
+
+        func removeDismissMonitors() {
+            if let monitor = mouseMonitor {
+                NSEvent.removeMonitor(monitor)
+                mouseMonitor = nil
+            }
+            if let observer = windowResignObserver {
+                NotificationCenter.default.removeObserver(observer)
+                windowResignObserver = nil
+            }
+        }
+
+        override func becomeFirstResponder() -> Bool {
+            let accepted = super.becomeFirstResponder()
+            if accepted {
+                onBecameFirstResponder?()
+            }
+            return accepted
+        }
+    }
+
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var text: Binding<String>
+        var onCommit: () -> Void
+        var onCancel: () -> Void
+        var hasFocused = false
+        private var didFinish = false
+
+        init(text: Binding<String>, onCommit: @escaping () -> Void, onCancel: @escaping () -> Void) {
+            self.text = text
+            self.onCommit = onCommit
+            self.onCancel = onCancel
+        }
+
+        func commitFromOutsideInteraction(field: AutoFocusTextField) {
+            guard !didFinish else { return }
+            didFinish = true
+            field.removeDismissMonitors()
+            if field.currentEditor() != nil {
+                field.window?.makeFirstResponder(nil)
+            }
+            text.wrappedValue = field.stringValue
+            onCommit()
+        }
+
+        func controlTextDidChange(_ notification: Notification) {
+            guard let field = notification.object as? NSTextField else { return }
+            text.wrappedValue = field.stringValue
+        }
+
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+                guard !didFinish else { return true }
+                didFinish = true
+                (control as? AutoFocusTextField)?.removeDismissMonitors()
+                if let field = control as? NSTextField {
+                    text.wrappedValue = field.stringValue
+                }
+                onCommit()
+                return true
+            }
+            if commandSelector == #selector(NSResponder.cancelOperation(_:)) {
+                guard !didFinish else { return true }
+                didFinish = true
+                (control as? AutoFocusTextField)?.removeDismissMonitors()
+                onCancel()
+                return true
+            }
+            return false
+        }
+
+        func controlTextDidEndEditing(_ notification: Notification) {
+            guard hasFocused, !didFinish else { return }
+            didFinish = true
+            (notification.object as? AutoFocusTextField)?.removeDismissMonitors()
+            if let field = notification.object as? NSTextField {
+                text.wrappedValue = field.stringValue
+            }
+            onCommit()
         }
     }
 }
