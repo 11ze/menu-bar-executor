@@ -188,7 +188,7 @@ final class InterfaceWindowTests: XCTestCase {
         await nextLayout()
         let content = try XCTUnwrap(window.contentView)
         content.layoutSubtreeIfNeeded()
-        let field = try XCTUnwrap(descendants(content).compactMap { $0 as? NSTextField }.first {
+        let field = try XCTUnwrap(descendants(content).compactMap { $0 as? NSSearchField }.first {
             $0.placeholderString == "搜索全部命令名称"
         })
         let originalAppearance = window.appearance
@@ -228,8 +228,12 @@ final class InterfaceWindowTests: XCTestCase {
             let editor = try XCTUnwrap(field.currentEditor() as? NSTextView, "点击 \(point) 应开始编辑（输入区域 \(rect)）")
             XCTAssertTrue(window.firstResponder === editor)
             XCTAssertTrue(try hasFocusBorder(), "输入前就应显示蓝色焦点边框")
-            editor.insertText("Docker", replacementRange: editor.selectedRange())
-            XCTAssertEqual(field.stringValue, "Docker")
+            editor.insertText("sync", replacementRange: editor.selectedRange())
+            XCTAssertEqual(field.stringValue, "sync")
+            let cell = try XCTUnwrap(field.cell as? NSSearchFieldCell)
+            let editorBounds = editor.convert(editor.bounds, to: field)
+            XCTAssertGreaterThanOrEqual(editorBounds.minX, cell.searchTextRect(forBounds: field.bounds).minX,
+                                        "字段编辑器必须给放大镜留出空间")
             editor.selectAll(nil)
             editor.deleteBackward(nil)
         }

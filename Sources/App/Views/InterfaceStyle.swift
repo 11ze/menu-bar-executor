@@ -76,13 +76,16 @@ private struct NativeSearchField: NSViewRepresentable {
 
     func makeNSView(context: Context) -> FocusReportingSearchField {
         let field = FocusReportingSearchField()
+        field.cell = ToolbarSearchFieldCell(textCell: "")
+        field.isEditable = true
         field.onFocusChange = { [weak coordinator = context.coordinator] focused in
             coordinator?.parent.focused = focused
         }
         field.placeholderString = placeholder
         field.setAccessibilityLabel(placeholder)
         field.font = .systemFont(ofSize: 12)
-        field.isBezeled = false
+        // AppKit 的圆角搜索框会为字段编辑器保留放大镜和清空按钮的位置。
+        field.isBezeled = true
         field.drawsBackground = false
         field.focusRingType = .none
         field.delegate = context.coordinator
@@ -106,6 +109,13 @@ private struct NativeSearchField: NSViewRepresentable {
             guard let field = notification.object as? NSSearchField else { return }
             parent.text = field.stringValue
         }
+    }
+}
+
+private final class ToolbarSearchFieldCell: NSSearchFieldCell {
+    override func draw(withFrame cellFrame: NSRect, in controlView: NSView) {
+        // 外框由 ToolbarSearchField 绘制，AppKit 负责图标和文本。
+        drawInterior(withFrame: cellFrame, in: controlView)
     }
 }
 
