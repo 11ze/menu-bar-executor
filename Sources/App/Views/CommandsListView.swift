@@ -38,7 +38,6 @@ struct CommandsListView: View {
     @State private var dropReorderGroup: String?
     @State private var dropReceiveGroup: SelectedGroup?
     @State private var dropReorderCommandID: UUID?
-    @FocusState private var searchFocused: Bool
 
     private var managedGroups: [String] {
         CommandsManager.managedGroupNames(from: manager.commands, groupOrder: settings.settings.groupOrder)
@@ -137,7 +136,9 @@ struct CommandsListView: View {
                 }
                 Divider()
                 HStack {
-                    Text("拖动命令可组内排序，拖到左侧分组可跨组移动")
+                    if !isSearching {
+                        Text("拖动命令可组内排序，拖到左侧分组可跨组移动")
+                    }
                     Spacer()
                     Text("共 \(manager.commands.count) 条 · 可见 \(stats.visible) 条 · 自动执行 \(stats.activeAuto)/\(stats.totalAuto) 生效")
                 }
@@ -501,22 +502,7 @@ struct CommandsListView: View {
     private var mainPanelView: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass").foregroundColor(InterfaceStyle.muted)
-                    TextField("搜索全部命令名称", text: $searchText)
-                        .textFieldStyle(.plain)
-                        .focused($searchFocused)
-                    if !searchText.isEmpty {
-                        Button { searchText = "" } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .frame(width: 24, height: 24)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("清空搜索")
-                    }
-                }
-                .modifier(ToolbarSearchStyle(focused: searchFocused))
+                ToolbarSearchField(placeholder: "搜索全部命令名称", text: $searchText)
                 Button {
                     clearDragState()
                     let defaultGroup: String?

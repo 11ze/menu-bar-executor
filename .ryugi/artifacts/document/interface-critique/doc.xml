@@ -1,5 +1,13 @@
 <doc>
   <h1 id="CRb_QXLp">MenuBarExecutor 界面设计评审</h1>
+  <h2 id="search-review">11 月 25 日 · 命令管理</h2>
+  <h3 id="search-add-group">首选 · 统一搜索时新命令的默认分组</h3>
+  <p id="search-add-evidence">选中「状态速览」，搜索 Docker，再点「添加命令」。原型把草稿放进「状态速览」，原生代码在搜索时将分组留空。同样的操作会得到不同的保存位置。如果之前选中的是隐藏分组，按原型保存的新命令也会随组隐藏。</p>
+  <p id="search-add-change">建议沿用原生规则。跨组搜索时新命令默认进「未分组」，用户可以在表单里另选。直接从命名分组添加时仍预填该组。修改范围是原型默认值及对应验收步骤。</p>
+  <h3 id="search-drag-hint">搜索时收起拖动提示</h3>
+  <p id="search-drag-evidence">搜索 Docker 后只剩一条结果，底栏仍提示可拖动排序或跨组移动。原型的结果行关闭了拖动，原生搜索结果也使用 allowDrag: false。建议搜索时收起底栏左侧提示，保留已有的「返回当前分组」按钮；清空搜索后再显示拖动提示。原型和原生各改一处显示条件。</p>
+  <p id="search-review-method">验证范围：Chrome 在 1280 和 760 像素宽的原型中均复现上述流程。原生依据 CommandsListView.swift 的添加按钮、搜索结果行和底栏代码核对，未运行 App。以下保留 11 月 18 日的评审记录。</p>
+  <p id="search-review-applied">11 月 25 日已落实以上两项，并修复设置搜索框点击后失去焦点的问题。原生窗口回归测试点击文字区、放大镜和上方留白，待焦点稳定后输入 Docker。旧版失败，修改后通过；原生全套 268 项测试通过。</p>
   <p id="yr1As3RU">对象：<code>.ryugi/artifacts/html/menu-bar-executor/index.html</code>，2026-11-18 本地渲染。范围：五个界面、深浅色、1280 / 760 / 390 宽。方法见文末。</p>
   <alert id="n63D1Nx6" type="note">
     <p><b>结论：底子好，不用重做。</b>方向是“安静的 macOS 小工具”，五屏一致，深浅色都成立。问题都在细节：默认尺寸下的裁切、选中行对比度、列表密度、几处文案与状态编码。</p>

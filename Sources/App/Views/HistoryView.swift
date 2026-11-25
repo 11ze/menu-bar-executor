@@ -7,7 +7,6 @@ struct HistoryView: View {
     @State private var searchText = ""
     @State private var onlyFailed = false
     @State private var copied = false
-    @FocusState private var searchFocused: Bool
 
     private var records: [ExecutionRecord] {
         history.records.filter {
@@ -24,15 +23,7 @@ struct HistoryView: View {
             VStack(spacing: 0) {
                 WindowHeader(title: "执行历史")
                 HStack(spacing: 12) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "magnifyingglass").foregroundColor(InterfaceStyle.muted)
-                        TextField("搜索命令名称", text: $searchText).textFieldStyle(.plain).focused($searchFocused)
-                        if !searchText.isEmpty {
-                            Button { searchText = "" } label: {
-                                Image(systemName: "xmark").frame(width: 24, height: 24).contentShape(Rectangle())
-                            }.buttonStyle(.plain).accessibilityLabel("清空搜索")
-                        }
-                    }.modifier(ToolbarSearchStyle(focused: searchFocused))
+                    ToolbarSearchField(placeholder: "搜索命令名称", text: $searchText)
                     Toggle("仅失败", isOn: $onlyFailed).font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
                     Button("清空历史") { showingClearConfirmation = true }.disabled(history.records.isEmpty)
                 }.font(.system(size: 13)).padding(.horizontal, 20).padding(.vertical, 15).background(InterfaceStyle.material)

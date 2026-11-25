@@ -180,6 +180,70 @@ final class InterfaceWindowTests: XCTestCase {
         }
     }
 
+    func testSettingsSearchAcceptsClickAndTyping() async throws {
+        let controller = SettingsWindowController.shared
+        controller.showWindow()
+        let window = try XCTUnwrap(controller.window)
+        defer { window.close() }
+        await nextLayout()
+        let content = try XCTUnwrap(window.contentView)
+        content.layoutSubtreeIfNeeded()
+        let field = try XCTUnwrap(descendants(content).compactMap { $0 as? NSTextField }.first {
+            $0.placeholderString == "搜索全部命令名称"
+        })
+        let originalAppearance = window.appearance
+        window.appearance = NSAppearance(named: .aqua)
+        defer { window.appearance = originalAppearance }
+        func hasFocusBorder() throws -> Bool {
+            content.layoutSubtreeIfNeeded()
+            let bounds = content.bounds
+            let bitmap = try XCTUnwrap(content.bitmapImageRepForCachingDisplay(in: bounds))
+            content.cacheDisplay(in: bounds, to: bitmap)
+            let fieldBounds = field.convert(field.bounds, to: content)
+            let scaleX = CGFloat(bitmap.pixelsWide) / bounds.width
+            let scaleY = CGFloat(bitmap.pixelsHigh) / bounds.height
+            let x = Int(fieldBounds.midX * scaleX)
+            let centerY = content.isFlipped ? fieldBounds.midY : bounds.maxY - fieldBounds.midY
+            let top = Int((centerY - 17) * scaleY)
+            return ((top - 2)...(top + 2)).contains { y in
+                guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB) else { return false }
+                return color.blueComponent - color.redComponent > 0.35
+            }
+        }
+        let rect = field.convert(field.bounds, to: nil)
+        for point in [NSPoint(x: rect.midX, y: rect.midY), NSPoint(x: rect.minX + 10, y: rect.midY),
+                      NSPoint(x: rect.midX, y: rect.maxY - 3)] {
+            window.makeFirstResponder(nil)
+            await nextLayout()
+            XCTAssertFalse(try hasFocusBorder(), "搜索框失焦后应恢复普通边框")
+            func mouse(_ type: NSEvent.EventType) throws -> NSEvent {
+                try XCTUnwrap(NSEvent.mouseEvent(with: type, location: point, modifierFlags: [],
+                    timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+                    context: nil, eventNumber: 1, clickCount: 1, pressure: 1))
+            }
+            let release = try mouse(.leftMouseUp)
+            NSApp.postEvent(release, atStart: true)
+            window.sendEvent(try mouse(.leftMouseDown))
+            await nextLayout()
+            let editor = try XCTUnwrap(field.currentEditor() as? NSTextView, "点击 \(point) 应开始编辑（输入区域 \(rect)）")
+            XCTAssertTrue(window.firstResponder === editor)
+            XCTAssertTrue(try hasFocusBorder(), "输入前就应显示蓝色焦点边框")
+            editor.insertText("Docker", replacementRange: editor.selectedRange())
+            XCTAssertEqual(field.stringValue, "Docker")
+            editor.selectAll(nil)
+            editor.deleteBackward(nil)
+        }
+
+        window.makeFirstResponder(nil)
+        await nextLayout()
+        XCTAssertTrue(window.makeFirstResponder(field))
+        await nextLayout()
+        XCTAssertTrue(try hasFocusBorder(), "搜索框获得键盘焦点时应显示蓝色边框")
+        window.makeFirstResponder(nil)
+        await nextLayout()
+        XCTAssertFalse(try hasFocusBorder(), "未输入就移走焦点也应恢复普通边框")
+    }
+
     func testSettingsWindowUsesOneTitlebarAndItsCloseButtonWorks() async throws {
         let controller = SettingsWindowController.shared
         controller.showWindow()

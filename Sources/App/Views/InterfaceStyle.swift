@@ -49,14 +49,91 @@ struct Keycap: View {
     }
 }
 
-struct ToolbarSearchStyle: ViewModifier {
-    let focused: Bool
+struct ToolbarSearchField: View {
+    let placeholder: String
+    @Binding var text: String
+    @State private var focused = false
 
-    func body(content: Content) -> some View {
-        content.font(.system(size: 12)).padding(.horizontal, 12).frame(height: 34)
+    var body: some View {
+        NativeSearchField(placeholder: placeholder, text: $text, focused: $focused)
+            .frame(height: 34)
             .background(InterfaceStyle.surface)
             .clipShape(RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(focused ? InterfaceStyle.selectedText : InterfaceStyle.line, lineWidth: 1))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(focused ? InterfaceStyle.selectedText : InterfaceStyle.line, lineWidth: 1)
+                    .allowsHitTesting(false)
+            }
+    }
+}
+
+private struct NativeSearchField: NSViewRepresentable {
+    let placeholder: String
+    @Binding var text: String
+    @Binding var focused: Bool
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeNSView(context: Context) -> FocusReportingSearchField {
+        let field = FocusReportingSearchField()
+        field.onFocusChange = { [weak coordinator = context.coordinator] focused in
+            coordinator?.parent.focused = focused
+        }
+        field.placeholderString = placeholder
+        field.setAccessibilityLabel(placeholder)
+        field.font = .systemFont(ofSize: 12)
+        field.isBezeled = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.delegate = context.coordinator
+        field.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        return field
+    }
+
+    func updateNSView(_ field: FocusReportingSearchField, context: Context) {
+        context.coordinator.parent = self
+        if field.stringValue != text, (field.currentEditor() as? NSTextView)?.hasMarkedText() != true {
+            field.stringValue = text
+        }
+    }
+
+    final class Coordinator: NSObject, NSSearchFieldDelegate {
+        var parent: NativeSearchField
+        init(_ parent: NativeSearchField) { self.parent = parent }
+
+        func controlTextDidChange(_ notification: Notification) {
+            guard let field = notification.object as? NSSearchField else { return }
+            parent.text = field.stringValue
+        }
+    }
+}
+
+private final class FocusReportingSearchField: NSSearchField {
+    var onFocusChange: ((Bool) -> Void)?
+
+    override func selectText(_ sender: Any?) {
+        super.selectText(sender)
+        reportFocus()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        super.mouseDown(with: event)
+        reportFocus()
+    }
+
+    override func textDidEndEditing(_ notification: Notification) {
+        super.textDidEndEditing(notification)
+        reportFocus()
+    }
+
+    private func reportFocus() {
+        // AppKit 处理完事件后，字段编辑器才会完成首响应者切换。
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            let focused = self.currentEditor().map { self.window?.firstResponder === $0 } ?? false
+            self.onFocusChange?(focused)
+        }
     }
 }
 
