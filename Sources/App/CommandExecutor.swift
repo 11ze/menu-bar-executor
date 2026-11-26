@@ -27,8 +27,18 @@ protocol ExecutionHistoryRecording: AnyObject {
 
 @MainActor
 protocol ExecutionNotifying: AnyObject {
-    func showSuccess(commandName: String, output: String?)
-    func showFailure(commandName: String, error: String, output: String?)
+    func showSuccess(commandName: String, output: String?, recordID: UUID?)
+    func showFailure(commandName: String, error: String, output: String?, recordID: UUID?)
+}
+
+extension ExecutionNotifying {
+    func showSuccess(commandName: String, output: String?) {
+        showSuccess(commandName: commandName, output: output, recordID: nil)
+    }
+
+    func showFailure(commandName: String, error: String, output: String?) {
+        showFailure(commandName: commandName, error: error, output: output, recordID: nil)
+    }
 }
 
 extension ExecutionHistory: ExecutionHistoryRecording {}
@@ -96,24 +106,25 @@ final class CommandExecutor {
         completion: (@MainActor (ExecutionResult) -> Void)?
     ) {
         let effects = Self.sideEffects(command: command, mode: mode)
+        var recordedID: UUID?
 
         if effects.record {
-            history.addRecord(
-                ExecutionRecord(command: command, success: isSuccessful(result), output: historyOutput(result))
-            )
+            let record = ExecutionRecord(command: command, success: isSuccessful(result), output: historyOutput(result))
+            recordedID = record.id
+            history.addRecord(record)
         }
 
         if effects.notify {
             switch result {
             case .success(let output):
-                notifier.showSuccess(commandName: command.name, output: output)
+                notifier.showSuccess(commandName: command.name, output: output, recordID: recordedID)
             case .exitedAbnormally(let code, let output):
                 notifier.showFailure(
-                    commandName: command.name, error: "退出码 \(code)", output: output
+                    commandName: command.name, error: "退出码 \(code)", output: output, recordID: recordedID
                 )
             case .failed(let error):
                 notifier.showFailure(
-                    commandName: command.name, error: error.localizedDescription, output: nil
+                    commandName: command.name, error: error.localizedDescription, output: nil, recordID: recordedID
                 )
             }
         }

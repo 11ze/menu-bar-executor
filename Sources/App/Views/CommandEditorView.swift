@@ -14,7 +14,8 @@ struct CommandEditorView: View {
     @State private var directExecution: Bool
     @State private var hidden: Bool
     @State private var showingDeleteConfirmation = false
-    @State private var formHeight: CGFloat = 532
+    @State private var showingDryRun = false
+    @State private var formHeight: CGFloat = 556
 
     let onSave: (Command) -> Bool
     var onDelete: (() -> Bool)?
@@ -34,6 +35,29 @@ struct CommandEditorView: View {
     }
 
     var isExisting: Bool { onDelete != nil }
+
+    private var canSave: Bool {
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !commandText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var draftCommandForDryRun: Command {
+        buildCommand(notification: false, autoExecute: false)
+    }
+
+    private func buildCommand(notification: Bool, autoExecute: Bool) -> Command {
+        Command(
+            id: command?.id ?? UUID(),
+            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+            command: commandText,
+            workingDirectory: workingDirectory.isEmpty ? nil : workingDirectory,
+            notification: notification,
+            autoExecute: autoExecute,
+            group: CommandsManager.normalizedGroup(group),
+            directExecution: directExecution,
+            hidden: hidden
+        )
+    }
 
     private var selectedGroupIsHidden: Bool {
         manager.groupVisibility.isGroupHidden(group)
@@ -120,13 +144,26 @@ struct CommandEditorView: View {
             Divider()
             HStack(spacing: 8) {
                 Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button {
+                    showingDryRun = true
+                } label: {
+                    Label("试跑", systemImage: "play.fill")
+                }
+                .buttonStyle(CompactQuietButtonStyle())
+                .disabled(commandText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .help("试跑当前命令草稿（不计入历史、不通知）")
+                .popover(isPresented: $showingDryRun, arrowEdge: .top) {
+                    CommandDryRunPopover(command: draftCommandForDryRun) {
+                        showingDryRun = false
+                    }
+                }
                 if isExisting {
                     Button(role: .destructive) { showingDeleteConfirmation = true } label: { Text("删除命令…").foregroundColor(InterfaceStyle.failure) }.buttonStyle(CompactQuietButtonStyle())
                 }
                 Spacer()
                 Button("保存命令") { saveCommand() }
                     .buttonStyle(InterfaceButtonStyle(prominent: true, height: 30)).keyboardShortcut(.defaultAction)
-                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || commandText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(!canSave)
             }.font(.system(size: 12)).padding(.horizontal, 20).padding(.vertical, 14).frame(height: 59).background(InterfaceStyle.chrome)
         }
         .font(.system(size: 13)).foregroundColor(InterfaceStyle.text).background(InterfaceStyle.surface)
@@ -149,15 +186,14 @@ struct CommandEditorView: View {
     }
 
     private var commandInput: some View {
-        Group {
-            if #available(macOS 13.0, *) {
-                TextEditor(text: $commandText).scrollContentBackground(.hidden)
-            } else {
-                TextEditor(text: $commandText)
+        InterfaceTextEditor(
+            text: $commandText,
+            height: 86,
+            accessibilityLabel: "命令内容",
+            onCommandReturn: {
+                if canSave { saveCommand() }
             }
-        }.font(.system(size: 13, design: .monospaced)).frame(height: 62).padding(5)
-            .background(InterfaceStyle.surface)
-            .overlay(RoundedRectangle(cornerRadius: 7).stroke(InterfaceStyle.line, lineWidth: 1))
+        )
     }
 
     private func field<Content: View>(_ title: String, optional: Bool = false, @ViewBuilder content: () -> Content) -> some View {
@@ -194,16 +230,7 @@ struct CommandEditorView: View {
 
     @discardableResult
     func saveCommand() -> Bool {
-        let trimmedGroup = group.trimmingCharacters(in: .whitespacesAndNewlines)
-        let saved = onSave(Command(
-            id: command?.id ?? UUID(),
-            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-            command: commandText,
-            workingDirectory: workingDirectory.isEmpty ? nil : workingDirectory,
-            notification: notification, autoExecute: autoExecute,
-            group: trimmedGroup.isEmpty ? nil : trimmedGroup, directExecution: directExecution,
-            hidden: hidden
-        ))
+        let saved = onSave(buildCommand(notification: notification, autoExecute: autoExecute))
         if saved { dismiss() }
         return saved
     }

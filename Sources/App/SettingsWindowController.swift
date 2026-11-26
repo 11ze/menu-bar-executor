@@ -2,6 +2,13 @@ import AppKit
 import SwiftUI
 
 @MainActor
+final class SettingsNavigationState: ObservableObject {
+    static let shared = SettingsNavigationState()
+    @Published var requestedTab: Int?
+    @Published var requestedEditCommand: Command?
+}
+
+@MainActor
 final class SettingsWindowController: NSWindowController {
     static let shared = SettingsWindowController()
 
@@ -53,7 +60,11 @@ final class SettingsWindowController: NSWindowController {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func showWindow() {
+    func showWindow(editing command: Command? = nil) {
+        if let command {
+            SettingsNavigationState.shared.requestedTab = 0
+            SettingsNavigationState.shared.requestedEditCommand = command
+        }
         if let screen = window?.screen ?? NSScreen.main, let window {
             var frame = window.frame
             frame.size.height = min(frame.height, screen.visibleFrame.height)

@@ -57,6 +57,12 @@ struct PaletteListModel: Equatable {
         )
     }
 
+    /// 当前选中项对应的命令（空列表或越界时返回 nil）
+    var selectedCommand: Command? {
+        guard items.indices.contains(selectedIndex) else { return nil }
+        return items[selectedIndex].command
+    }
+
     /// 替换选中索引，供键盘导航与 hover 使用
     func updatingSelectedIndex(_ index: Int) -> PaletteListModel {
         PaletteListModel(items: items, selectedIndex: index, hasAnyCommands: hasAnyCommands)

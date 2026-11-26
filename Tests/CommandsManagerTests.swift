@@ -211,6 +211,50 @@ final class CommandsManagerTests: XCTestCase {
         XCTAssertEqual(result.map(\.name), ["u1"])
     }
 
+    func testFilteredCommands_MatchesPinyinInitialsAndMixedQuery() {
+        let commands = [
+            Command(name: "启动 Docker 服务", command: "open -a Docker", group: "开发工具"),
+            Command(name: "查看 Git 分支", command: "git branch --show-current", group: "状态速览"),
+            Command(name: "刷新 DNS 缓存", command: "sudo dscacheutil -flushcache", group: "日常操作"),
+        ]
+        XCTAssertEqual(CommandsManager.filteredCommands(from: commands, by: "qd").map(\.name), ["启动 Docker 服务"])
+        XCTAssertEqual(CommandsManager.filteredCommands(from: commands, by: "gitfz").map(\.name), ["查看 Git 分支"])
+        XCTAssertEqual(CommandsManager.filteredCommands(from: commands, by: "sx dns").map(\.name), ["刷新 DNS 缓存"])
+    }
+
+    // MARK: - duplicatingCommand
+
+    func testDuplicatingCommand_InsertsAfterOriginalWithUniqueNameAndCopiesProperties() {
+        let original = Command(
+            name: "启动服务",
+            command: "docker compose up -d",
+            workingDirectory: "~/dev",
+            notification: false,
+            autoExecute: true,
+            group: "开发工具",
+            directExecution: true,
+            hidden: true
+        )
+        let sibling = Command(name: "其他命令", command: "echo hi", group: "开发工具")
+
+        let first = CommandsManager.duplicatingCommand(original.id, in: [original, sibling])
+        XCTAssertEqual(first?.commands.map(\.name), ["启动服务", "启动服务 副本", "其他命令"])
+        XCTAssertNotEqual(first?.duplicate.id, original.id)
+        XCTAssertEqual(first?.duplicate.command, original.command)
+        XCTAssertEqual(first?.duplicate.workingDirectory, original.workingDirectory)
+        XCTAssertEqual(first?.duplicate.notification, original.notification)
+        XCTAssertEqual(first?.duplicate.autoExecute, original.autoExecute)
+        XCTAssertEqual(first?.duplicate.group, original.group)
+        XCTAssertEqual(first?.duplicate.directExecution, original.directExecution)
+        XCTAssertEqual(first?.duplicate.hidden, original.hidden)
+
+        let second = CommandsManager.duplicatingCommand(original.id, in: first!.commands)
+        XCTAssertEqual(second?.duplicate.name, "启动服务 副本 2")
+        XCTAssertEqual(second?.commands.map(\.name), ["启动服务", "启动服务 副本 2", "启动服务 副本", "其他命令"])
+
+        XCTAssertNil(CommandsManager.duplicatingCommand(UUID(), in: [original]))
+    }
+
     // MARK: - 显隐控制
 
     func testVisibleCommands_ExcludesHiddenCommandsHiddenGroupsAndHiddenUngrouped() {

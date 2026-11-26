@@ -427,6 +427,85 @@ final class InterfaceWindowTests: XCTestCase {
         XCTAssertEqual(editor.string, "zhongwen")
     }
 
+    func testCommandEditorMultilineTextEditorProtectsMarkedTextShowsFocusBorderAndSupportsCommandReturn() async throws {
+        final class Model: ObservableObject {
+            @Published var text = "echo hi"
+            var commandReturnCount = 0
+        }
+        struct HostView: View {
+            @ObservedObject var model: Model
+            var body: some View {
+                InterfaceTextEditor(text: $model.text, height: 86) {
+                    model.commandReturnCount += 1
+                }
+                .padding(16)
+                .frame(width: 460, height: 120)
+            }
+        }
+
+        let model = Model()
+        let (window, host) = makeHostedWindow(
+            size: NSSize(width: 460, height: 120),
+            appearance: .aqua,
+            rootView: HostView(model: model)
+        )
+        defer { teardownHostedWindow(window) }
+
+        for _ in 0..<5 {
+            host.layoutSubtreeIfNeeded()
+            await nextLayout()
+        }
+
+        let content = try XCTUnwrap(window.contentView)
+        let scrollView = try XCTUnwrap(descendants(content).compactMap { $0 as? NSScrollView }.first)
+        let textView = try XCTUnwrap(scrollView.documentView as? CommandEditorTextView)
+
+        XCTAssertFalse(textView.isAutomaticQuoteSubstitutionEnabled, "命令编辑器应关闭智能引号替换")
+        XCTAssertFalse(textView.isAutomaticDashSubstitutionEnabled, "命令编辑器应关闭智能破折号替换")
+
+        window.makeFirstResponder(nil)
+        await nextLayout()
+        XCTAssertFalse(try hasBlueTopBorder(around: scrollView, in: content, halfHeight: 43), "失焦时命令框应恢复普通边框")
+
+        // 点击命令框底部留白应直接聚焦并展示蓝色焦点边框
+        let scrollRect = scrollView.convert(scrollView.bounds, to: nil)
+        try clickWindow(window, at: NSPoint(x: scrollRect.maxX - 18, y: scrollRect.minY + 10), postUpFirst: true)
+        await nextLayout()
+        XCTAssertTrue(window.firstResponder === textView, "点击命令框底部留白应聚焦命令编辑器")
+        XCTAssertTrue(try hasBlueTopBorder(around: scrollView, in: content, halfHeight: 43), "聚焦时命令框应显示 1px 蓝色边框")
+
+        // 中文组词期间，SwiftUI 更新不得覆写 markedText，且 ⌘↩ 不得误触发提交
+        textView.setMarkedText("ceshi", selectedRange: NSRange(location: 5, length: 0), replacementRange: NSRange(location: 0, length: textView.string.count))
+        XCTAssertTrue(textView.hasMarkedText())
+        model.text = "echo external"
+        await nextLayout()
+        XCTAssertTrue(textView.hasMarkedText(), "命令编辑器中文组词期间不得被 updateNSView 打断")
+
+        let cmdReturn = try XCTUnwrap(NSEvent.keyEvent(
+            with: .keyDown, location: .zero, modifierFlags: [.command],
+            timestamp: 0, windowNumber: window.windowNumber, context: nil,
+            characters: "\r", charactersIgnoringModifiers: "\r", isARepeat: false, keyCode: KeyCode.returnKey
+        ))
+        XCTAssertFalse(textView.performKeyEquivalent(with: cmdReturn), "中文组词期间 ⌘↩ 不应截获提交")
+        XCTAssertEqual(model.commandReturnCount, 0)
+
+        textView.unmarkText()
+        XCTAssertTrue(textView.performKeyEquivalent(with: cmdReturn), "非组词态按 ⌘↩ 应触发保存回调")
+        XCTAssertEqual(model.commandReturnCount, 1)
+
+        // 焦点位于同一窗口的其他输入框且正在中文组词时，CommandEditorTextView 不得截获 ⌘↩
+        let otherField = NSTextField(frame: NSRect(x: 0, y: 0, width: 120, height: 24))
+        content.addSubview(otherField)
+        defer { otherField.removeFromSuperview() }
+        XCTAssertTrue(window.makeFirstResponder(otherField))
+        await nextLayout()
+        let otherEditor = try XCTUnwrap(otherField.currentEditor() as? NSTextView)
+        otherEditor.setMarkedText("mingcheng", selectedRange: NSRange(location: 9, length: 0), replacementRange: NSRange(location: 0, length: otherEditor.string.count))
+        XCTAssertTrue(otherEditor.hasMarkedText())
+        XCTAssertFalse(textView.performKeyEquivalent(with: cmdReturn), "其他输入框中文组词期间 ⌘↩ 不得被多行命令框截获保存")
+        XCTAssertEqual(model.commandReturnCount, 1)
+    }
+
     func testSettingsWindowUsesOneTitlebarAndItsCloseButtonWorks() async throws {
         let controller = SettingsWindowController.shared
         controller.showWindow()

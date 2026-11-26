@@ -184,4 +184,18 @@ final class PaletteListModelTests: XCTestCase {
         )
         XCTAssertEqual(summarize(model.items), ["h:开发", "c:已分组:1"])
     }
+
+    func testSelectedCommandReturnsActiveCommandOrNilWhenEmpty() {
+        let model = PaletteListModel.derive(
+            commands: [makeCommand("alpha", group: "开发"), makeCommand("beta", group: "开发")],
+            searchText: "",
+            groupOrder: ["开发"],
+            previousIndex: 0
+        )
+        XCTAssertEqual(model.selectedCommand?.name, "alpha")
+        XCTAssertEqual(model.movedDown()?.selectedCommand?.name, "beta")
+
+        let empty = PaletteListModel.derive(commands: [], searchText: "", groupOrder: nil, previousIndex: 0)
+        XCTAssertNil(empty.selectedCommand)
+    }
 }

@@ -16,7 +16,7 @@ struct HighlightedText: View {
     }
 
     private var highlightedText: Text {
-        let ranges = text.ranges(of: search, options: .caseInsensitive)
+        let ranges = CommandSearchMatcher.matchRanges(in: text, query: search)
         var result = Text("")
 
         var currentIndex = text.startIndex

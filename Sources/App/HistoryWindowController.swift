@@ -2,6 +2,12 @@ import AppKit
 import SwiftUI
 
 @MainActor
+final class HistoryNavigationState: ObservableObject {
+    static let shared = HistoryNavigationState()
+    @Published var requestedRecordID: UUID?
+}
+
+@MainActor
 final class HistoryWindowController: NSObject {
     static let shared = HistoryWindowController()
 
@@ -30,7 +36,10 @@ final class HistoryWindowController: NSObject {
         NotificationCenter.default.removeObserver(self)
     }
 
-    func showWindow() {
+    func showWindow(selecting recordID: UUID? = nil) {
+        if let recordID {
+            HistoryNavigationState.shared.requestedRecordID = recordID
+        }
         if let window = window {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)

@@ -16,6 +16,13 @@ enum InterfaceStyle {
 
     static let success = color(light: 0x267748, dark: 0x8cd9ac)
     static let failure = color(light: 0xbe3c36, dark: 0xff9d97)
+    /// 浮动面板半透明外轮廓描边：浅色使用轻暗边、深色使用轻亮边，与桌面背景自然区分。
+    static let panelBorder = Color(nsColor: NSColor(name: nil) { appearance in
+        if appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua {
+            return NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.14)
+        }
+        return NSColor(srgbRed: 0, green: 0, blue: 0, alpha: 0.12)
+    })
 
     static func applyWindowChrome(to window: NSWindow) {
         window.styleMask.insert(.fullSizeContentView)
@@ -516,6 +523,166 @@ final class FocusReportingTextField: NSTextField {
 
     func reportFocus() {
         reportEditingFocusAsync(onFocusChange)
+    }
+}
+
+/// 表单多行等宽命令编辑器：1px 焦点蓝边、关闭智能引号/破折号、中文组词保护、支持 ⌘↩ 快捷提交。
+struct InterfaceTextEditor: View {
+    @Binding var text: String
+    var height: CGFloat = 86
+    var accessibilityLabel: String = "命令内容"
+    var onCommandReturn: (() -> Void)? = nil
+    @State private var focused = false
+
+    var body: some View {
+        NativeCommandTextEditor(
+            text: $text,
+            accessibilityLabel: accessibilityLabel,
+            focused: $focused,
+            onCommandReturn: onCommandReturn
+        )
+        .frame(height: height)
+        .background(InterfaceStyle.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 7))
+        .overlay {
+            RoundedRectangle(cornerRadius: 7)
+                .stroke(focused ? InterfaceStyle.selectedText : InterfaceStyle.line, lineWidth: 1)
+                .allowsHitTesting(false)
+        }
+    }
+}
+
+private struct NativeCommandTextEditor: NSViewRepresentable {
+    @Binding var text: String
+    let accessibilityLabel: String
+    @Binding var focused: Bool
+    let onCommandReturn: (() -> Void)?
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeNSView(context: Context) -> FocusForwardingScrollView {
+        let scrollView = FocusForwardingScrollView()
+        scrollView.drawsBackground = false
+        scrollView.borderType = .noBorder
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
+
+        let textView = CommandEditorTextView()
+        textView.delegate = context.coordinator
+        textView.isRichText = false
+        textView.importsGraphics = false
+        textView.allowsUndo = true
+        textView.drawsBackground = false
+        textView.font = .monospacedSystemFont(ofSize: 13, weight: .regular)
+        textView.textColor = NSColor(InterfaceStyle.text)
+        textView.insertionPointColor = NSColor(InterfaceStyle.text)
+        textView.textContainerInset = NSSize(width: 6, height: 8)
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.isAutomaticTextReplacementEnabled = false
+        textView.isAutomaticSpellingCorrectionEnabled = false
+        textView.isContinuousSpellCheckingEnabled = false
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.autoresizingMask = [.width]
+        textView.textContainer?.widthTracksTextView = true
+        textView.setAccessibilityLabel(accessibilityLabel)
+        textView.string = text
+        textView.onFocusChange = { [weak coordinator = context.coordinator] isFocused in
+            coordinator?.parent.focused = isFocused
+        }
+        textView.onCommandReturn = { [weak coordinator = context.coordinator] in
+            coordinator?.parent.onCommandReturn?()
+        }
+
+        scrollView.documentView = textView
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: FocusForwardingScrollView, context: Context) {
+        context.coordinator.parent = self
+        guard let textView = scrollView.documentView as? CommandEditorTextView else { return }
+        if textView.string != text, !textView.hasMarkedText() {
+            textView.string = text
+        }
+        if textView.accessibilityLabel() != accessibilityLabel {
+            textView.setAccessibilityLabel(accessibilityLabel)
+        }
+    }
+
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        var parent: NativeCommandTextEditor
+        init(_ parent: NativeCommandTextEditor) { self.parent = parent }
+
+        func textDidChange(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+            parent.text = textView.string
+        }
+    }
+}
+
+/// 保证多行命令编辑框整框空白区域均可点击聚焦。
+final class FocusForwardingScrollView: NSScrollView {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func layout() {
+        super.layout()
+        guard let textView = documentView as? NSTextView else { return }
+        let width = max(0, contentSize.width)
+        let minHeight = max(0, contentSize.height)
+        if textView.minSize != NSSize(width: width, height: minHeight) {
+            textView.minSize = NSSize(width: width, height: minHeight)
+        }
+        if textView.frame.height < minHeight || textView.frame.width != width {
+            textView.setFrameSize(NSSize(width: width, height: max(textView.frame.height, minHeight)))
+        }
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        let hit = super.hitTest(point)
+        if hit === self || hit === contentView {
+            return documentView ?? hit
+        }
+        return hit
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        if let textView = documentView as? NSTextView, window?.firstResponder !== textView {
+            window?.makeFirstResponder(textView)
+        }
+        super.mouseDown(with: event)
+    }
+}
+
+final class CommandEditorTextView: NSTextView {
+    var onFocusChange: ((Bool) -> Void)?
+    var onCommandReturn: (() -> Void)?
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func becomeFirstResponder() -> Bool {
+        let accepted = super.becomeFirstResponder()
+        if accepted { onFocusChange?(true) }
+        return accepted
+    }
+
+    override func resignFirstResponder() -> Bool {
+        let accepted = super.resignFirstResponder()
+        if accepted { onFocusChange?(false) }
+        return accepted
+    }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if !KeyDownMonitor.hasMarkedText(in: window?.firstResponder),
+           !hasMarkedText(),
+           event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+           event.keyCode == KeyCode.returnKey {
+            onCommandReturn?()
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
     }
 }
 

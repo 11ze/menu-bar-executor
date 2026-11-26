@@ -119,4 +119,44 @@ final class ExecutionRecordTests: XCTestCase {
             "2025年12月31日 23:59"
         )
     }
+
+    func testResolveCommandPrefersMatchingConfiguredCommandAndFallsBackToRecord() {
+        let configured = Command(
+            name: "构建项目",
+            command: "swift build",
+            workingDirectory: "~/Projects/demo",
+            notification: false,
+            autoExecute: false,
+            group: "开发工具",
+            directExecution: true
+        )
+        let record = ExecutionRecord(command: configured, success: true, output: "ok")
+
+        let matched = ExecutionHistory.resolveCommand(for: record, in: [configured])
+        XCTAssertEqual(matched.id, configured.id)
+        XCTAssertEqual(matched.workingDirectory, "~/Projects/demo")
+        XCTAssertTrue(matched.directExecution)
+        XCTAssertFalse(matched.notification)
+
+        let modified = Command(name: "构建项目", command: "swift test", workingDirectory: "~/other")
+        let fallback = ExecutionHistory.resolveCommand(for: record, in: [modified])
+        XCTAssertEqual(fallback.name, "构建项目")
+        XCTAssertEqual(fallback.command, "swift build")
+        XCTAssertNil(fallback.workingDirectory)
+    }
+
+    func testFiltersEnsuringVisibilityClearsOnlyBlockingFilters() {
+        let successRecord = ExecutionRecord(command: Command(name: "启动 Docker 服务", command: "open -a Docker"), success: true, output: "ok")
+        let failedRecord = ExecutionRecord(command: Command(name: "刷新 DNS 缓存", command: "sudo flush"), success: false, output: "err")
+
+        // 勾选「仅失败」时重跑成功，应关闭「仅失败」以确保新记录可见，同时保留仍匹配的搜索词
+        let rerunSuccess = ExecutionHistory.filtersEnsuringVisibility(of: successRecord, searchText: "qd", onlyFailed: true)
+        XCTAssertEqual(rerunSuccess.searchText, "qd")
+        XCTAssertFalse(rerunSuccess.onlyFailed)
+
+        // 搜索词不匹配目标记录时应清空搜索词，但若目标为失败记录则可保留「仅失败」
+        let mismatchSearch = ExecutionHistory.filtersEnsuringVisibility(of: failedRecord, searchText: "Docker", onlyFailed: true)
+        XCTAssertEqual(mismatchSearch.searchText, "")
+        XCTAssertTrue(mismatchSearch.onlyFailed)
+    }
 }

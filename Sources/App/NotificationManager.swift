@@ -10,13 +10,18 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
     /// 更新通知的标识符
     private static let updateNotificationIdentifier = "com.cai.menu-bar-executor.update"
+    private static let recordIDUserInfoKey = "recordID"
 
     /// 更新通知点击后的回调
     private var updateActionHandler: (() -> Void)?
     private let policy: NotificationPolicy
+    private let onOpenHistoryRecord: @MainActor (UUID) -> Void
 
     private override init() {
         policy = NotificationPolicy(environment: ProcessInfo.processInfo.environment)
+        onOpenHistoryRecord = { recordID in
+            HistoryWindowController.shared.showWindow(selecting: recordID)
+        }
         super.init()
         configure(
             requestAuthorizationAction: { [weak self] in self?.requestAuthorization() }
@@ -25,9 +30,13 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
     init(
         policy: NotificationPolicy,
-        requestAuthorizationAction: () -> Void
+        requestAuthorizationAction: () -> Void,
+        onOpenHistoryRecord: @escaping @MainActor (UUID) -> Void = { recordID in
+            HistoryWindowController.shared.showWindow(selecting: recordID)
+        }
     ) {
         self.policy = policy
+        self.onOpenHistoryRecord = onOpenHistoryRecord
         super.init()
         configure(requestAuthorizationAction: requestAuthorizationAction)
     }
@@ -64,16 +73,36 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
+        let category = response.notification.request.content.categoryIdentifier
+        let userInfo = response.notification.request.content.userInfo
         Task { @MainActor in
-            if response.notification.request.content.categoryIdentifier == Self.updateNotificationIdentifier {
-                updateActionHandler?()
-                updateActionHandler = nil
-            }
+            self.handleNotificationResponse(categoryIdentifier: category, userInfo: userInfo)
         }
         completionHandler()
     }
 
-    func showSuccess(commandName: String, output: String?) {
+    func handleNotificationResponse(categoryIdentifier: String, userInfo: [AnyHashable: Any]) {
+        if categoryIdentifier == Self.updateNotificationIdentifier {
+            updateActionHandler?()
+            updateActionHandler = nil
+            return
+        }
+        if let recordID = Self.recordID(from: userInfo) {
+            onOpenHistoryRecord(recordID)
+        }
+    }
+
+    nonisolated static func executionNotificationUserInfo(recordID: UUID?) -> [AnyHashable: Any] {
+        guard let recordID else { return [:] }
+        return [recordIDUserInfoKey: recordID.uuidString]
+    }
+
+    nonisolated static func recordID(from userInfo: [AnyHashable: Any]) -> UUID? {
+        guard let raw = userInfo[recordIDUserInfoKey] as? String else { return nil }
+        return UUID(uuidString: raw)
+    }
+
+    func showSuccess(commandName: String, output: String?, recordID: UUID? = nil) {
         let content = UNMutableNotificationContent()
         content.title = Self.appName
         content.subtitle = "命令: \(commandName)"
@@ -85,6 +114,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             content.body = "输出: \(output)"
         }
 
+        content.userInfo = Self.executionNotificationUserInfo(recordID: recordID)
         content.sound = .default
         postNotification(content)
     }
@@ -101,11 +131,12 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         return body
     }
 
-    func showFailure(commandName: String, error: String, output: String?) {
+    func showFailure(commandName: String, error: String, output: String?, recordID: UUID? = nil) {
         let content = UNMutableNotificationContent()
         content.title = Self.appName
         content.subtitle = "命令: \(commandName)"
         content.body = Self.failureBody(error: error, output: output)
+        content.userInfo = Self.executionNotificationUserInfo(recordID: recordID)
         content.sound = .default
         postNotification(content)
     }

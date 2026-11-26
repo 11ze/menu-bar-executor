@@ -7,13 +7,13 @@
 - **命令原文**: 编辑保存保留命令内容的首尾空白，避免改变 Shell 语义；仅判空时裁剪空白。
 - **命令写入**: 新建/编辑统一走 `CommandsManager.upsert`（按 id 原位替换、未知追加），勿在视图闭包里自行判别身份；分组重命名、解散及命令增删改组均归一化分组名并同步清理孤儿 `hiddenGroups`
 - **面板列表**: 列表派生收在 `PaletteListModel` 纯值类型（含 `hasAnyCommands`，保证空列表与全隐藏切换触发快照更新），`PaletteCoordinator` 只留执行副作用，勿在 coordinator 或视图里加列表组装逻辑；派生前先按 `Command.hidden`、`hiddenGroups`、`hideUngrouped` 过滤不可见命令（含搜索），使快捷键编号与自动执行范围天然一致
-- **面板搜索**: 搜索词变化时，`PaletteCoordinator` 一次发布已选中首条命令的列表快照；视图不补选，实际滚动仍由视图执行。重复赋相同搜索词不重置选择。
+- **面板搜索**: 搜索词变化时，`PaletteCoordinator` 一次发布已选中首条命令的列表快照；视图不补选，实际滚动仍由视图执行。重复赋相同搜索词不重置选择。搜索匹配统一收口在 `CommandSearchMatcher`（只匹配命令名称，优先连续子串，其次支持中文全拼/简拼/混合与英文子序列，供面板、命令管理与执行历史共用，并驱动 `HighlightedText` 命中高亮）。
 - **面板配置快照**: `PaletteCoordinator` 从同一次 `$settings` 发布中取 `commands`、`groupOrder`、`hiddenGroups` 与 `hideUngrouped`，任一变化都重建列表；订阅内勿回读 `settings` 属性，避免 `willSet` 期间混用新旧值
 - **面板自动执行**: `reset()`、面板隐藏、命令/分组变为隐藏与新一轮自动执行均取消尚未完成的对应进程，并使旧轮次或已隐藏命令的回调失效，只接纳当前轮次可见命令的结果；仍经 `CommandExecutor` 的 auto 模式执行
 - **键盘监听**: 本地 keyDown 监听一律用 `KeyDownMonitor`；有 marked text 时优先交给输入法，不抢候选确认或导航；勿手写 `addLocalMonitorForEvents` 四件套
-- **执行**: `CommandExecutor` 是唯一执行入口；`ExecutionMode` 决定副作用——userInitiated 落历史 + 按 `notification` 发通知，auto 两者皆无；副作用 sink（`ExecutionHistoryRecording` / `ExecutionNotifying`）注入，测试接内存假件；非零退出通知携带退出码且不重复拼接相同正文；`ProcessRunner` 非阻塞排空输出（默认保留上限 256 KB，超限继续排空管道并标记截断，非 UTF-8 容错解码），同时等待进程退出与 EOF；期限覆盖整个执行。超时与主动取消均在校验 `pid > 0` 后强制终止命令的进程组并关闭读取，回调仅一次（主动取消不回调）；脱离该进程组的进程不保证终止。勿改回先等退出后读管道（大输出会互等死锁）
+- **执行**: `CommandExecutor` 是唯一执行入口；`ExecutionMode` 决定副作用——userInitiated 落历史 + 按 `notification` 发通知，auto 两者皆无（管理页与编辑页试跑亦走 auto 模式，关闭浮层时取消未完成进程）；副作用 sink（`ExecutionHistoryRecording` / `ExecutionNotifying`）注入，测试接内存假件；userInitiated 通知携带对应 `ExecutionRecord.id`，点击通知打开执行历史并定位该记录；非零退出通知携带退出码且不重复拼接相同正文；`ProcessRunner` 非阻塞排空输出（默认保留上限 256 KB，超限继续排空管道并标记截断，非 UTF-8 容错解码），同时等待进程退出与 EOF；期限覆盖整个执行。超时与主动取消均在校验 `pid > 0` 后强制终止命令的进程组并关闭读取，回调仅一次（主动取消不回调）；脱离该进程组的进程不保证终止。勿改回先等退出后读管道（大输出会互等死锁）
 
-- **面板快捷键**: ⌘1–9 固定对应当前搜索结果前九条，滚动不改编号；搜索、选择和列表滚动无动画。鼠标只在实际移动时同步选择，不抢搜索焦点。
+- **面板快捷键**: ⌘1–9 固定对应当前搜索结果前九条，滚动不改编号；⌘E 关闭面板并打开设置直接编辑当前选中命令；搜索、选择和列表滚动无动画。鼠标只在实际移动时同步选择，不抢搜索焦点。
 - **结果查看**: 自动执行结果浮层只读，不调用执行入口、不落历史；浮层和编辑 sheet 的键盘事件优先于面板导航与执行，取消删除保留编辑草稿。
 - **结果样式**: 自动执行结果在普通、悬停和键盘聚焦状态均不加文字下划线，保留原文中的 `_`；可查看状态用箭头、变色及焦点环提示。
 - **历史展示**: 只展示已持久化的信息；现有输出最多 500 字符，不标注完整输出，不补造耗时、退出码或运行中状态。
@@ -22,7 +22,7 @@
 - **面板内容**: 列表直接衔接底栏，不显示命令内容、工作目录或编辑入口；查看与编辑统一走设置页，空列表保留添加入口。
 - **面板尺寸**: 默认按内容取高度；已有尺寸或手动调整后尊重保存高度，搜索不覆盖用户尺寸。原生窗口最小、最大高度必须保留可调整范围；尺寸写入仍走 `updatePaletteFrame`。
 - **点击范围**: 所有可点控件（包括 `plain` 按钮、自定义样式按钮及带内边距的输入框）的留白区域均必须纳入点击命中范围（通过 `.contentShape(Rectangle())` 或整框承接点击）。具体指标：面板执行按钮与结果按钮覆盖完整的 36 点行高，执行按钮的左侧留白放在 label 内并纳入内容形状；结果按钮独立响应查看，不触发执行；搜索清空按钮使用至少 24 × 24 点的命中区域；命令管理“编辑”按钮的 label 包含左右 8 点留白、至少 26 点高度及矩形内容形状；面板底栏按钮同样纳入矩形内容形状。
-- **桥接输入框**: 表单单行输入统一用 `InterfaceTextField`（整框留白可点击聚焦、带焦点边框），搜索框用 `ToolbarSearchField`。所有桥接 AppKit 输入控件（`NSTextField` / `NSSearchField` / `NSComboBox`）在 `updateNSView` 回写文本前必须校验 `(currentEditor() as? NSTextView)?.hasMarkedText() != true`，避免打断中文组词。
+- **桥接输入框**: 表单单行输入统一用 `InterfaceTextField`（整框留白可点击聚焦、带 1px 蓝色焦点边框），多行命令输入统一用 `InterfaceTextEditor`（同款 1px 蓝色焦点边框、关闭智能引号与破折号、支持 `⌘↩` 提交），搜索框用 `ToolbarSearchField`。所有桥接 AppKit 输入控件（`NSTextField` / `NSSearchField` / `NSTextView` / `NSComboBox`）在 `updateNSView` 回写文本前必须校验 `hasMarkedText() != true`，避免打断中文组词。
 - **设置标签**: plain 按钮的留白参与点击，用内容形状明确命中区域。
 - **窗口外观**: 设置与历史窗口由 `InterfaceStyle.applyWindowChrome` 收起系统标题栏（`fullSizeContentView`、透明标题栏、隐藏系统按钮），标题区由 `WindowHeader` 画在窗口内；两个根视图用 `ignoresSafeArea(edges: .top)` 让内容贴住窗口顶边，系统标题栏的安全区不再占一条空白。
 - **输入法选项**: 仅按显示名称排除 `&` 和 `.`，不按 ID 过滤；通用页打开时刷新列表，过滤不改写已有输入法设置。

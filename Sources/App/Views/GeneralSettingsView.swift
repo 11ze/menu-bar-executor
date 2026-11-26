@@ -73,12 +73,20 @@ struct GeneralSettingsView: View {
                             Button("导入…", action: showImportPanel)
                         }
                         Divider()
-                        Text("~/.config/menu-bar-executor/settings.json")
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(InterfaceStyle.muted)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 14)
+                        HStack(spacing: 12) {
+                            Text("~/.config/menu-bar-executor/settings.json")
+                                .font(.system(size: 12, design: .monospaced))
+                                .foregroundColor(InterfaceStyle.muted)
+                                .textSelection(.enabled)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            Spacer(minLength: 8)
+                            Button("在 Finder 中显示", action: revealConfigInFinder)
+                                .font(.system(size: 12))
+                                .buttonStyle(CompactQuietButtonStyle())
+                                .fixedSize()
+                        }
+                        .padding(.vertical, 10)
                     }
                 }
                 .padding(.horizontal, 30).padding(.vertical, 18)
@@ -164,6 +172,17 @@ struct GeneralSettingsView: View {
         if panel.runModal() == .OK, let url = panel.url {
             importURL = url
             showingImportConfirmation = true
+        }
+    }
+
+    private func revealConfigInFinder() {
+        let fileURL = AppPaths.settingsFile
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            NSWorkspace.shared.activateFileViewerSelecting([fileURL])
+        } else {
+            let dirURL = fileURL.deletingLastPathComponent()
+            try? FileManager.default.createDirectory(at: dirURL, withIntermediateDirectories: true)
+            NSWorkspace.shared.open(dirURL)
         }
     }
 }

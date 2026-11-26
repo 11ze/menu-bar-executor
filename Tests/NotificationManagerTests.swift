@@ -32,4 +32,25 @@ final class NotificationManagerTests: XCTestCase {
             "错误: permission denied"
         )
     }
+
+    @MainActor
+    func testExecutionNotificationResponseRoutesToHistoryRecord() {
+        let expectedID = UUID()
+        var openedIDs: [UUID] = []
+        let policy = NotificationPolicy(environment: ["XCTestConfigurationFilePath": ""])
+        let manager = NotificationManager(
+            policy: policy,
+            requestAuthorizationAction: {},
+            onOpenHistoryRecord: { openedIDs.append($0) }
+        )
+
+        let userInfo = NotificationManager.executionNotificationUserInfo(recordID: expectedID)
+        XCTAssertEqual(NotificationManager.recordID(from: userInfo), expectedID)
+
+        manager.handleNotificationResponse(categoryIdentifier: "", userInfo: userInfo)
+        XCTAssertEqual(openedIDs, [expectedID])
+
+        manager.handleNotificationResponse(categoryIdentifier: "", userInfo: [:])
+        XCTAssertEqual(openedIDs, [expectedID], "无 recordID 时不应误打开历史")
+    }
 }

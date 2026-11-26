@@ -134,14 +134,17 @@ final class CommandExecutorTests: XCTestCase {
         var successes: [String] = []
         var failures: [String] = []
         var failureCalls: [FailureCall] = []
+        var notifiedRecordIDs: [UUID?] = []
 
-        func showSuccess(commandName: String, output: String?) {
+        func showSuccess(commandName: String, output: String?, recordID: UUID?) {
             successes.append(commandName)
+            notifiedRecordIDs.append(recordID)
         }
 
-        func showFailure(commandName: String, error: String, output: String?) {
+        func showFailure(commandName: String, error: String, output: String?, recordID: UUID?) {
             failures.append(commandName)
             failureCalls.append(FailureCall(commandName: commandName, error: error, output: output))
+            notifiedRecordIDs.append(recordID)
         }
     }
 
@@ -162,6 +165,7 @@ final class CommandExecutorTests: XCTestCase {
             XCTAssertTrue(history.records[0].success)
             XCTAssertEqual(history.records[0].output?.trimmingCharacters(in: .whitespacesAndNewlines), "side-effect")
             XCTAssertEqual(notifier.successes, ["回声"], "notification 开启时发系统通知")
+            XCTAssertEqual(notifier.notifiedRecordIDs, [history.records[0].id], "通知应携带对应历史记录 ID")
             XCTAssertTrue(notifier.failures.isEmpty)
             finished.fulfill()
         }

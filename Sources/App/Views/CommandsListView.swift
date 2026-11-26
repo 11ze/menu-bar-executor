@@ -23,8 +23,10 @@ struct CommandsListView: View {
 
     @ObservedObject private var manager = CommandsManager.shared
     @ObservedObject private var settings = AppSettingsManager.shared
+    @ObservedObject private var navigation = SettingsNavigationState.shared
     @State private var selectedGroup: SelectedGroup?
     @State private var editingCommand: Command?
+    @State private var dryRunCommandID: UUID?
     @State private var searchText = ""
     @State private var hoveredCommandID: UUID?
     @State private var hoveredGroupKey: SelectedGroup?
@@ -150,6 +152,8 @@ struct CommandsListView: View {
             }
         }
         .onChange(of: searchText) { _ in clearDragState() }
+        .onAppear { consumeRequestedEdit() }
+        .onChange(of: navigation.requestedEditCommand) { _ in consumeRequestedEdit() }
         .alert("操作失败", isPresented: Binding(
             get: { editingCommand == nil && !showingDeleteGroupConfirmation && settings.lastError != nil },
             set: { if !$0 { settings.lastError = nil } }
@@ -713,7 +717,8 @@ struct CommandsListView: View {
             }
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 7) {
-                    Text(command.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
+                    HighlightedText(text: command.name, search: searchText, highlight: InterfaceStyle.selectedText)
+                        .font(.system(size: 13, weight: .medium)).lineLimit(1)
                     if command.autoExecute {
                         let autoLabel = command.hidden ? "自动执行 · 已暂停" : (groupHidden ? "自动执行 · 随组暂停" : "自动执行")
                         let isPaused = command.hidden || groupHidden
@@ -752,6 +757,37 @@ struct CommandsListView: View {
             .opacity(effectiveHidden ? 0.52 : 1)
             Spacer(minLength: 8)
             HStack(spacing: 6) {
+                Button {
+                    clearDragState()
+                    dryRunCommandID = command.id
+                } label: {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 10.5))
+                }
+                .buttonStyle(CommandRowButtonStyle(revealed: isHovered || dryRunCommandID == command.id, invisibleWhenIdle: dryRunCommandID != command.id))
+                .accessibilityLabel("试跑「\(command.name)」")
+                .help("试跑此命令（不计入历史、不通知）")
+                .popover(
+                    isPresented: Binding(
+                        get: { dryRunCommandID == command.id },
+                        set: { if !$0 && dryRunCommandID == command.id { dryRunCommandID = nil } }
+                    ),
+                    arrowEdge: .bottom
+                ) {
+                    CommandDryRunPopover(command: command) {
+                        dryRunCommandID = nil
+                    }
+                }
+                Button {
+                    clearDragState()
+                    manager.duplicateCommand(id: command.id)
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 11))
+                }
+                .buttonStyle(CommandRowButtonStyle(revealed: isHovered, invisibleWhenIdle: true))
+                .accessibilityLabel("复制「\(command.name)」副本")
+                .help("复制命令副本")
                 Button {
                     clearDragState()
                     manager.toggleCommandHidden(id: command.id)
@@ -829,6 +865,19 @@ struct CommandsListView: View {
     }
 
     // MARK: - 交互动作
+
+    private func consumeRequestedEdit() {
+        guard let target = navigation.requestedEditCommand else { return }
+        navigation.requestedEditCommand = nil
+        clearDragState()
+        searchText = ""
+        if let group = CommandsManager.normalizedGroup(target.group) {
+            selectedGroup = .named(group)
+        } else {
+            selectedGroup = .ungrouped
+        }
+        editingCommand = manager.commands.first(where: { $0.id == target.id }) ?? target
+    }
 
     private func selectGroup(_ group: SelectedGroup) {
         clearDragState()

@@ -82,6 +82,9 @@ struct CommandPaletteView: View {
                 HStack(spacing: geometry.size.width < 400 ? 4 : (geometry.size.width < 540 ? 8 : 12)) {
                     HStack(spacing: 3) { Keycap(text: "↑"); Keycap(text: "↓"); Text("选择") }.fixedSize()
                     HStack(spacing: 3) { Keycap(text: "↵"); Text("执行") }.fixedSize()
+                    if geometry.size.width >= 540, coordinator.listModel.selectedCommand != nil {
+                        HStack(spacing: 3) { Keycap(text: "⌘E"); Text("编辑") }.fixedSize()
+                    }
                     Spacer(minLength: 4)
                     Button("执行历史") {
                         CommandPaletteWindowController.shared.hide()
@@ -101,6 +104,11 @@ struct CommandPaletteView: View {
         .background(InterfaceStyle.surface)
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 15))
+        .overlay {
+            RoundedRectangle(cornerRadius: 15)
+                .strokeBorder(InterfaceStyle.panelBorder, lineWidth: 1)
+                .allowsHitTesting(false)
+        }
         .onReceive(coordinator.$searchText) { _ in
             DispatchQueue.main.async { isSearchFocused = true }
         }
@@ -140,12 +148,24 @@ struct CommandPaletteRow: View {
     @State private var resultButton: NSButton?
     @State private var resultHovered = false
 
-    private var result: (text: String, marker: String, color: Color, canView: Bool)? {
+    private struct RowResultDisplay {
+        let text: String
+        let marker: String
+        let color: Color
+        let canView: Bool
+        let isLoading: Bool
+    }
+
+    private var result: RowResultDisplay? {
         switch autoExecuteState {
-        case .loading: return ("正在执行…", "●", InterfaceStyle.muted, false)
-        case .success(let output): return (output.isEmpty ? "无输出" : output, "●", InterfaceStyle.success, !output.isEmpty)
-        case .failure(let error): return (error, "●", InterfaceStyle.failure, !error.isEmpty)
-        case .none: return nil
+        case .loading:
+            return RowResultDisplay(text: "正在执行…", marker: "●", color: InterfaceStyle.muted, canView: false, isLoading: true)
+        case .success(let output):
+            return RowResultDisplay(text: output.isEmpty ? "无输出" : output, marker: "●", color: InterfaceStyle.success, canView: !output.isEmpty, isLoading: false)
+        case .failure(let error):
+            return RowResultDisplay(text: error, marker: "●", color: InterfaceStyle.failure, canView: !error.isEmpty, isLoading: false)
+        case .none:
+            return nil
         }
     }
 
@@ -205,7 +225,7 @@ struct CommandPaletteRow: View {
                                     CommandPaletteWindowController.shared.closeIfInactive()
                                 }
                             }
-                    } else { resultLabel(result).frame(width: resultWidth(for: result.text, in: geometry.size.width, canView: result.canView), alignment: .trailing) }
+                    } else { resultLabel(result).frame(width: resultWidth(for: result.text, in: geometry.size.width, canView: result.canView, isLoading: result.isLoading), alignment: .trailing) }
                 }
                 if displayIndex <= PaletteConfig.maxQuickSelectCount { Text("⌘\(displayIndex)").font(.system(size: 11)).foregroundColor(InterfaceStyle.muted) }
             }
@@ -215,14 +235,14 @@ struct CommandPaletteRow: View {
         }.frame(height: 36)
     }
 
-    private func resultWidth(for text: String, in rowWidth: CGFloat, canView: Bool) -> CGFloat {
+    private func resultWidth(for text: String, in rowWidth: CGFloat, canView: Bool, isLoading: Bool = false) -> CGFloat {
         let titleWidth = ceil((command.name as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 13)]).width)
         let shortcutWidth = displayIndex <= PaletteConfig.maxQuickSelectCount
             ? ceil(("⌘\(displayIndex)" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 11)]).width) + 8 : 0
         let available = max(17, rowWidth - 20 - titleWidth - 12 - shortcutWidth - 10)
         let inlineText = text.replacingOccurrences(of: "\n", with: " ")
         let textWidth = ceil((inlineText as NSString).size(withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)]).width)
-        return min(textWidth + 17 + (canView ? 14 : 0), available)
+        return min(textWidth + (isLoading ? 25 : 17) + (canView ? 14 : 0), available)
     }
 
     private func openResult() {
@@ -232,12 +252,20 @@ struct CommandPaletteRow: View {
         showingResult = true
     }
 
-    private func resultLabel(_ result: (text: String, marker: String, color: Color, canView: Bool)) -> some View {
+    private func resultLabel(_ result: RowResultDisplay) -> some View {
         HStack(spacing: 6) {
-            Text(result.marker).font(.system(size: 9)).foregroundColor(result.color)
+            if result.isLoading {
+                ProgressView()
+                    .controlSize(.mini)
+                    .scaleEffect(0.62)
+                    .frame(width: 11, height: 11)
+            } else {
+                Text(result.marker).font(.system(size: 9)).foregroundColor(result.color)
+            }
             Text(result.text.replacingOccurrences(of: "\n", with: " "))
-                .font(.system(size: 12, design: .monospaced)).foregroundColor(InterfaceStyle.text).lineLimit(1)
-
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundColor(result.isLoading ? InterfaceStyle.muted : InterfaceStyle.text)
+                .lineLimit(1)
         }.help(result.text)
     }
 }

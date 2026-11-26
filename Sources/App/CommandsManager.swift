@@ -63,10 +63,41 @@ final class CommandsManager: ObservableObject {
     }
 
     nonisolated static func filteredCommands(from commands: [Command], by searchText: String) -> [Command] {
-        guard !searchText.isEmpty else { return commands }
+        guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return commands }
         return commands.filter {
-            $0.name.localizedCaseInsensitiveContains(searchText)
+            CommandSearchMatcher.matches($0.name, query: searchText)
         }
+    }
+
+    /// 复制命令副本：新 UUID、紧邻原命令下方、名称按「副本 / 副本 N」自动去重。
+    nonisolated static func duplicatingCommand(
+        _ commandID: UUID,
+        in commands: [Command]
+    ) -> (commands: [Command], duplicate: Command)? {
+        guard let index = commands.firstIndex(where: { $0.id == commandID }) else { return nil }
+        let original = commands[index]
+        let existingNames = Set(commands.map(\.name))
+        let baseName = "\(original.name) 副本"
+        var candidateName = baseName
+        var suffix = 2
+        while existingNames.contains(candidateName) {
+            candidateName = "\(baseName) \(suffix)"
+            suffix += 1
+        }
+        let duplicate = Command(
+            id: UUID(),
+            name: candidateName,
+            command: original.command,
+            workingDirectory: original.workingDirectory,
+            notification: original.notification,
+            autoExecute: original.autoExecute,
+            group: original.group,
+            directExecution: original.directExecution,
+            hidden: original.hidden
+        )
+        var updated = commands
+        updated.insert(duplicate, at: index + 1)
+        return (updated, duplicate)
     }
 
     nonisolated static func normalizedHiddenGroups(_ hiddenGroups: [String]) -> [String] {
@@ -437,6 +468,13 @@ final class CommandsManager: ObservableObject {
     func toggleCommandHidden(id: UUID) -> Bool {
         guard let updated = Self.togglingCommandHidden(id, in: commands) else { return false }
         return settingsManager.saveCommands(updated)
+    }
+
+    @discardableResult
+    func duplicateCommand(id: UUID) -> Command? {
+        guard let result = Self.duplicatingCommand(id, in: commands) else { return nil }
+        guard settingsManager.saveCommands(result.commands) else { return nil }
+        return result.duplicate
     }
 
     @discardableResult

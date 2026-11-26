@@ -10,6 +10,7 @@ enum KeyCode {
     static let downArrow: UInt16 = 125
     static let tab: UInt16 = 48
     static let settingsShortcut = ","  // ⌘+, 打开设置
+    static let editShortcut = "e"      // ⌘+E 编辑当前选中命令
 }
 
 // MARK: - 自定义 Panel（支持无标题栏时接收键盘事件）
@@ -35,6 +36,18 @@ final class PaletteContainerView: NSView {
             Task { @MainActor in
                 CommandPaletteWindowController.shared.hide()
                 SettingsWindowController.shared.showWindow()
+            }
+            return true
+        }
+
+        // 处理 ⌘+E (编辑当前选中命令)
+        if event.modifierFlags.contains(.command),
+           let chars = event.charactersIgnoringModifiers?.lowercased(),
+           chars == KeyCode.editShortcut {
+            Task { @MainActor in
+                guard let cmd = PaletteCoordinator.shared.listModel.selectedCommand else { return }
+                CommandPaletteWindowController.shared.hide()
+                SettingsWindowController.shared.showWindow(editing: cmd)
             }
             return true
         }

@@ -87,6 +87,25 @@ final class ExecutionHistory: ObservableObject {
         saveHistory()
     }
 
+    /// 根据历史记录解析可执行命令：优先匹配当前配置中同名同原文的命令以保留目录与执行选项，找不到时按历史原文构造。
+    nonisolated static func resolveCommand(for record: ExecutionRecord, in commands: [Command]) -> Command {
+        if let matched = commands.first(where: { $0.name == record.commandName && $0.command == record.commandText }) {
+            return matched
+        }
+        return Command(name: record.commandName, command: record.commandText)
+    }
+
+    /// 选中某条目标记录前，仅清除会隐藏该记录的筛选条件，避免通知定位或重跑成功后记录被静默过滤。
+    nonisolated static func filtersEnsuringVisibility(
+        of record: ExecutionRecord,
+        searchText: String,
+        onlyFailed: Bool
+    ) -> (searchText: String, onlyFailed: Bool) {
+        let nextOnlyFailed = onlyFailed && !record.success
+        let nextSearch = CommandSearchMatcher.matches(record.commandName, query: searchText) ? searchText : ""
+        return (nextSearch, nextOnlyFailed)
+    }
+
     private func loadHistory() {
         guard FileManager.default.fileExists(atPath: filePath.path) else { return }
 
