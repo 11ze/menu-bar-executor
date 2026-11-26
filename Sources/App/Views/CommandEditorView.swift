@@ -15,7 +15,6 @@ struct CommandEditorView: View {
     @State private var hidden: Bool
     @State private var showingDeleteConfirmation = false
     @State private var formHeight: CGFloat = 532
-    @FocusState private var nameFocused: Bool
 
     let onSave: (Command) -> Bool
     var onDelete: (() -> Bool)?
@@ -64,7 +63,7 @@ struct CommandEditorView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     field("命令名称") {
-                        TextField("例如：启动 Docker 服务", text: $name).focused($nameFocused)
+                        InterfaceTextField(placeholder: "例如：启动 Docker 服务", text: $name, autoFocus: true)
                     }
                     field("命令内容") {
                         commandInput
@@ -76,7 +75,7 @@ struct CommandEditorView: View {
                         .frame(width: (620 - 24 * 2 - 16) / 2.4)
                         field("工作目录", optional: true) {
                             HStack {
-                                TextField("默认工作目录", text: $workingDirectory)
+                                InterfaceTextField(placeholder: "默认工作目录", text: $workingDirectory)
                                 Button("选择…", action: chooseDirectory)
                             }
                             Text("支持 ~，留空使用默认目录。").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
@@ -86,7 +85,9 @@ struct CommandEditorView: View {
                     Divider()
                     option("打开面板时自动执行", detail: "每次打开都会运行；结果显示在行内，不计入历史、不通知。", isOn: $autoExecute)
                     option("直接执行", detail: "跳过 ~/.zshrc；其中的 alias、函数和环境变量不可用。", isOn: $directExecution)
-                    Toggle("手动执行完成后通知", isOn: $notification).font(.system(size: 12)).frame(minHeight: 18)
+                    Toggle("手动执行完成后通知", isOn: $notification)
+                        .toggleStyle(InterfaceCheckboxToggleStyle())
+                        .font(.system(size: 12))
                     option("在命令面板中隐藏", detail: "隐藏后不出现在命令面板和搜索中，自动执行也会暂停。", isOn: $hidden)
                     if let pauseMessage = autoExecutePauseMessage {
                         HStack(alignment: .top, spacing: 6) {
@@ -109,7 +110,7 @@ struct CommandEditorView: View {
                         Text("命令超过 30 秒会终止。").font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
                             .frame(minHeight: 18, alignment: .leading)
                     }
-                }.padding(.horizontal, 24).padding(.vertical, 16).textFieldStyle(InterfaceTextFieldStyle())
+                }.padding(.horizontal, 24).padding(.vertical, 16)
                     .background(GeometryReader { geometry in
                         Color.clear.onAppear { formHeight = geometry.size.height }
                             .onChange(of: geometry.size.height) { formHeight = $0 }
@@ -131,7 +132,6 @@ struct CommandEditorView: View {
         .font(.system(size: 13)).foregroundColor(InterfaceStyle.text).background(InterfaceStyle.surface)
         .buttonStyle(InterfaceButtonStyle(height: 30))
         .frame(width: 620)
-        .onAppear { nameFocused = true }
         .alert("操作失败", isPresented: Binding(
             get: { settings.lastError != nil },
             set: { if !$0 { settings.lastError = nil } }
@@ -172,8 +172,10 @@ struct CommandEditorView: View {
 
     private func option(_ title: String, detail: String, isOn: Binding<Bool>) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Toggle(title, isOn: isOn).font(.system(size: 12)).frame(minHeight: 18)
-            Text(detail).font(.system(size: 12)).foregroundColor(InterfaceStyle.muted).padding(.leading, 20)
+            Toggle(title, isOn: isOn)
+                .toggleStyle(InterfaceCheckboxToggleStyle())
+                .font(.system(size: 12))
+            Text(detail).font(.system(size: 12)).foregroundColor(InterfaceStyle.muted).padding(.leading, 23)
                 .frame(minHeight: 18, alignment: .leading)
         }
     }
@@ -207,41 +209,89 @@ struct CommandEditorView: View {
     }
 }
 
-private struct CommandGroupField: NSViewRepresentable {
+/// 与单行输入框同高（36pt）的分组组合框：输入复用中文组词保护，右侧展开原生系统下拉菜单。
+struct CommandGroupField: View {
     @Binding var text: String
     let groups: [String]
+    @State private var focused = false
+    @State private var boxWidth: CGFloat = 224
 
-    func makeCoordinator() -> Coordinator { Coordinator(text: $text) }
-    func makeNSView(context: Context) -> NSComboBox {
-        let box = NSComboBox()
-        box.isEditable = true
-        box.completes = true
-        box.placeholderString = "选择或输入分组"
-        box.font = .systemFont(ofSize: 12)
-        box.delegate = context.coordinator
-        box.setAccessibilityLabel("分组")
-        return box
-    }
-    func updateNSView(_ box: NSComboBox, context: Context) {
-        context.coordinator.text = $text
-        if box.objectValues.compactMap({ $0 as? String }) != groups {
-            box.removeAllItems()
-            box.addItems(withObjectValues: groups)
-        }
-        if box.stringValue != text { box.stringValue = text }
+    static func menuPopupGeometry(boxWidth: CGFloat, buttonSize: NSSize) -> (minimumWidth: CGFloat, origin: NSPoint) {
+        let width = max(140, boxWidth)
+        return (width, NSPoint(x: -(width - buttonSize.width), y: buttonSize.height + 4))
     }
 
-    final class Coordinator: NSObject, NSComboBoxDelegate {
-        var text: Binding<String>
-        init(text: Binding<String>) { self.text = text }
-        func controlTextDidChange(_ notification: Notification) {
-            guard let box = notification.object as? NSComboBox else { return }
-            text.wrappedValue = box.stringValue
+    var body: some View {
+        HStack(spacing: 0) {
+            NativeFormTextField(
+                placeholder: "选择或输入分组",
+                accessibilityLabel: "分组",
+                text: $text,
+                trailingInset: groups.isEmpty ? 10 : 4,
+                focused: $focused
+            )
+            if !groups.isEmpty {
+                GroupDropdownButton(groups: groups, menuWidth: boxWidth, selection: $text)
+                    .frame(width: 28, height: 34)
+            }
         }
-        func comboBoxSelectionDidChange(_ notification: Notification) {
-            guard let box = notification.object as? NSComboBox,
-                  let value = box.objectValueOfSelectedItem as? String else { return }
-            text.wrappedValue = value
+        .modifier(InterfaceFieldChrome(focused: focused))
+        .background(GeometryReader { proxy in
+            Color.clear
+                .onAppear { boxWidth = proxy.size.width }
+                .onChange(of: proxy.size.width) { boxWidth = $0 }
+        })
+    }
+}
+
+private struct GroupDropdownButton: NSViewRepresentable {
+    let groups: [String]
+    let menuWidth: CGFloat
+    @Binding var selection: String
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeNSView(context: Context) -> NSButton {
+        let button = NSButton()
+        button.isBordered = false
+        button.bezelStyle = .inline
+        button.image = NSImage(systemSymbolName: "chevron.down", accessibilityDescription: "展开分组列表")?
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 10, weight: .semibold))
+        button.contentTintColor = NSColor(InterfaceStyle.muted)
+        button.setAccessibilityLabel("展开分组列表")
+        button.toolTip = "选择已有分组"
+        button.target = context.coordinator
+        button.action = #selector(Coordinator.showMenu(_:))
+        return button
+    }
+
+    func updateNSView(_ button: NSButton, context: Context) {
+        context.coordinator.parent = self
+        button.contentTintColor = NSColor(InterfaceStyle.muted)
+    }
+
+    final class Coordinator: NSObject {
+        var parent: GroupDropdownButton
+        init(_ parent: GroupDropdownButton) { self.parent = parent }
+
+        @objc func showMenu(_ sender: NSButton) {
+            let menu = NSMenu()
+            let current = parent.selection.trimmingCharacters(in: .whitespacesAndNewlines)
+            for group in parent.groups {
+                let item = NSMenuItem(title: group, action: #selector(selectGroup(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = group
+                item.state = (group == current) ? .on : .off
+                menu.addItem(item)
+            }
+            let geometry = CommandGroupField.menuPopupGeometry(boxWidth: parent.menuWidth, buttonSize: sender.bounds.size)
+            menu.minimumWidth = geometry.minimumWidth
+            menu.popUp(positioning: nil, at: geometry.origin, in: sender)
+        }
+
+        @objc private func selectGroup(_ sender: NSMenuItem) {
+            guard let group = sender.representedObject as? String else { return }
+            parent.selection = group
         }
     }
 }

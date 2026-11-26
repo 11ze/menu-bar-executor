@@ -185,49 +185,38 @@ final class InterfaceWindowTests: XCTestCase {
         controller.showWindow()
         let window = try XCTUnwrap(controller.window)
         defer { window.close() }
+        try await assertToolbarSearchFieldAcceptsClickAndTyping(in: window, placeholder: "搜索全部命令名称")
+    }
+
+    func testHistorySearchAcceptsClickAndTyping() async throws {
+        let controller = HistoryWindowController.shared
+        controller.showWindow()
+        let window = try XCTUnwrap(NSApp.windows.first { $0.title == "执行历史" })
+        defer { window.performClose(nil) }
+        try await assertToolbarSearchFieldAcceptsClickAndTyping(in: window, placeholder: "搜索命令名称")
+    }
+
+    private func assertToolbarSearchFieldAcceptsClickAndTyping(in window: NSWindow, placeholder: String) async throws {
         await nextLayout()
         let content = try XCTUnwrap(window.contentView)
         content.layoutSubtreeIfNeeded()
         let field = try XCTUnwrap(descendants(content).compactMap { $0 as? NSSearchField }.first {
-            $0.placeholderString == "搜索全部命令名称"
+            $0.placeholderString == placeholder
         })
         let originalAppearance = window.appearance
         window.appearance = NSAppearance(named: .aqua)
         defer { window.appearance = originalAppearance }
-        func hasFocusBorder() throws -> Bool {
-            content.layoutSubtreeIfNeeded()
-            let bounds = content.bounds
-            let bitmap = try XCTUnwrap(content.bitmapImageRepForCachingDisplay(in: bounds))
-            content.cacheDisplay(in: bounds, to: bitmap)
-            let fieldBounds = field.convert(field.bounds, to: content)
-            let scaleX = CGFloat(bitmap.pixelsWide) / bounds.width
-            let scaleY = CGFloat(bitmap.pixelsHigh) / bounds.height
-            let x = Int(fieldBounds.midX * scaleX)
-            let centerY = content.isFlipped ? fieldBounds.midY : bounds.maxY - fieldBounds.midY
-            let top = Int((centerY - 17) * scaleY)
-            return ((top - 2)...(top + 2)).contains { y in
-                guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB) else { return false }
-                return color.blueComponent - color.redComponent > 0.35
-            }
-        }
         let rect = field.convert(field.bounds, to: nil)
         for point in [NSPoint(x: rect.midX, y: rect.midY), NSPoint(x: rect.minX + 10, y: rect.midY),
                       NSPoint(x: rect.midX, y: rect.maxY - 3)] {
             window.makeFirstResponder(nil)
             await nextLayout()
-            XCTAssertFalse(try hasFocusBorder(), "搜索框失焦后应恢复普通边框")
-            func mouse(_ type: NSEvent.EventType) throws -> NSEvent {
-                try XCTUnwrap(NSEvent.mouseEvent(with: type, location: point, modifierFlags: [],
-                    timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
-                    context: nil, eventNumber: 1, clickCount: 1, pressure: 1))
-            }
-            let release = try mouse(.leftMouseUp)
-            NSApp.postEvent(release, atStart: true)
-            window.sendEvent(try mouse(.leftMouseDown))
+            XCTAssertFalse(try hasBlueTopBorder(around: field, in: content, halfHeight: 17), "搜索框失焦后应恢复普通边框")
+            try clickWindow(window, at: point, postUpFirst: true)
             await nextLayout()
             let editor = try XCTUnwrap(field.currentEditor() as? NSTextView, "点击 \(point) 应开始编辑（输入区域 \(rect)）")
             XCTAssertTrue(window.firstResponder === editor)
-            XCTAssertTrue(try hasFocusBorder(), "输入前就应显示蓝色焦点边框")
+            XCTAssertTrue(try hasBlueTopBorder(around: field, in: content, halfHeight: 17), "输入前就应显示蓝色焦点边框")
             editor.insertText("sync", replacementRange: editor.selectedRange())
             XCTAssertEqual(field.stringValue, "sync")
             let cell = try XCTUnwrap(field.cell as? NSSearchFieldCell)
@@ -242,10 +231,200 @@ final class InterfaceWindowTests: XCTestCase {
         await nextLayout()
         XCTAssertTrue(window.makeFirstResponder(field))
         await nextLayout()
-        XCTAssertTrue(try hasFocusBorder(), "搜索框获得键盘焦点时应显示蓝色边框")
+        XCTAssertTrue(try hasBlueTopBorder(around: field, in: content, halfHeight: 17), "搜索框获得键盘焦点时应显示蓝色边框")
         window.makeFirstResponder(nil)
         await nextLayout()
-        XCTAssertFalse(try hasFocusBorder(), "未输入就移走焦点也应恢复普通边框")
+        XCTAssertFalse(try hasBlueTopBorder(around: field, in: content, halfHeight: 17), "未输入就移走焦点也应恢复普通边框")
+    }
+
+    func testPaletteFooterButtonPaddingAcceptsClick() async throws {
+        var historyClicks = 0
+        var settingsClicks = 0
+        let (window, host) = makeHostedWindow(
+            size: NSSize(width: 260, height: 60),
+            rootView: HStack(spacing: 12) {
+                Button("执行历史") { historyClicks += 1 }
+                Button("设置 ⌘,") { settingsClicks += 1 }
+            }
+            .buttonStyle(PaletteFooterButtonStyle())
+            .padding(.leading, 20)
+            .frame(width: 260, height: 60, alignment: .leading)
+        )
+        defer { teardownHostedWindow(window) }
+
+        for _ in 0..<5 {
+            host.layoutSubtreeIfNeeded()
+            await nextLayout()
+        }
+
+        // 「执行历史」起点严格在 x = 20，左右留白各 8pt，高 24pt（垂直居中于 60 -> y ∈ [18, 42]）
+        // 分别点中左侧 2pt 留白、底部 2pt 留白、顶部 2pt 留白
+        for point in [NSPoint(x: 22, y: 30), NSPoint(x: 46, y: 20), NSPoint(x: 46, y: 40)] {
+            let before = historyClicks
+            try clickWindow(window, at: point)
+            await nextLayout()
+            XCTAssertEqual(historyClicks, before + 1, "「执行历史」留白点 \(point) 必须可点击触发")
+        }
+
+        // 测量「执行历史」宽度（文本宽 + 左右 16pt）+ 12pt 间距，定位第二个按钮「设置 ⌘,」起点
+        let historyTextWidth = ceil(("执行历史" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 12)]).width)
+        let settingsStartX = 20 + historyTextWidth + 16 + 12
+        for point in [NSPoint(x: settingsStartX + 2, y: 30), NSPoint(x: settingsStartX + 26, y: 20), NSPoint(x: settingsStartX + 26, y: 40)] {
+            let before = settingsClicks
+            try clickWindow(window, at: point)
+            await nextLayout()
+            XCTAssertEqual(settingsClicks, before + 1, "「设置 ⌘,」留白点 \(point) 必须可点击触发")
+        }
+
+        // 同时验证真实 CommandPaletteView 底栏最右侧「设置 ⌘,」的右侧/底部留白可打开设置窗口
+        SettingsWindowController.shared.window?.close()
+        let tempSettingsURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("menu-bar-executor-footer-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: tempSettingsURL) }
+        let tempSettings = AppSettingsManager(filePath: tempSettingsURL, enableFileMonitoring: false)
+        let coordinator = PaletteCoordinator(settingsManager: tempSettings, runAutoCommand: { _, _ in {} })
+        let (paletteWindow, paletteHost) = makeHostedWindow(
+            size: NSSize(width: 600, height: 503),
+            rootView: CommandPaletteView(coordinator: coordinator)
+        )
+        defer {
+            teardownHostedWindow(paletteWindow)
+            SettingsWindowController.shared.window?.close()
+        }
+        for _ in 0..<5 {
+            paletteHost.layoutSubtreeIfNeeded()
+            await nextLayout()
+        }
+        // 底栏高 43、右留白 12，按钮高 24 垂直居中（y ∈ [9.5, 33.5]），右缘在 x = 588 -> x = 585 落在右侧 8pt 留白内
+        try clickWindow(paletteWindow, at: NSPoint(x: 585, y: 12))
+        await nextLayout()
+        XCTAssertEqual(SettingsWindowController.shared.window?.isVisible, true, "真实命令面板底栏「设置 ⌘,」右侧留白应能打开设置窗口")
+    }
+
+    func testCommandEditorTextFieldsAcceptEdgeClickAndShowFocusBorder() async throws {
+        let command = Command(name: "", command: "printf test")
+        let (window, host) = makeHostedWindow(
+            size: NSSize(width: 620, height: 680),
+            appearance: .aqua,
+            rootView: CommandEditorView(command: command, onSave: { _ in true })
+        )
+        defer { teardownHostedWindow(window) }
+
+        for _ in 0..<8 {
+            host.layoutSubtreeIfNeeded()
+            await nextLayout()
+        }
+
+        let content = try XCTUnwrap(window.contentView)
+        for placeholder in ["例如：启动 Docker 服务", "默认工作目录"] {
+            let field = try XCTUnwrap(descendants(content).compactMap { $0 as? NSTextField }.first {
+                $0.placeholderString == placeholder
+            }, "应找到输入框 \(placeholder)")
+            let fieldRect = field.convert(field.bounds, to: nil)
+            // 外框高 36pt、左右留白 10pt；探测外框左侧留白（fieldRect 左侧 6pt 处）与外框上下留白（fieldRect 中线偏上下 14pt 处）
+            let boxMidY = fieldRect.midY
+            let edgePoints = [
+                NSPoint(x: fieldRect.minX - 6, y: boxMidY),
+                NSPoint(x: fieldRect.midX, y: boxMidY + 14),
+                NSPoint(x: fieldRect.midX, y: boxMidY - 14)
+            ]
+            for point in edgePoints {
+                window.makeFirstResponder(nil)
+                await nextLayout()
+                XCTAssertFalse(try hasBlueTopBorder(around: field, in: content, halfHeight: 18), "「\(placeholder)」失焦后应恢复普通边框")
+                try clickWindow(window, at: point, postUpFirst: true)
+                await nextLayout()
+                let editor = try XCTUnwrap(
+                    field.currentEditor() as? NSTextView,
+                    "点击「\(placeholder)」框内留白 \(point) 应聚焦输入框（文本区 \(fieldRect)）"
+                )
+                XCTAssertTrue(window.firstResponder === editor)
+                XCTAssertTrue(try hasBlueTopBorder(around: field, in: content, halfHeight: 18), "「\(placeholder)」聚焦后应显示蓝色边框")
+                editor.insertText("demo", replacementRange: editor.selectedRange())
+                XCTAssertEqual(field.stringValue, "demo")
+                editor.selectAll(nil)
+                editor.deleteBackward(nil)
+            }
+        }
+
+        // 分组输入框与工作目录输入框应保持同一视觉基线高度（同为 36pt 表单输入框）
+        let groupField = try XCTUnwrap(descendants(content).compactMap { $0 as? NSTextField }.first {
+            $0.placeholderString == "选择或输入分组"
+        })
+        let dirField = try XCTUnwrap(descendants(content).compactMap { $0 as? NSTextField }.first {
+            $0.placeholderString == "默认工作目录"
+        })
+        let groupRect = groupField.convert(groupField.bounds, to: nil)
+        let dirRect = dirField.convert(dirField.bounds, to: nil)
+        XCTAssertEqual(groupRect.midY, dirRect.midY, accuracy: 2, "分组输入框应与右侧工作目录输入框保持同高齐平")
+        let menuGeo = CommandGroupField.menuPopupGeometry(boxWidth: 224, buttonSize: NSSize(width: 28, height: 34))
+        XCTAssertEqual(menuGeo.minimumWidth, 224, accuracy: 0.5, "下拉菜单宽度应与分组框一致")
+        XCTAssertEqual(menuGeo.origin.x, -196, accuracy: 0.5, "下拉菜单左缘应与分组框左缘对齐")
+        XCTAssertEqual(menuGeo.origin.y, 38, accuracy: 0.5, "下拉菜单应贴合分组框底边下方 4pt")
+
+        // 处于中文组词态时，点击框内留白不得结束编辑或清空 markedText
+        let nameField = try XCTUnwrap(descendants(content).compactMap { $0 as? NSTextField }.first {
+            $0.placeholderString == "例如：启动 Docker 服务"
+        })
+        XCTAssertTrue(window.makeFirstResponder(nameField))
+        await nextLayout()
+        let composingEditor = try XCTUnwrap(nameField.currentEditor() as? NSTextView)
+        composingEditor.setMarkedText(
+            "zhongwen",
+            selectedRange: NSRange(location: 8, length: 0),
+            replacementRange: NSRange(location: 0, length: composingEditor.string.count)
+        )
+        XCTAssertTrue(composingEditor.hasMarkedText())
+        let nameRect = nameField.convert(nameField.bounds, to: nil)
+        let paddingPoint = NSPoint(x: nameRect.minX - 6, y: nameRect.midY)
+        try clickWindow(window, at: paddingPoint, postUpFirst: true)
+        await nextLayout()
+        XCTAssertTrue(composingEditor.hasMarkedText(), "编辑框中文组词期间点击留白不得打断 markedText")
+        XCTAssertEqual(composingEditor.string, "zhongwen")
+    }
+
+    func testCommandGroupFieldPreservesMarkedTextDuringSwiftUIUpdate() async throws {
+        final class Model: ObservableObject {
+            @Published var text = "开发"
+            @Published var groups = ["开发"]
+        }
+        struct HostView: View {
+            @ObservedObject var model: Model
+            var body: some View {
+                CommandGroupField(text: $model.text, groups: model.groups)
+                    .frame(width: 220, height: 28)
+            }
+        }
+
+        let model = Model()
+        let (window, host) = makeHostedWindow(
+            size: NSSize(width: 300, height: 80),
+            rootView: HostView(model: model)
+        )
+        defer { teardownHostedWindow(window) }
+
+        for _ in 0..<5 {
+            host.layoutSubtreeIfNeeded()
+            await nextLayout()
+        }
+
+        let groupField = try XCTUnwrap(descendants(host).compactMap { $0 as? NSTextField }.first {
+            $0.accessibilityLabel() == "分组"
+        })
+        XCTAssertTrue(window.makeFirstResponder(groupField))
+        await nextLayout()
+        let editor = try XCTUnwrap(groupField.currentEditor() as? NSTextView)
+        // 模拟中文输入法组词中：框内已有未提交的 markedText，绑定值仍为旧值 "开发"
+        editor.setMarkedText("zhongwen", selectedRange: NSRange(location: 8, length: 0), replacementRange: NSRange(location: 0, length: editor.string.count))
+        XCTAssertTrue(editor.hasMarkedText())
+
+        // 触发 groups 更新，促使 SwiftUI 调用 CommandGroupField.updateNSView
+        model.groups = ["开发", "工具"]
+        await nextLayout()
+        host.layoutSubtreeIfNeeded()
+
+        XCTAssertTrue(editor.hasMarkedText(), "分组下拉框中文组词期间不得被 updateNSView 打断")
+        XCTAssertEqual(editor.string, "zhongwen")
     }
 
     func testSettingsWindowUsesOneTitlebarAndItsCloseButtonWorks() async throws {
@@ -614,6 +793,67 @@ final class InterfaceWindowTests: XCTestCase {
         let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
         XCTAssertGreaterThan(data.count, 1000, "不能把空图片当作界面渲染成功")
         try data.write(to: folder.appendingPathComponent(name + ".png"))
+    }
+
+    private func makeHostedWindow<Content: View>(
+        size: NSSize,
+        appearance: NSAppearance.Name? = nil,
+        rootView: Content
+    ) -> (NSWindow, NSHostingView<Content>) {
+        let window = NSWindow(
+            contentRect: NSRect(origin: NSPoint(x: 120, y: 120), size: size),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        if let appearance { window.appearance = NSAppearance(named: appearance) }
+        window.isReleasedWhenClosed = false
+        let host = NSHostingView(rootView: rootView)
+        window.contentView = host
+        window.makeKeyAndOrderFront(nil)
+        return (window, host)
+    }
+
+    private func teardownHostedWindow(_ window: NSWindow) {
+        window.orderOut(nil)
+        window.contentView = nil
+    }
+
+    private func clickWindow(_ window: NSWindow, at point: NSPoint, postUpFirst: Bool = false) throws {
+        let down = try XCTUnwrap(NSEvent.mouseEvent(
+            with: .leftMouseDown, location: point, modifierFlags: [],
+            timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+            context: nil, eventNumber: 1, clickCount: 1, pressure: 1
+        ))
+        let up = try XCTUnwrap(NSEvent.mouseEvent(
+            with: .leftMouseUp, location: point, modifierFlags: [],
+            timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+            context: nil, eventNumber: 2, clickCount: 1, pressure: 1
+        ))
+        if postUpFirst {
+            NSApp.postEvent(up, atStart: true)
+            window.sendEvent(down)
+        } else {
+            window.sendEvent(down)
+            window.sendEvent(up)
+        }
+    }
+
+    private func hasBlueTopBorder(around view: NSView, in content: NSView, halfHeight: CGFloat) throws -> Bool {
+        content.layoutSubtreeIfNeeded()
+        let bounds = content.bounds
+        let bitmap = try XCTUnwrap(content.bitmapImageRepForCachingDisplay(in: bounds))
+        content.cacheDisplay(in: bounds, to: bitmap)
+        let viewBounds = view.convert(view.bounds, to: content)
+        let scaleX = CGFloat(bitmap.pixelsWide) / bounds.width
+        let scaleY = CGFloat(bitmap.pixelsHigh) / bounds.height
+        let x = Int(viewBounds.midX * scaleX)
+        let centerY = content.isFlipped ? viewBounds.midY : bounds.maxY - viewBounds.midY
+        let top = Int((centerY - halfHeight) * scaleY)
+        return ((top - 2)...(top + 2)).contains { y in
+            guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB) else { return false }
+            return color.blueComponent - color.redComponent > 0.35
+        }
     }
 
     private func nextLayout() async {

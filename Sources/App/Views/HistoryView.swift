@@ -24,7 +24,9 @@ struct HistoryView: View {
                 WindowHeader(title: "执行历史")
                 HStack(spacing: 12) {
                     ToolbarSearchField(placeholder: "搜索命令名称", text: $searchText)
-                    Toggle("仅失败", isOn: $onlyFailed).font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
+                    Toggle("仅失败", isOn: $onlyFailed)
+                        .toggleStyle(InterfaceCheckboxToggleStyle())
+                        .font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
                     Button("清空历史") { showingClearConfirmation = true }.disabled(history.records.isEmpty)
                 }.font(.system(size: 13)).padding(.horizontal, 20).padding(.vertical, 15).background(InterfaceStyle.material)
                 Divider()
@@ -43,7 +45,7 @@ struct HistoryView: View {
                                                 }
                                                 Spacer(minLength: 0)
                                             }
-                                            (Text(item.executedAt, style: .date) + Text(" ") + Text(item.executedAt, style: .time)).font(.system(size: 12)).padding(.leading, 14)
+                                            Text(item.formattedExecutedAt).font(.system(size: 12)).padding(.leading, 14)
                                         }.font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
                                             .padding(.horizontal, 12).padding(.vertical, 13).frame(maxWidth: .infinity, alignment: .leading)
                                             .background(item.id == record.id ? InterfaceStyle.selection : .clear)
@@ -59,7 +61,7 @@ struct HistoryView: View {
                                     Text(record.commandName).font(.system(size: 18, weight: .semibold)).textSelection(.enabled)
                                     HStack(spacing: 12) {
                                         Text(record.success ? "执行成功" : "执行失败").foregroundColor(record.success ? InterfaceStyle.success : InterfaceStyle.failure)
-                                        Text(record.executedAt, style: .date) + Text(" ") + Text(record.executedAt, style: .time)
+                                        Text(record.formattedExecutedAt)
                                     }.font(.system(size: 12)).foregroundColor(InterfaceStyle.muted)
                                 }
                                 VStack(alignment: .leading, spacing: 8) {

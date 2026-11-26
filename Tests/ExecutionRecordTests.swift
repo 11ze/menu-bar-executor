@@ -90,4 +90,33 @@ final class ExecutionRecordTests: XCTestCase {
         XCTAssertFalse(decoded.success)
         XCTAssertEqual(decoded.output, "error: build failed")
     }
+
+    // MARK: - 紧凑中文时间格式
+
+    func testFormatExecutedAtUsesCompactChineseFormats() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        let tz = try XCTUnwrap(TimeZone(secondsFromGMT: 8 * 3600))
+        calendar.timeZone = tz
+        func date(_ y: Int, _ m: Int, _ d: Int, _ h: Int, _ min: Int, _ s: Int) throws -> Date {
+            try XCTUnwrap(calendar.date(from: DateComponents(year: y, month: m, day: d, hour: h, minute: min, second: s)))
+        }
+
+        let now = try date(2026, 11, 26, 20, 50, 0)
+        XCTAssertEqual(
+            ExecutionRecord.formatExecutedAt(try date(2026, 11, 26, 10, 42, 8), relativeTo: now, calendar: calendar, timeZone: tz),
+            "今天 10:42:08"
+        )
+        XCTAssertEqual(
+            ExecutionRecord.formatExecutedAt(try date(2026, 11, 25, 18, 6, 34), relativeTo: now, calendar: calendar, timeZone: tz),
+            "昨天 18:06:34"
+        )
+        XCTAssertEqual(
+            ExecutionRecord.formatExecutedAt(try date(2026, 11, 20, 9, 5, 0), relativeTo: now, calendar: calendar, timeZone: tz),
+            "11月20日 09:05"
+        )
+        XCTAssertEqual(
+            ExecutionRecord.formatExecutedAt(try date(2025, 12, 31, 23, 59, 0), relativeTo: now, calendar: calendar, timeZone: tz),
+            "2025年12月31日 23:59"
+        )
+    }
 }

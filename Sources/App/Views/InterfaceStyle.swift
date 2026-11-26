@@ -12,6 +12,7 @@ enum InterfaceStyle {
     static let selectedText = color(light: 0x0068e8, dark: 0x83b9ff)
     static let selectedRowText = color(light: 0x005ecb, dark: 0x83b9ff)
     static let selection = color(light: 0xe4edfa, dark: 0x30455f)
+    static let accent = Color(red: 0, green: 0.408, blue: 0.91)
 
     static let success = color(light: 0x267748, dark: 0x8cd9ac)
     static let failure = color(light: 0xbe3c36, dark: 0xff9d97)
@@ -96,9 +97,7 @@ private struct NativeSearchField: NSViewRepresentable {
 
     func updateNSView(_ field: FocusReportingSearchField, context: Context) {
         context.coordinator.parent = self
-        if field.stringValue != text, (field.currentEditor() as? NSTextView)?.hasMarkedText() != true {
-            field.stringValue = text
-        }
+        field.syncTextPreservingMarkedText(text)
     }
 
     final class Coordinator: NSObject, NSSearchFieldDelegate {
@@ -124,25 +123,34 @@ private final class FocusReportingSearchField: NSSearchField {
 
     override func selectText(_ sender: Any?) {
         super.selectText(sender)
-        reportFocus()
+        reportEditingFocusAsync(onFocusChange)
     }
 
     override func mouseDown(with event: NSEvent) {
         super.mouseDown(with: event)
-        reportFocus()
+        reportEditingFocusAsync(onFocusChange)
     }
 
     override func textDidEndEditing(_ notification: Notification) {
         super.textDidEndEditing(notification)
-        reportFocus()
+        reportEditingFocusAsync(onFocusChange)
+    }
+}
+
+extension NSTextField {
+    /// 非中文组词态且文本不同时才回写，避免外部状态刷新打断 markedText。
+    func syncTextPreservingMarkedText(_ text: String) {
+        if stringValue != text, (currentEditor() as? NSTextView)?.hasMarkedText() != true {
+            stringValue = text
+        }
     }
 
-    private func reportFocus() {
-        // AppKit 处理完事件后，字段编辑器才会完成首响应者切换。
+    /// 在 AppKit 完成首响应者切换后的下一拍上报真实编辑焦点。
+    func reportEditingFocusAsync(_ onFocusChange: ((Bool) -> Void)?) {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             let focused = self.currentEditor().map { self.window?.firstResponder === $0 } ?? false
-            self.onFocusChange?(focused)
+            onFocusChange?(focused)
         }
     }
 }
@@ -227,7 +235,7 @@ struct PaletteFooterButtonStyle: ButtonStyle {
                 .padding(.horizontal, 8).frame(height: 24)
                 .background(hovered || pressed ? InterfaceStyle.selection : .clear)
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(focused ? InterfaceStyle.selectedText : .clear, lineWidth: 2))
-                .cornerRadius(6)
+                .cornerRadius(6).contentShape(Rectangle())
                 .onHover { hovered = $0 }
         }
     }
@@ -253,21 +261,261 @@ struct InterfaceButtonStyle: ButtonStyle {
         var body: some View {
             label.padding(.horizontal, 11).padding(.vertical, 5).frame(minHeight: height)
                 .foregroundColor(prominent ? .white : (hovered || pressed ? InterfaceStyle.selectedText : InterfaceStyle.text))
-                .background(prominent ? Color(red: 0, green: 0.408, blue: 0.91) : (hovered || pressed ? InterfaceStyle.selection : InterfaceStyle.surface))
-                .overlay(RoundedRectangle(cornerRadius: 7).stroke(focused ? InterfaceStyle.selectedText : (prominent ? .clear : InterfaceStyle.line), lineWidth: focused ? 2 : 1))
-                .cornerRadius(7).contentShape(Rectangle())
+                .background(prominent ? InterfaceStyle.accent : (hovered || pressed ? InterfaceStyle.selection : InterfaceStyle.surface))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 7)
+                        .stroke(focused ? InterfaceStyle.selectedText : (prominent ? Color.white.opacity(0.16) : InterfaceStyle.line), lineWidth: focused ? 2 : 1)
+                )
+                .cornerRadius(7)
+                .shadow(color: prominent ? InterfaceStyle.accent.opacity(0.22) : .clear, radius: 2, x: 0, y: 1)
+                .contentShape(Rectangle())
                 .opacity(enabled ? 1 : 0.4)
                 .onHover { hovered = enabled && $0 }
         }
     }
 }
 
-struct InterfaceTextFieldStyle: TextFieldStyle {
-    func _body(configuration: TextField<Self._Label>) -> some View {
-        configuration.textFieldStyle(.plain).padding(.horizontal, 10).padding(.vertical, 8).frame(minHeight: 36)
+/// 清晰细边复选框样式：替代系统非激活态模糊灰块，保留完整点击热区、键盘焦点环、禁用态与开关语义。
+struct InterfaceCheckboxToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        CheckboxRow(configuration: configuration)
+    }
+
+    private struct CheckboxRow: View {
+        let configuration: Configuration
+        @State private var hovered = false
+        @Environment(\.isEnabled) private var enabled
+        @Environment(\.isFocused) private var focused
+
+        var body: some View {
+            Button {
+                configuration.isOn.toggle()
+            } label: {
+                HStack(spacing: 8) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(configuration.isOn ? InterfaceStyle.accent : InterfaceStyle.surface)
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(
+                                configuration.isOn
+                                    ? InterfaceStyle.accent
+                                    : (enabled && hovered ? InterfaceStyle.selectedText : InterfaceStyle.line),
+                                lineWidth: 1
+                            )
+                        if configuration.isOn {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 9.5, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                    }
+                    .frame(width: 15, height: 15)
+                    .overlay {
+                        if focused {
+                            RoundedRectangle(cornerRadius: 5)
+                                .stroke(InterfaceStyle.selectedText, lineWidth: 2)
+                                .padding(-2)
+                        }
+                    }
+                    configuration.label
+                }
+                .frame(minHeight: 18)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .opacity(enabled ? 1 : 0.4)
+            .onHover { hovered = enabled && $0 }
+            .accessibilityValue(configuration.isOn ? "已开启" : "已关闭")
+            .accessibilityAddTraits(configuration.isOn ? .isSelected : [])
+        }
+    }
+}
+
+/// 表单单行 36pt 圆角框外观：供单行输入框与分组组合框共用。
+struct InterfaceFieldChrome: ViewModifier {
+    let focused: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .frame(height: 36)
             .background(InterfaceStyle.surface)
-            .overlay(RoundedRectangle(cornerRadius: 7).stroke(InterfaceStyle.line, lineWidth: 1))
-            .cornerRadius(7)
+            .clipShape(RoundedRectangle(cornerRadius: 7))
+            .overlay {
+                RoundedRectangle(cornerRadius: 7)
+                    .stroke(focused ? InterfaceStyle.selectedText : InterfaceStyle.line, lineWidth: 1)
+                    .allowsHitTesting(false)
+            }
+    }
+}
+
+/// 表单单行输入框：整框留白均可点击聚焦，自带中文组词保护与一致的焦点边框。
+struct InterfaceTextField: View {
+    let placeholder: String
+    @Binding var text: String
+    var autoFocus = false
+    @State private var focused = false
+
+    var body: some View {
+        NativeFormTextField(placeholder: placeholder, text: $text, autoFocus: autoFocus, focused: $focused)
+            .modifier(InterfaceFieldChrome(focused: focused))
+    }
+}
+
+struct NativeFormTextField: NSViewRepresentable {
+    let placeholder: String
+    var accessibilityLabel: String? = nil
+    @Binding var text: String
+    var autoFocus = false
+    var trailingInset: CGFloat = 10
+    @Binding var focused: Bool
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeNSView(context: Context) -> PaddedTextFieldContainer {
+        let container = PaddedTextFieldContainer(autoFocus: autoFocus, trailingInset: trailingInset)
+        let field = container.field
+        field.placeholderString = placeholder
+        field.setAccessibilityLabel(accessibilityLabel ?? placeholder)
+        field.stringValue = text
+        field.font = .systemFont(ofSize: 13)
+        field.textColor = NSColor(InterfaceStyle.text)
+        field.delegate = context.coordinator
+        field.onFocusChange = { [weak coordinator = context.coordinator] focused in
+            coordinator?.parent.focused = focused
+        }
+        return container
+    }
+
+    func updateNSView(_ container: PaddedTextFieldContainer, context: Context) {
+        context.coordinator.parent = self
+        container.updateTrailingInset(trailingInset)
+        let field = container.field
+        if field.placeholderString != placeholder {
+            field.placeholderString = placeholder
+        }
+        let targetLabel = accessibilityLabel ?? placeholder
+        if field.accessibilityLabel() != targetLabel {
+            field.setAccessibilityLabel(targetLabel)
+        }
+        field.syncTextPreservingMarkedText(text)
+    }
+
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var parent: NativeFormTextField
+        init(_ parent: NativeFormTextField) { self.parent = parent }
+
+        func controlTextDidChange(_ notification: Notification) {
+            guard let field = notification.object as? NSTextField else { return }
+            parent.text = field.stringValue
+        }
+    }
+}
+
+final class PaddedTextFieldContainer: NSView {
+    let field = FocusReportingTextField()
+    private let autoFocus: Bool
+    private var didAutoFocus = false
+    private var trailingConstraint: NSLayoutConstraint?
+
+    init(autoFocus: Bool, trailingInset: CGFloat = 10) {
+        self.autoFocus = autoFocus
+        super.init(frame: .zero)
+        field.isBordered = false
+        field.isBezeled = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.cell?.usesSingleLineMode = true
+        field.cell?.isScrollable = true
+        field.lineBreakMode = .byTruncatingTail
+        field.translatesAutoresizingMaskIntoConstraints = false
+        field.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        addSubview(field)
+        let trailing = field.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -trailingInset)
+        self.trailingConstraint = trailing
+        NSLayoutConstraint.activate([
+            field.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
+            trailing,
+            field.centerYAnchor.constraint(equalTo: centerYAnchor)
+        ])
+    }
+
+    func updateTrailingInset(_ inset: CGFloat) {
+        guard trailingConstraint?.constant != -inset else { return }
+        trailingConstraint?.constant = -inset
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override var intrinsicContentSize: NSSize {
+        NSSize(width: NSView.noIntrinsicMetric, height: 36)
+    }
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard autoFocus, !didAutoFocus, window != nil else { return }
+        didAutoFocus = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let window = self.window else { return }
+            if window.makeFirstResponder(self.field) {
+                self.field.reportFocus()
+            }
+        }
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        let point = convert(event.locationInWindow, from: nil)
+        guard let window else {
+            super.mouseDown(with: event)
+            return
+        }
+        if let editor = field.currentEditor() as? NSTextView, window.firstResponder === editor {
+            // 已在编辑态且处于中文组词期间，点击框内留白不得结束编辑或打断 markedText
+            guard !editor.hasMarkedText() else { return }
+            placeCaret(for: point, in: editor)
+            return
+        }
+        if window.makeFirstResponder(field) {
+            if let editor = field.currentEditor() as? NSTextView {
+                placeCaret(for: point, in: editor)
+            }
+            field.reportFocus()
+        }
+    }
+
+    private func placeCaret(for point: NSPoint, in editor: NSTextView) {
+        let offset = point.x < field.frame.minX ? 0 : editor.string.utf16.count
+        editor.selectedRange = NSRange(location: offset, length: 0)
+    }
+}
+
+final class FocusReportingTextField: NSTextField {
+    var onFocusChange: ((Bool) -> Void)?
+
+    override func becomeFirstResponder() -> Bool {
+        let accepted = super.becomeFirstResponder()
+        if accepted { reportFocus() }
+        return accepted
+    }
+
+    override func selectText(_ sender: Any?) {
+        super.selectText(sender)
+        reportFocus()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        super.mouseDown(with: event)
+        reportFocus()
+    }
+
+    override func textDidEndEditing(_ notification: Notification) {
+        super.textDidEndEditing(notification)
+        reportFocus()
+    }
+
+    func reportFocus() {
+        reportEditingFocusAsync(onFocusChange)
     }
 }
 
@@ -293,13 +541,16 @@ struct WindowHeader: View {
     }
 
     private func tab(_ title: String, index: Int, selection: Binding<Int>) -> some View {
-        Button { selection.wrappedValue = index } label: {
+        let active = selection.wrappedValue == index
+        return Button { selection.wrappedValue = index } label: {
             Text(title).font(.system(size: 12))
-                .foregroundColor(selection.wrappedValue == index ? InterfaceStyle.text : InterfaceStyle.muted)
+                .foregroundColor(active ? InterfaceStyle.text : InterfaceStyle.muted)
                 .padding(.horizontal, 22).padding(.vertical, 4).frame(minHeight: 26)
-                .background(selection.wrappedValue == index ? InterfaceStyle.surface : .clear)
-                .cornerRadius(6).contentShape(Rectangle())
-        }.buttonStyle(.plain).accessibilityAddTraits(selection.wrappedValue == index ? .isSelected : [])
+                .background(active ? InterfaceStyle.surface : .clear)
+                .cornerRadius(6)
+                .shadow(color: active ? Color.black.opacity(0.08) : .clear, radius: 1.5, x: 0, y: 1)
+                .contentShape(Rectangle())
+        }.buttonStyle(.plain).accessibilityAddTraits(active ? .isSelected : [])
     }
 }
 

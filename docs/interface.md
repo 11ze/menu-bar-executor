@@ -1,6 +1,8 @@
 # MenuBarExecutor 界面规范与验收
 
-软件界面以 Ryugi 交互原型 `.ryugi/artifacts/html/menu-bar-executor/index.html` 为设计参照。GitHub Pages 发布同一份文件，展示 main 分支发布的最新版交互原型，不保证与已发布的原生版本同步。原生实现按窗口内部布局对齐；网页外部的桌面背景、审稿导航、状态选择和设计说明不属于软件界面。旧设计稿已移除。
+软件界面与 Ryugi 交互原型 `.ryugi/artifacts/html/menu-bar-executor/index.html` 保持一致。GitHub Pages 发布同一份文件，展示 main 分支发布的最新版交互原型，不保证与已发布的原生版本同步。原生实现按窗口内部布局对齐；网页外部的桌面背景、审稿导航、状态选择和设计说明不属于软件界面。旧设计稿已移除。
+
+同步原则：优先使用稳定的原生控件与 `InterfaceStyle.swift` 中已收口的复用基元（如 `ToolbarSearchField`、`InterfaceTextField`、统一按钮样式与 `WindowHeader`）。若某处样式在 macOS 原生实现中需要脆弱的 `NSCell` 魔改或高风险桥接，在界面美观的前提下，允许设计稿向原生实际形态妥协并同步更新，始终保持原型与软件一致。硬检查项：所有可点控件留白必须纳入点击命中区；所有桥接输入框必须做中文 `hasMarkedText()` 保护。编辑表单单行输入框聚焦统一使用 1px 蓝色边框（原生 `InterfaceTextField` 与原型 `.field input:focus` 保持一致）。
 
 ## 打开
 
@@ -89,7 +91,7 @@ python3 -m http.server 4311 --directory .ryugi/artifacts/html/menu-bar-executor
 7. 历史启用“仅失败”，只显示 DNS 失败记录；测试搜索无结果、空输出、复制输出、清空确认的取消和确认。刷新恢复示例记录。
 8. 深浅色分别在 1280px、760px 宽度下打开五页，检查列表滚动、工具栏和底栏固定、长命令截断、编辑表单与输出滚动。窄浏览器中的窗口收缩用于审稿，原生最小尺寸仍需单独验证。
 
-中文输入回归：在仓库根目录执行 `python3 -m http.server 4312`，打开 <http://localhost:4312/Tests/PrototypeInputTests.html>。三项均应 PASS，覆盖三个搜索框组词期间保留输入节点、提交中文后过滤结果。此测试模拟 DOM 组合事件，真实输入法仍按下方原生步骤验证。
+中文输入回归：在仓库根目录执行 `python3 -m http.server 4312`，打开 <http://localhost:4312/Tests/PrototypeInputTests.html>。四项均应 PASS，覆盖三个搜索框组词期间保留输入节点、提交中文后过滤结果，以及命令编辑分组下拉框紧贴输入框对齐且展示全部分组。此测试模拟 DOM 组合事件，真实输入法仍按下方原生步骤验证。
 
 原生构建和测试沿用根目录 `AGENTS.md` 的命令，派生数据必须放在 `/tmp`。外观修改采用截图验收，不为颜色或常量编写同义反复测试。`InterfaceWindowTests` 验证内容区不叠加第二条系统标题栏（内容贴住窗口顶边，55 点标题区里的关闭按钮中心距顶 27.5 点）、关闭按钮和历史重开行为，并将深浅色、正常/最小尺寸及结果悬停/键盘聚焦的原生渲染保存到系统临时目录的 `menu-bar-executor-native-reference/`；命令面板截图使用临时配置和禁用执行的协调器。
 

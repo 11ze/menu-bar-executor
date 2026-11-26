@@ -16,6 +16,47 @@ struct ExecutionRecord: Identifiable, Codable, Hashable {
         self.success = success
         self.output = output?.truncated(to: 500)
     }
+
+    var formattedExecutedAt: String {
+        Self.formatExecutedAt(executedAt)
+    }
+
+    private static let formatLock = NSLock()
+    private static let cachedFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        return formatter
+    }()
+
+    /// 紧凑中文时间展示：今天/昨天显示到秒，同年显示月日时分，跨年补年份。
+    static func formatExecutedAt(
+        _ date: Date,
+        relativeTo now: Date = Date(),
+        calendar: Calendar = .current,
+        timeZone: TimeZone = .current
+    ) -> String {
+        var cal = calendar
+        cal.timeZone = timeZone
+        formatLock.lock()
+        defer { formatLock.unlock() }
+        cachedFormatter.calendar = cal
+        cachedFormatter.timeZone = timeZone
+        if cal.isDate(date, inSameDayAs: now) {
+            cachedFormatter.dateFormat = "HH:mm:ss"
+            return "今天 " + cachedFormatter.string(from: date)
+        }
+        if let yesterday = cal.date(byAdding: .day, value: -1, to: now),
+           cal.isDate(date, inSameDayAs: yesterday) {
+            cachedFormatter.dateFormat = "HH:mm:ss"
+            return "昨天 " + cachedFormatter.string(from: date)
+        }
+        if cal.component(.year, from: date) == cal.component(.year, from: now) {
+            cachedFormatter.dateFormat = "M月d日 HH:mm"
+            return cachedFormatter.string(from: date)
+        }
+        cachedFormatter.dateFormat = "yyyy年M月d日 HH:mm"
+        return cachedFormatter.string(from: date)
+    }
 }
 
 @MainActor

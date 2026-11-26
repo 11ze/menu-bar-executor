@@ -35,6 +35,67 @@
             results.push('FAIL ' + page + '：' + error.message);
         }
     }
+    try {
+        await new Promise(resolve => {
+            frame.onload = resolve;
+            frame.src = '../.ryugi/artifacts/html/menu-bar-executor/index.html?case=editor-combo&run=' + Date.now() + '#editor';
+        });
+        const win = frame.contentWindow;
+        const doc = frame.contentDocument;
+        const box = doc.querySelector('#editor-form .combobox');
+        const input = box?.querySelector('input[name="group"]');
+        const toggle = box?.querySelector('[data-action="toggleGroupMenu"]');
+        if (!box || !input || !toggle) throw new Error('缺少分组组合框元素');
+        if (input.getAttribute('list') !== null) throw new Error('不应依赖浏览器原生 datalist 弹层');
+        toggle.click();
+        const menu = doc.querySelector('.combo-menu');
+        if (!menu) throw new Error('点击展开按钮未弹出分组列表');
+        const options = [...menu.querySelectorAll('.combo-option')].map(el => el.dataset.comboOption);
+        if (options.length < 3) throw new Error('展开后应显示全部分组，实际：' + options.join(','));
+        const boxRect = box.getBoundingClientRect();
+        const menuRect = menu.getBoundingClientRect();
+        if (Math.abs(menuRect.left - boxRect.left) > 2 || Math.abs(menuRect.width - boxRect.width) > 2) {
+            throw new Error(`下拉框水平未对齐：box=(${boxRect.left},${boxRect.width}) menu=(${menuRect.left},${menuRect.width})`);
+        }
+        if (menuRect.top < boxRect.bottom - 1 || menuRect.top > boxRect.bottom + 12) {
+            throw new Error(`下拉框垂直未紧贴输入框：box.bottom=${boxRect.bottom} menu.top=${menuRect.top}`);
+        }
+        // 点击分组输入框本身不应误关菜单
+        input.click();
+        if (!doc.querySelector('.combo-menu')) throw new Error('点击分组输入框不应关闭已展开的下拉框');
+        // Tab 切走应关闭菜单
+        doc.dispatchEvent(new win.KeyboardEvent('keydown', {key: 'Tab', bubbles: true}));
+        if (doc.querySelector('.combo-menu')) throw new Error('按 Tab 后未关闭分组下拉框');
+        // 纯键盘 ArrowDown 打开、方向键移动、回车选中
+        input.focus();
+        doc.dispatchEvent(new win.KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true}));
+        const kbMenu = doc.querySelector('.combo-menu');
+        if (!kbMenu) throw new Error('焦点在分组框时按 ArrowDown 未展开菜单');
+        doc.dispatchEvent(new win.KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true}));
+        doc.dispatchEvent(new win.KeyboardEvent('keydown', {key: 'Enter', bubbles: true}));
+        if (input.value !== '日常操作') throw new Error('键盘选择分组失败，实际：' + input.value);
+        if (doc.querySelector('.combo-menu')) throw new Error('键盘回车选择后未关闭下拉框');
+        // 点选回填与关闭
+        toggle.click();
+        doc.querySelector('.combo-menu [data-combo-option="状态速览"]').click();
+        if (input.value !== '状态速览') throw new Error('点选分组项未回填输入框');
+        if (doc.querySelector('.combo-menu')) throw new Error('选择后未关闭下拉框');
+        // 视口下方空间不足时自动向上翻转展开
+        const origHeight = frame.style.height;
+        frame.style.height = Math.round(boxRect.bottom + 36) + 'px';
+        toggle.click();
+        const flippedMenu = doc.querySelector('.combo-menu');
+        if (!flippedMenu) throw new Error('矮视口下未展开上翻分组菜单');
+        const flippedBoxRect = box.getBoundingClientRect();
+        const flippedMenuRect = flippedMenu.getBoundingClientRect();
+        frame.style.height = origHeight;
+        if (flippedMenuRect.bottom > flippedBoxRect.top + 1) {
+            throw new Error(`空间不足时应向上翻转展开：box.top=${flippedBoxRect.top} menu.bottom=${flippedMenuRect.bottom}`);
+        }
+        results.push('PASS editor-combo：分组下拉框紧贴输入框对齐、支持纯键盘、点选与矮视口上翻');
+    } catch (error) {
+        results.push('FAIL editor-combo：' + error.message);
+    }
     document.getElementById('results').textContent = results.join('\n');
     document.title = results.some(result => result.startsWith('FAIL')) ? 'FAIL 原型中文输入回归' : 'PASS 原型中文输入回归';
 })();

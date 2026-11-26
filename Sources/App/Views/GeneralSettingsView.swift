@@ -77,6 +77,7 @@ struct GeneralSettingsView: View {
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundColor(InterfaceStyle.muted)
                             .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.vertical, 14)
                     }
                 }
