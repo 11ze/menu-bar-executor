@@ -257,10 +257,6 @@ struct CommandsListView: View {
     private func namedGroupRow(_ name: String) -> some View {
         let key = SelectedGroup.named(name)
         let isActive = !isSearching && effectiveSelection == key
-        let isHovered = hoveredGroupKey == key
-        let isReceiving = dropReceiveGroup == key
-        let isReorderingTarget = dropReorderGroup == name
-        let isHidden = isGroupHidden(name)
         let count = manager.commands.filter { CommandsManager.normalizedGroup($0.group) == name }.count
 
         return Group {
@@ -286,81 +282,13 @@ struct CommandsListView: View {
                 .background(isActive ? InterfaceStyle.selection : Color.clear)
                 .cornerRadius(7)
             } else {
-                HStack(spacing: 5) {
-                    Button {
-                        selectGroup(key)
-                    } label: {
-                        HStack(spacing: 6) {
-                            dragGrip(visible: isHovered || isActive)
-                            Text(name)
-                                .font(.system(size: 12.5, weight: .medium))
-                                .foregroundColor(isActive || isReceiving ? InterfaceStyle.selectedRowText : InterfaceStyle.text)
-                                .opacity(isHidden ? 0.52 : 1)
-                                .lineLimit(1)
-                            Spacer(minLength: 4)
-                        }
-                        .frame(maxHeight: .infinity)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .help(isHidden ? "\(name)（已隐藏）" : name)
-
-                    if isHovered {
-                        HStack(spacing: 1) {
-                            sidebarMiniButton(
-                                systemImage: isHidden ? "eye.slash" : "eye",
-                                label: isHidden ? "显示分组\(name)" : "隐藏分组\(name)",
-                                highlighted: isHidden
-                            ) {
-                                toggleGroupHidden(key)
-                            }
-                            sidebarMiniButton(systemImage: "pencil", label: "重命名分组\(name)") {
-                                startRenamingGroup(name)
-                            }
-                            sidebarMiniButton(systemImage: "xmark", label: "删除分组\(name)", destructive: true) {
-                                requestDeleteGroup(name)
-                            }
-                        }
-                    } else {
-                        if isHidden {
-                            sidebarMiniButton(
-                                systemImage: "eye.slash",
-                                label: "恢复显示分组\(name)",
-                                highlighted: isActive
-                            ) {
-                                toggleGroupHidden(key)
-                            }
-                        }
-                        Text("\(count)")
-                            .font(.system(size: 11))
-                            .foregroundColor(isActive ? InterfaceStyle.selectedRowText : InterfaceStyle.muted)
-                            .opacity(isHidden ? 0.52 : (isActive ? 0.85 : 1))
-                            .padding(.trailing, 4)
-                    }
-                }
-                .padding(.horizontal, 8)
-                .frame(height: 34)
-                .background(
-                    isReceiving ? InterfaceStyle.selection :
-                        (isActive ? InterfaceStyle.selection : (isHovered ? InterfaceStyle.subtle : Color.clear))
+                sidebarGroupRow(
+                    key: key,
+                    title: name,
+                    count: count,
+                    showDragGrip: true,
+                    reorderIndicatorAlignment: dropReorderGroup == name ? groupReorderAlignment(for: name) : nil
                 )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 7)
-                        .stroke(
-                            isReceiving ? InterfaceStyle.selectedText : Color.clear,
-                            style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
-                        )
-                )
-                .overlay(alignment: groupReorderAlignment(for: name)) {
-                    if isReorderingTarget {
-                        InterfaceStyle.selectedText.frame(height: 2)
-                    }
-                }
-                .cornerRadius(7)
-                .onHover { hovered in
-                    if hovered { hoveredGroupKey = key }
-                    else if hoveredGroupKey == key { hoveredGroupKey = nil }
-                }
                 .onDrag {
                     draggingItem = .group(name)
                     return Self.makeDragProvider("group:\(name)")
@@ -403,73 +331,12 @@ struct CommandsListView: View {
     }
 
     private var ungroupedRow: some View {
-        let key = SelectedGroup.ungrouped
-        let isActive = !isSearching && effectiveSelection == key
-        let isHovered = hoveredGroupKey == key
-        let isReceiving = dropReceiveGroup == key
-        let isHidden = isGroupHidden(nil)
-
-        return HStack(spacing: 5) {
-            Button {
-                selectGroup(key)
-            } label: {
-                HStack(spacing: 6) {
-                    Color.clear.frame(width: 14, height: 14)
-                    Text("未分组")
-                        .font(.system(size: 12.5, weight: .medium))
-                        .foregroundColor(isActive || isReceiving ? InterfaceStyle.selectedRowText : InterfaceStyle.muted)
-                        .opacity(isHidden ? 0.52 : 1)
-                        .lineLimit(1)
-                    Spacer(minLength: 4)
-                }
-                .frame(maxHeight: .infinity)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            if isHovered {
-                sidebarMiniButton(
-                    systemImage: isHidden ? "eye.slash" : "eye",
-                    label: isHidden ? "显示未分组" : "隐藏未分组",
-                    highlighted: isHidden
-                ) {
-                    toggleGroupHidden(key)
-                }
-            } else {
-                if isHidden {
-                    sidebarMiniButton(
-                        systemImage: "eye.slash",
-                        label: "恢复显示未分组",
-                        highlighted: isActive
-                    ) {
-                        toggleGroupHidden(key)
-                    }
-                }
-                Text("\(ungroupedCount)")
-                    .font(.system(size: 11))
-                    .foregroundColor(isActive ? InterfaceStyle.selectedRowText : InterfaceStyle.muted)
-                    .opacity(isHidden ? 0.52 : (isActive ? 0.85 : 1))
-                    .padding(.trailing, 4)
-            }
-        }
-        .padding(.horizontal, 8)
-        .frame(height: 34)
-        .background(
-            isReceiving ? InterfaceStyle.selection :
-                (isActive ? InterfaceStyle.selection : (isHovered ? InterfaceStyle.subtle : Color.clear))
+        sidebarGroupRow(
+            key: .ungrouped,
+            title: "未分组",
+            count: ungroupedCount,
+            mutedTitle: true
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 7)
-                .stroke(
-                    isReceiving ? InterfaceStyle.selectedText : Color.clear,
-                    style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
-                )
-        )
-        .cornerRadius(7)
-        .onHover { hovered in
-            if hovered { hoveredGroupKey = key }
-            else if hoveredGroupKey == key { hoveredGroupKey = nil }
-        }
         .onDrop(
             of: [Self.dragItemUTType],
             delegate: UngroupedDropDelegate(
@@ -482,23 +349,74 @@ struct CommandsListView: View {
         )
     }
 
-    private func sidebarMiniButton(
-        systemImage: String,
-        label: String,
-        destructive: Bool = false,
-        highlighted: Bool = false,
-        action: @escaping () -> Void
+    private func sidebarGroupRow(
+        key: SelectedGroup,
+        title: String,
+        count: Int,
+        mutedTitle: Bool = false,
+        showDragGrip: Bool = false,
+        reorderIndicatorAlignment: Alignment? = nil
     ) -> some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 10.5, weight: .medium))
-                .foregroundColor(destructive ? InterfaceStyle.failure : (highlighted ? InterfaceStyle.selectedRowText : InterfaceStyle.muted))
-                .frame(width: 21, height: 21)
-                .contentShape(Rectangle())
+        let isActive = !isSearching && effectiveSelection == key
+        let isHovered = hoveredGroupKey == key
+        let isReceiving = dropReceiveGroup == key
+        let isHidden = isGroupHidden(key)
+
+        return Button {
+            selectGroup(key)
+        } label: {
+            HStack(spacing: 6) {
+                if showDragGrip {
+                    dragGrip(visible: isHovered || isActive)
+                } else {
+                    Color.clear.frame(width: 14, height: 14)
+                }
+                Text(title)
+                    .font(.system(size: 12.5, weight: .medium))
+                    .foregroundColor(isActive || isReceiving ? InterfaceStyle.selectedRowText : (mutedTitle ? InterfaceStyle.muted : InterfaceStyle.text))
+                    .opacity(isHidden ? 0.52 : 1)
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                if isHidden {
+                    Image(systemName: "eye.slash")
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundColor(isActive ? InterfaceStyle.selectedRowText : InterfaceStyle.muted)
+                        .opacity(0.75)
+                }
+                Text("\(count)")
+                    .font(.system(size: 11))
+                    .foregroundColor(isActive ? InterfaceStyle.selectedRowText : InterfaceStyle.muted)
+                    .opacity(isHidden ? 0.52 : (isActive ? 0.85 : 1))
+                    .padding(.trailing, 4)
+            }
+            .padding(.horizontal, 8)
+            .frame(height: 34)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(label)
-        .help(label)
+        .accessibilityLabel(isHidden ? "\(title)，已隐藏，\(count) 条命令" : "\(title)，\(count) 条命令")
+        .help(isHidden ? "\(title)（已隐藏）" : title)
+        .background(
+            isReceiving ? InterfaceStyle.selection :
+                (isActive ? InterfaceStyle.selection : (isHovered ? InterfaceStyle.subtle : Color.clear))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 7)
+                .stroke(
+                    isReceiving ? InterfaceStyle.selectedText : Color.clear,
+                    style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
+                )
+        )
+        .overlay(alignment: reorderIndicatorAlignment ?? .top) {
+            if reorderIndicatorAlignment != nil {
+                InterfaceStyle.selectedText.frame(height: 2)
+            }
+        }
+        .cornerRadius(7)
+        .onHover { hovered in
+            if hovered { hoveredGroupKey = key }
+            else if hoveredGroupKey == key { hoveredGroupKey = nil }
+        }
     }
 
     // MARK: - 右侧命令区
@@ -598,12 +516,14 @@ struct CommandsListView: View {
                 }
                 Spacer(minLength: 8)
                 HStack(spacing: 4) {
-                    Button(groupHidden ? "显示分组" : "隐藏分组") {
-                        toggleGroupHidden(effectiveSelection)
+                    if !groupHidden {
+                        Button("隐藏分组") {
+                            toggleGroupHidden(effectiveSelection)
+                        }
+                        .buttonStyle(CompactQuietButtonStyle())
+                        .font(.system(size: 12))
+                        .fixedSize()
                     }
-                    .buttonStyle(CompactQuietButtonStyle())
-                    .font(.system(size: 12))
-                    .fixedSize()
                     if case .named(let name) = effectiveSelection {
                         Button("重命名分组") { startRenamingGroup(name) }
                             .buttonStyle(CompactQuietButtonStyle())
