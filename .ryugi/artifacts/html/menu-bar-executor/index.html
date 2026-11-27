@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MenuBarExecutor · 交互原型与界面规范</title>
+<title>MenuBarExecutor — macOS 菜单栏命令执行器 · 交互演示</title>
+<meta name="description" content="把常用 Shell 命令放进 macOS 菜单栏。按快捷键呼出面板，输入名称或拼音，回车即执行。在线体验全部界面交互。">
 <style>
 /* ==========================================================================
    1. 共享主题令牌与软件界面基础样式（与 Sources/App/Views/InterfaceStyle.swift 一致）
    ========================================================================== */
-:root{color-scheme:light;--desktop:#f4f4f4;--paper:#fdfdfe;--chrome:#eff1f4;--subtle:#f5f6f8;--material:#f6f8fb;--line:#dce0e6;--text:#24262b;--muted:#626772;--blue:#0068e8;--selection:#e4edfa;--selected-text:#005ecb;--green:#267748;--red:#be3c36;--shadow:0 28px 70px #18181b26,0 3px 12px #18181b12;--mono:ui-monospace,"SF Mono",Menlo,monospace;--wb-canvas:#eceef2;--wb-grid:rgba(36,38,43,.075);--wb-border:rgba(36,38,43,.09);--wb-border-strong:rgba(36,38,43,.15);--wb-surface:#ffffff;--wb-surface-2:#f8f9fb;--wb-menubar:rgba(255,255,255,.78);--wb-measure:#cf4700;--wb-measure-bg:#fff3eb;--wb-measure-line:rgba(207,71,0,.62)}
-[data-theme="dark"]{color-scheme:dark;--desktop:#171717;--paper:#292b30;--chrome:#25272c;--subtle:#222429;--material:#25272c;--line:#404249;--text:#f0f1f4;--muted:#acb1ba;--blue:#83b9ff;--selection:#30455f;--selected-text:#83b9ff;--green:#8cd9ac;--red:#ff9d97;--shadow:0 28px 70px #0005,0 3px 12px #0003;--wb-canvas:#111215;--wb-grid:rgba(240,241,244,.08);--wb-border:rgba(240,241,244,.09);--wb-border-strong:rgba(240,241,244,.16);--wb-surface:#1d1f23;--wb-surface-2:#181a1e;--wb-menubar:rgba(29,31,35,.82);--wb-measure:#ff9157;--wb-measure-bg:#2d1c13;--wb-measure-line:rgba(255,145,87,.65)}
+:root{color-scheme:light;--desktop:#f4f4f4;--paper:#fdfdfe;--chrome:#eff1f4;--subtle:#f5f6f8;--material:#f6f8fb;--line:#dce0e6;--text:#24262b;--muted:#626772;--blue:#0068e8;--selection:#e4edfa;--selected-text:#005ecb;--green:#267748;--red:#be3c36;--shadow:0 28px 70px #18181b26,0 3px 12px #18181b12;--mono:ui-monospace,"SF Mono",Menlo,monospace;--pub-canvas:#eceef2;--pub-grid:rgba(36,38,43,.075);--pub-border:rgba(36,38,43,.09);--pub-border-strong:rgba(36,38,43,.15);--pub-surface:#ffffff;--pub-surface-2:#f8f9fb;--pub-menubar:rgba(255,255,255,.8)}
+[data-theme="dark"]{color-scheme:dark;--desktop:#171717;--paper:#292b30;--chrome:#25272c;--subtle:#222429;--material:#25272c;--line:#404249;--text:#f0f1f4;--muted:#acb1ba;--blue:#83b9ff;--selection:#30455f;--selected-text:#83b9ff;--green:#8cd9ac;--red:#ff9d97;--shadow:0 28px 70px #0005,0 3px 12px #0003;--pub-canvas:#111215;--pub-grid:rgba(240,241,244,.08);--pub-border:rgba(240,241,244,.09);--pub-border-strong:rgba(240,241,244,.16);--pub-surface:#1d1f23;--pub-surface-2:#181a1e;--pub-menubar:rgba(29,31,35,.84)}
 *{box-sizing:border-box}body{margin:0;background:var(--desktop);color:var(--text);font:13px/1.5 -apple-system,"SF Pro Text","PingFang SC",sans-serif;-webkit-font-smoothing:antialiased}button,input,textarea,select{font:inherit}button,a,input,textarea,select{-webkit-tap-highlight-color:transparent}button{cursor:pointer;color:inherit;border:1px solid var(--line);background:var(--paper);border-radius:7px;padding:5px 11px;white-space:nowrap}button:hover{background:var(--selection);color:var(--blue)}button:disabled{opacity:.4;cursor:default;background:var(--paper);color:var(--muted)}button:focus-visible,a:focus-visible{outline:2px solid var(--blue);outline-offset:3px}input,textarea,select{color:var(--text);background:var(--paper);border:1px solid var(--line);border-radius:7px;padding:8px 10px;min-width:0}input:focus,textarea:focus,select:focus{outline:2px solid var(--blue);outline-offset:1px}input[type="checkbox"]{accent-color:var(--blue)}input::placeholder{color:var(--muted)}h1,h2,h3,p{margin:0}a{color:inherit;text-decoration:none}
 
 /* ==========================================================================
@@ -22,288 +23,267 @@
 @media(max-width:600px){.windowbar{gap:12px;padding:0 14px}.windowtabs button{padding:4px 12px}.toolbar{padding:12px;gap:8px;flex-wrap:wrap}.history-body{grid-template-columns:145px minmax(0,1fr)}.history-detail{padding:16px}.history-detail h2{font-size:15px}.history-item{padding:12px 7px}.history-item time{font-size:12px;margin-left:0}.settings-body{padding:20px 14px}.setting{gap:12px}.setting select{max-width:120px}.field-pair{grid-template-columns:1fr}.windowfoot{padding:10px 12px}.commands-workspace{flex-direction:column;height:auto}.group-sidebar{width:100%;border-right:0;border-bottom:1px solid var(--line);max-height:180px}.commands-scroll{max-height:360px}.command-row{padding:10px 14px}.command-row h3{flex-wrap:wrap;gap:3px}.form-body{padding:18px}.windowfoot>span{min-width:0}.windowfoot>span:last-child{font-size:12px}.history-detail .meta{flex-wrap:wrap;gap:4px}}
 
 /* ==========================================================================
-   3. 设计稿工作台外壳样式（不属于软件界面，仅用于预览、评审与规格查验）
+   3. 对外展示页外壳样式（不属于软件界面，仅用于产品演示与下载引导）
    ========================================================================== */
-.wb-container{max-width:1200px;margin:0 auto;padding:0 32px}
-.wb-header{position:sticky;top:0;z-index:12;background:color-mix(in srgb,var(--desktop) 88%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--wb-border)}
-.wb-header-inner{min-height:60px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 0}
-.wb-brand{display:flex;gap:10px;align-items:center;min-width:0}
-.wb-appmark{display:grid;place-items:center;width:32px;height:32px;border-radius:8px;background:var(--text);color:var(--paper);font:700 17px var(--mono);flex-shrink:0;letter-spacing:-1px}
-.wb-brand-text{display:flex;flex-direction:column;min-width:0}
-.wb-brand-name{font-weight:600;font-size:13.5px;letter-spacing:-.2px;line-height:1.2}
-.wb-brand-sub{font-size:11.5px;color:var(--muted);line-height:1.3;margin-top:1px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pub-container{max-width:1160px;margin:0 auto;padding-inline:32px}
+.pub-header{position:sticky;top:0;z-index:12;background:color-mix(in srgb,var(--desktop) 88%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--pub-border)}
+.pub-header-inner{min-height:58px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:9px 0}
+.pub-brand{display:flex;gap:10px;align-items:center;min-width:0}
+.pub-appmark{display:grid;place-items:center;width:32px;height:32px;border-radius:8px;background:var(--text);color:var(--paper);font:700 17px var(--mono);flex-shrink:0;letter-spacing:-1px}
+.pub-brand-text{display:flex;flex-direction:column;min-width:0}
+.pub-brand-name{font-weight:600;font-size:13.5px;letter-spacing:-.2px;line-height:1.2}
+.pub-brand-sub{font-size:11.5px;color:var(--muted);line-height:1.3;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-.wb-nav{display:flex;gap:2px;padding:3px;border:1px solid var(--wb-border);border-radius:10px;background:var(--wb-surface-2)}
-.wb-nav button{border:0;background:transparent;color:var(--muted);padding:6px 12px;font-size:12px;border-radius:7px;display:inline-flex;align-items:center;gap:6px;transition:background-color .14s ease,color .14s ease}
-.wb-nav button:hover{color:var(--text);background:color-mix(in srgb,var(--text) 5%,transparent)}
-.wb-nav button.active{background:var(--wb-surface);color:var(--text);font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.wb-nav-idx{font:11px var(--mono);color:var(--muted);opacity:.7;font-variant-numeric:tabular-nums}
-.wb-nav button.active .wb-nav-idx{color:var(--blue);opacity:1}
+.pub-nav{display:flex;gap:2px;padding:3px;border:1px solid var(--pub-border);border-radius:10px;background:var(--pub-surface-2)}
+.pub-nav button{border:0;background:transparent;color:var(--muted);padding:6px 13px;font-size:12px;border-radius:7px;transition:background-color .14s ease,color .14s ease}
+.pub-nav button:hover{color:var(--text);background:color-mix(in srgb,var(--text) 5%,transparent)}
+.pub-nav button.active{background:var(--pub-surface);color:var(--text);font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 
-.wb-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.wb-btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 11px;font-size:12px;border-radius:8px;background:var(--wb-surface);border:1px solid var(--wb-border-strong);color:var(--text);transition:background-color .14s ease,border-color .14s ease,color .14s ease}
-.wb-btn:hover{background:var(--selection);border-color:color-mix(in srgb,var(--blue) 35%,var(--wb-border));color:var(--blue)}
-.wb-btn.wb-btn-quiet{background:transparent;border-color:transparent;color:var(--muted)}
-.wb-btn.wb-btn-quiet:hover{background:color-mix(in srgb,var(--text) 6%,transparent);color:var(--text);border-color:transparent}
-.wb-btn[aria-pressed="true"]{background:var(--selection);border-color:color-mix(in srgb,var(--blue) 45%,transparent);color:var(--selected-text)}
-.wb-dirty-dot{width:6px;height:6px;border-radius:50%;background:var(--blue);display:none}
-.wb-btn.is-dirty .wb-dirty-dot{display:inline-block}
-.wb-btn.is-dirty{color:var(--text);border-color:var(--wb-border-strong);background:var(--wb-surface)}
+.pub-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.pub-btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 11px;font-size:12px;border-radius:8px;background:var(--pub-surface);border:1px solid var(--pub-border-strong);color:var(--text);transition:background-color .14s ease,border-color .14s ease,color .14s ease}
+.pub-btn:hover{background:var(--selection);border-color:color-mix(in srgb,var(--blue) 35%,var(--pub-border));color:var(--blue)}
+.pub-btn-quiet{background:transparent;border-color:transparent;color:var(--muted)}
+.pub-btn-quiet:hover{background:color-mix(in srgb,var(--text) 6%,transparent);color:var(--text);border-color:transparent}
+.pub-btn-cta{background:#0068e8;border-color:#0068e8;color:#fff;font-weight:500;box-shadow:inset 0 1px rgba(255,255,255,.16)}
+.pub-btn-cta:hover{background:#005ac9;border-color:#005ac9;color:#fff}
+.pub-dirty-dot{width:6px;height:6px;border-radius:50%;background:var(--blue);display:none}
+.pub-btn.is-dirty .pub-dirty-dot{display:inline-block}
+.pub-btn.is-dirty{color:var(--text);border-color:var(--pub-border-strong);background:var(--pub-surface)}
 
-.wb-main{padding-top:20px;padding-bottom:44px}
+.pub-main{padding-top:22px;padding-bottom:56px}
 
-/* 舞台外壳（校准画布 + 顶部控制栏 + 底部情景条） */
-.wb-stage-shell{border:1px solid var(--wb-border-strong);border-radius:16px;background:var(--wb-surface);overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.03)}
-.wb-stage-bar{min-height:44px;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--wb-surface);border-bottom:1px solid var(--wb-border)}
-.wb-stage-meta{display:flex;align-items:center;gap:10px;min-width:0}
-.wb-step-pill{font:11.5px var(--mono);font-variant-numeric:tabular-nums;color:var(--muted);background:var(--wb-surface-2);border:1px solid var(--wb-border);border-radius:6px;padding:2px 7px}
-.wb-screen-name{font-size:13px;font-weight:600;color:var(--text)}
-.wb-dim-readout{font:11.5px var(--mono);font-variant-numeric:tabular-nums;color:var(--muted);padding-left:10px;border-left:1px solid var(--wb-border)}
-.wb-stage-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+/* 首屏紧凑标题栏：保持产品窗口立即可见 */
+.pub-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:16px;flex-wrap:wrap}
+.pub-hero-copy{min-width:0}
+.pub-hero h1{font-size:22px;font-weight:600;letter-spacing:-.5px;line-height:1.25;color:var(--text)}
+.pub-hero p{font-size:13px;color:var(--muted);margin-top:5px;line-height:1.55}
+.pub-hero-meta{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);flex-shrink:0}
+.pub-meta-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
 
-.wb-seg{display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:8px;background:var(--wb-surface-2);border:1px solid var(--wb-border)}
-.wb-seg button{border:0;background:transparent;color:var(--muted);padding:3px 9px;height:24px;font-size:11.5px;border-radius:6px;font-variant-numeric:tabular-nums;transition:background-color .14s ease,color .14s ease}
-.wb-seg button:hover{color:var(--text);background:color-mix(in srgb,var(--text) 5%,transparent)}
-.wb-seg button.active{background:var(--wb-surface);color:var(--text);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+/* 交互演示舞台 */
+.pub-stage-shell{border:1px solid var(--pub-border-strong);border-radius:16px;background:var(--pub-surface);overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.pub-canvas{position:relative;background-color:var(--pub-canvas);background-image:radial-gradient(var(--pub-grid) 1px,transparent 1px);background-size:20px 20px;background-position:10px 10px;overflow-x:auto}
+.pub-menubar{height:28px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;background:var(--pub-menubar);backdrop-filter:blur(10px);border-bottom:1px solid var(--pub-border);font-size:11.5px;color:var(--muted);user-select:none}
+.pub-menubar-left{display:flex;align-items:center;gap:14px;min-width:0}
+.pub-menubar-left strong{color:var(--text);font-weight:600}
+.pub-menubar-right{display:flex;align-items:center;gap:10px;font-variant-numeric:tabular-nums}
+.pub-menubar-icon{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;border-radius:5px;border:1px solid transparent;background:transparent;color:var(--text);font:600 11.5px var(--mono)}
+.pub-menubar-icon:hover{background:color-mix(in srgb,var(--text) 8%,transparent);color:var(--text)}
+.pub-menubar-icon[aria-pressed="true"]{background:var(--selection);color:var(--selected-text);border-color:color-mix(in srgb,var(--blue) 28%,transparent)}
+.pub-menubar-shortcut{font:11px var(--mono);color:var(--muted)}
 
-.wb-tool-toggle{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;font-size:11.5px;border-radius:7px;background:var(--wb-surface-2);border:1px solid var(--wb-border);color:var(--muted);transition:background-color .14s ease,color .14s ease,border-color .14s ease}
-.wb-tool-toggle:hover{color:var(--text);background:color-mix(in srgb,var(--text) 5%,transparent)}
-.wb-tool-toggle[aria-pressed="true"]{background:var(--wb-measure-bg);border-color:color-mix(in srgb,var(--wb-measure) 45%,transparent);color:var(--wb-measure);font-weight:500}
+.stage{min-height:540px;display:flex;justify-content:center;align-items:center;padding:30px 24px;position:relative}
+.stage.is-palette-stage{min-height:500px;align-items:flex-start;padding-top:26px;padding-bottom:32px}
 
-/* 舞台画布 */
-.wb-canvas{position:relative;background-color:var(--wb-canvas);background-image:radial-gradient(var(--wb-grid) 1px,transparent 1px);background-size:20px 20px;background-position:10px 10px;overflow-x:auto}
-.wb-menubar{height:28px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;background:var(--wb-menubar);backdrop-filter:blur(10px);border-bottom:1px solid var(--wb-border);font-size:11.5px;color:var(--muted);user-select:none}
-.wb-menubar-left{display:flex;align-items:center;gap:14px;min-width:0}
-.wb-menubar-left strong{color:var(--text);font-weight:600}
-.wb-menubar-right{display:flex;align-items:center;gap:10px;font-variant-numeric:tabular-nums}
-.wb-menubar-icon{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;border-radius:5px;border:1px solid transparent;background:transparent;color:var(--text);font:600 11.5px var(--mono)}
-.wb-menubar-icon:hover{background:color-mix(in srgb,var(--text) 8%,transparent);color:var(--text)}
-.wb-menubar-icon[aria-pressed="true"]{background:var(--selection);color:var(--selected-text);border-color:color-mix(in srgb,var(--blue) 28%,transparent)}
-.wb-menubar-shortcut{font:11px var(--mono);color:var(--muted)}
+/* 舞台底部体验栏 */
+.pub-tray{padding:10px 16px;background:var(--pub-surface);border-top:1px solid var(--pub-border);display:flex;align-items:center;justify-content:space-between;gap:12px 20px;flex-wrap:wrap}
+.pub-tray-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.pub-tray-label{font-size:11.5px;color:var(--muted);font-weight:500;white-space:nowrap}
+.pub-chip{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:6px;font-size:11.5px;background:var(--pub-surface-2);border:1px solid var(--pub-border);color:var(--text);transition:background-color .14s ease,border-color .14s ease,color .14s ease}
+.pub-chip:hover{background:var(--selection);border-color:color-mix(in srgb,var(--blue) 35%,transparent);color:var(--selected-text)}
+.pub-chip.active{background:var(--selection);border-color:color-mix(in srgb,var(--blue) 45%,transparent);color:var(--selected-text);font-weight:500}
+.pub-seg{display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:8px;background:var(--pub-surface-2);border:1px solid var(--pub-border)}
+.pub-seg button{border:0;background:transparent;color:var(--muted);padding:3px 9px;height:24px;font-size:11.5px;border-radius:6px;transition:background-color .14s ease,color .14s ease}
+.pub-seg button:hover{color:var(--text);background:color-mix(in srgb,var(--text) 5%,transparent)}
+.pub-seg button.active{background:var(--pub-surface);color:var(--text);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.08)}
 
-.stage{min-height:560px;display:flex;justify-content:center;align-items:center;padding:34px 28px;position:relative}
-.stage.is-palette-stage{min-height:520px;align-items:flex-start;padding-top:30px;padding-bottom:36px}
+/* 当前界面导览卡 */
+.pub-guide{margin-top:20px;border:1px solid var(--pub-border-strong);border-radius:16px;background:var(--pub-surface);padding:24px 28px;display:grid;grid-template-columns:1.25fr 1fr;gap:32px;align-items:start}
+.pub-guide-eyebrow{font-size:12px;font-weight:500;color:var(--blue)}
+.pub-guide h2{font-size:19px;font-weight:600;letter-spacing:-.4px;margin-top:6px;line-height:1.3}
+.pub-guide-text{font-size:13px;line-height:1.8;color:var(--muted);margin-top:10px}
+.pub-tour-links{display:flex;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap}
+.pub-tour-btn{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 11px;font-size:12px;border-radius:7px;background:var(--pub-surface-2);border:1px solid var(--pub-border);color:var(--text)}
+.pub-tour-btn:hover{background:var(--selection);border-color:color-mix(in srgb,var(--blue) 35%,transparent);color:var(--selected-text)}
 
-/* 非侵入式容器宽度/高度模拟（仅在用户选择非默认宽度/矮视口预设时生效） */
-.stage[data-preview-width="360"] .window{width:360px!important}
-.stage[data-preview-width="360"] .palette-help{gap:4px}
-.stage[data-preview-width="360"] .palette-help .wide-only{display:none!important}
-.stage[data-preview-width="360"] .palette .windowfoot{gap:6px}
-.stage[data-preview-width="800"] .window{width:800px!important}
-.stage[data-preview-width="640"] .window{width:640px!important}
-.stage[data-preview-width="640"] .history-body{grid-template-columns:220px minmax(0,1fr)}
-.stage[data-preview-height="short"] .editor-window .sheet.inline{max-height:430px!important}
+.pub-shortcuts-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:10px}
+.pub-shortcuts{display:grid;gap:6px}
+.pub-shortcut-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 11px;border-radius:8px;background:var(--pub-surface-2);border:1px solid var(--pub-border);font-size:12px}
+.pub-shortcut-keys{display:inline-flex;align-items:center;gap:4px;flex-shrink:0}
+.pub-shortcut-desc{color:var(--muted);text-align:right}
 
-/* 红线尺寸标注层（独立覆盖层，pointer-events:none，不改动窗口 DOM） */
-.wb-spec-overlay{position:absolute;inset:0;pointer-events:none;z-index:8;overflow:hidden}
-.wb-m-box{position:absolute;border:1px dashed var(--wb-measure-line);border-radius:4px}
-.wb-m-bar-h{position:absolute;height:1px;background:var(--wb-measure-line)}
-.wb-m-bar-h::before,.wb-m-bar-h::after{content:"";position:absolute;top:-3px;width:1px;height:7px;background:var(--wb-measure-line)}
-.wb-m-bar-h::before{left:0}.wb-m-bar-h::after{right:0}
-.wb-m-bar-v{position:absolute;width:1px;background:var(--wb-measure-line)}
-.wb-m-bar-v::before,.wb-m-bar-v::after{content:"";position:absolute;left:-3px;height:1px;width:7px;background:var(--wb-measure-line)}
-.wb-m-bar-v::before{top:0}.wb-m-bar-v::after{bottom:0}
-.wb-m-pill{position:absolute;font:500 11px/1.2 var(--mono);font-variant-numeric:tabular-nums;color:var(--wb-measure);background:var(--wb-measure-bg);border:1px solid color-mix(in srgb,var(--wb-measure) 38%,transparent);border-radius:5px;padding:2px 6px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+/* 产品特性与下载区（非对称编辑排版） */
+.pub-overview{margin-top:28px;padding-top:28px;border-top:1px solid var(--pub-border);display:grid;grid-template-columns:320px minmax(0,1fr);gap:40px;align-items:start}
+.pub-overview-lead h2{font-size:18px;font-weight:600;letter-spacing:-.3px;line-height:1.35}
+.pub-overview-lead p{font-size:13px;line-height:1.75;color:var(--muted);margin-top:10px}
+.pub-cta-row{display:flex;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap}
+.pub-cta-meta{font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6}
 
-/* 舞台底部控制条（情景预设 + 快捷体验） */
-.wb-stage-tray{padding:10px 16px;background:var(--wb-surface);border-top:1px solid var(--wb-border);display:flex;align-items:center;justify-content:space-between;gap:12px 20px;flex-wrap:wrap}
-.wb-tray-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
-.wb-tray-label{font-size:11.5px;color:var(--muted);font-weight:500;white-space:nowrap}
-.wb-chip{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:6px;font-size:11.5px;background:var(--wb-surface-2);border:1px solid var(--wb-border);color:var(--text);transition:background-color .14s ease,border-color .14s ease,color .14s ease}
-.wb-chip:hover{background:var(--selection);border-color:color-mix(in srgb,var(--blue) 35%,transparent);color:var(--selected-text)}
-.wb-chip.active{background:var(--selection);border-color:color-mix(in srgb,var(--blue) 45%,transparent);color:var(--selected-text);font-weight:500}
-.wb-chip-try{background:transparent;border-style:dashed;border-color:var(--wb-border-strong);color:var(--muted)}
-.wb-chip-try:hover{border-style:solid;background:var(--selection);border-color:color-mix(in srgb,var(--blue) 35%,transparent);color:var(--selected-text)}
-
-/* 规范与验收工作区 */
-.wb-deck{margin-top:24px;border:1px solid var(--wb-border-strong);border-radius:16px;background:var(--wb-surface);overflow:hidden}
-.wb-deck-head{padding:18px 24px;border-bottom:1px solid var(--wb-border);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.wb-deck-heading{min-width:0}
-.wb-deck-kicker{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:8px}
-.wb-deck-title{font-size:19px;font-weight:600;letter-spacing:-.4px;margin-top:4px;line-height:1.3}
-.wb-deck-tabs{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:var(--wb-surface-2);border:1px solid var(--wb-border)}
-.wb-deck-tabs button{border:0;background:transparent;color:var(--muted);padding:6px 12px;font-size:12px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;transition:background-color .14s ease,color .14s ease}
-.wb-deck-tabs button:hover{color:var(--text);background:color-mix(in srgb,var(--text) 5%,transparent)}
-.wb-deck-tabs button.active{background:var(--wb-surface);color:var(--text);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.08)}
-.wb-count-badge{font:11px var(--mono);font-variant-numeric:tabular-nums;color:var(--muted);background:color-mix(in srgb,var(--text) 7%,transparent);padding:1px 6px;border-radius:10px}
-.wb-deck-tabs button.active .wb-count-badge{background:var(--selection);color:var(--selected-text)}
-
-.wb-deck-body{padding:22px 24px}
-.wb-spec-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:28px;align-items:start}
-.wb-prose{font-size:13px;line-height:1.75;color:var(--muted)}
-.wb-section-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
-.wb-shortcuts{margin-top:18px;display:grid;gap:6px}
-.wb-shortcut-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 10px;border-radius:8px;background:var(--wb-surface-2);border:1px solid var(--wb-border);font-size:12px}
-.wb-shortcut-keys{display:inline-flex;align-items:center;gap:4px;flex-shrink:0}
-.wb-shortcut-desc{color:var(--muted);text-align:right}
-
-.wb-spec-card{border:1px solid var(--wb-border);border-radius:12px;background:var(--wb-surface-2);overflow:hidden}
-.wb-spec-row{display:grid;grid-template-columns:92px minmax(0,1fr);gap:12px;padding:10px 14px;font-size:12px;align-items:baseline}
-.wb-spec-row+.wb-spec-row{border-top:1px solid var(--wb-border)}
-.wb-spec-key{color:var(--muted);font-weight:500}
-.wb-spec-val{color:var(--text);font-variant-numeric:tabular-nums;line-height:1.55}
-.wb-file-pills{display:flex;flex-wrap:wrap;gap:6px}
-.wb-file-pill{font:11.5px var(--mono);color:var(--text);background:var(--wb-surface);border:1px solid var(--wb-border);border-radius:5px;padding:2px 7px}
-.wb-boundary-note{margin-top:12px;padding:10px 12px;border-radius:9px;background:var(--wb-surface-2);border:1px solid var(--wb-border);font-size:12px;line-height:1.6;color:var(--muted)}
-.wb-boundary-note strong{color:var(--text);font-weight:500}
-
-/* 验收清单面板 */
-.wb-check-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
-.wb-check-progress{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
-.wb-progress-track{width:140px;height:6px;border-radius:4px;background:var(--wb-surface-2);border:1px solid var(--wb-border);overflow:hidden}
-.wb-progress-fill{height:100%;background:var(--blue);transition:width .2s ease}
-.wb-check-list{display:grid;gap:8px}
-.wb-check-item{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:11px 14px;border-radius:10px;border:1px solid var(--wb-border);background:var(--wb-surface-2);transition:border-color .14s ease,background-color .14s ease}
-.wb-check-item.is-done{border-color:color-mix(in srgb,var(--green) 35%,var(--wb-border));background:color-mix(in srgb,var(--green) 6%,var(--wb-surface-2))}
-.wb-check-label{display:flex;align-items:flex-start;gap:10px;cursor:pointer;flex:1;min-width:0;font-size:12.5px;line-height:1.6;color:var(--text)}
-.wb-check-label input{margin-top:3px;flex-shrink:0}
-.wb-check-item.is-done .wb-check-text{color:var(--muted);text-decoration:line-through}
-.wb-check-trigger{height:24px;padding:0 9px;font-size:11.5px;border-radius:6px;background:var(--wb-surface);border:1px solid var(--wb-border-strong);color:var(--muted);flex-shrink:0}
-.wb-check-trigger:hover{background:var(--selection);color:var(--selected-text);border-color:color-mix(in srgb,var(--blue) 35%,transparent)}
-
-/* 设计令牌面板 */
-.wb-tokens-layout{display:grid;gap:20px}
-.wb-token-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
-.wb-token-card{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:10px 12px;border-radius:10px;border:1px solid var(--wb-border);background:var(--wb-surface-2);transition:border-color .14s ease,background-color .14s ease}
-.wb-token-card:hover{background:var(--wb-surface);border-color:color-mix(in srgb,var(--blue) 40%,var(--wb-border));color:var(--text)}
-.wb-swatch{width:32px;height:32px;border-radius:8px;border:1px solid var(--wb-border-strong);flex-shrink:0}
-.wb-token-info{min-width:0;flex:1}
-.wb-token-name{font:500 12px var(--mono);color:var(--text);display:flex;align-items:center;justify-content:space-between;gap:6px}
-.wb-token-hex{font:11px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
-.wb-token-role{font-size:11.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-.wb-contrast-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px}
-.wb-contrast-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;border-radius:10px;border:1px solid var(--wb-border);background:var(--wb-surface-2)}
-.wb-contrast-sample{display:inline-flex;align-items:center;justify-content:center;min-width:64px;height:28px;padding:0 8px;border-radius:6px;border:1px solid var(--wb-border);font-size:12px;font-weight:600;flex-shrink:0;white-space:nowrap}
-.wb-contrast-meta{flex:1;min-width:0}
-.wb-contrast-title{font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.wb-contrast-pair{font:11px var(--mono);color:var(--muted);margin-top:2px;white-space:nowrap}
-.wb-contrast-score{font:600 11.5px var(--mono);font-variant-numeric:tabular-nums;padding:2px 7px;border-radius:5px;background:color-mix(in srgb,var(--green) 14%,transparent);color:var(--green);flex-shrink:0}
-
-.wb-scale-strip{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.wb-scale-box{padding:12px 14px;border-radius:10px;border:1px solid var(--wb-border);background:var(--wb-surface-2);font-size:12px}
-.wb-scale-items{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.wb-scale-chip{font:11.5px var(--mono);font-variant-numeric:tabular-nums;padding:3px 8px;border-radius:6px;background:var(--wb-surface);border:1px solid var(--wb-border);color:var(--text)}
+.pub-feature-list{border:1px solid var(--pub-border-strong);border-radius:14px;background:var(--pub-surface);overflow:hidden}
+.pub-feature-item{display:flex;align-items:flex-start;gap:14px;padding:15px 18px}
+.pub-feature-item+.pub-feature-item{border-top:1px solid var(--pub-border)}
+.pub-feature-icon{width:32px;height:32px;border-radius:8px;background:var(--pub-surface-2);border:1px solid var(--pub-border);color:var(--text);display:grid;place-items:center;flex-shrink:0;margin-top:1px}
+.pub-feature-item h3{font-size:13.5px;font-weight:600;color:var(--text);line-height:1.35}
+.pub-feature-item p{font-size:12.5px;line-height:1.65;color:var(--muted);margin-top:3px}
+.pub-feature-item code{font:11.5px var(--mono);color:var(--text);background:var(--pub-surface-2);border:1px solid var(--pub-border);border-radius:4px;padding:0 5px}
 
 /* 页脚 */
-.wb-footer{border-top:1px solid var(--wb-border);padding:18px 0 28px;font-size:12px;color:var(--muted)}
-.wb-footer-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.wb-footer-left{display:flex;align-items:center;gap:8px}
-.wb-footer-right{display:flex;align-items:center;gap:14px}
-.wb-footer a{color:var(--muted);border-bottom:1px solid transparent;transition:color .14s ease,border-color .14s ease}
-.wb-footer a:hover{color:var(--blue);border-bottom-color:color-mix(in srgb,var(--blue) 45%,transparent)}
+.pub-footer{border-top:1px solid var(--pub-border);padding:20px 0 32px;font-size:12px;color:var(--muted)}
+.pub-footer-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.pub-footer-left{display:flex;align-items:center;gap:8px}
+.pub-footer-right{display:flex;align-items:center;gap:16px}
+.pub-footer a{color:var(--muted);border-bottom:1px solid transparent;transition:color .14s ease,border-color .14s ease}
+.pub-footer a:hover{color:var(--blue);border-bottom-color:color-mix(in srgb,var(--blue) 45%,transparent)}
 
-@media(min-width:1450px){.stage{min-height:620px}.stage.is-palette-stage{min-height:560px}}
+@media(min-width:1450px){.stage{min-height:600px}.stage.is-palette-stage{min-height:540px}}
 @media(max-width:960px){
-  .wb-container{padding:0 20px}
-  .wb-header-inner{flex-wrap:wrap;gap:10px;padding:12px 0}
-  .wb-nav{order:3;width:100%;justify-content:space-between;overflow-x:auto}
-  .wb-nav button{flex:1;justify-content:center}
-  .wb-spec-grid{grid-template-columns:1fr;gap:20px}
-  .wb-scale-strip{grid-template-columns:1fr}
+  .pub-container{padding-inline:20px}
+  .pub-header-inner{flex-wrap:wrap;gap:10px;padding:10px 0}
+  .pub-nav{order:3;width:100%;justify-content:space-between;overflow-x:auto}
+  .pub-nav button{flex:1;justify-content:center}
+  .pub-guide{grid-template-columns:1fr;gap:22px;padding:20px}
+  .pub-overview{grid-template-columns:1fr;gap:24px}
 }
 @media(max-width:600px){
-  .wb-container{padding:0 12px}
-  .wb-nav-idx{display:none}
-  .wb-nav button{padding:6px 8px;font-size:11.5px}
-  .wb-btn-text-hide{display:none}
-  .wb-stage-bar{padding:8px 12px}
-  .wb-dim-readout{display:none}
-  .wb-menubar-left span{display:none}
-  .stage{padding:20px 10px;min-height:460px}
-  .stage.is-palette-stage{padding-top:18px;min-height:440px}
-  .wb-stage-tray{padding:10px 12px}
-  .wb-deck-head{padding:14px 16px}
-  .wb-deck-title{font-size:17px}
-  .wb-deck-body{padding:16px}
-  .wb-spec-row{grid-template-columns:1fr;gap:4px}
+  .pub-header{position:static}
+  .pub-container{padding-inline:12px}
+  .pub-nav button{padding:6px 8px;font-size:11.5px}
+  .pub-btn-text-hide{display:none}
+  .pub-hero{margin-bottom:12px}
+  .pub-hero h1{font-size:19px}
+  .pub-menubar-left span{display:none}
+  .stage{padding:18px 10px;min-height:440px}
+  .stage.is-palette-stage{padding-top:16px;min-height:420px}
+  .pub-tray{padding:10px 12px}
+  .pub-guide{padding:16px}
+  .pub-feature-item{padding:13px 14px}
 }
 </style>
 </head>
 <body>
-<!-- 现有功能来源：Sources/App；视觉来源：InterfaceStyle.swift；此目录为软件界面的设计参照。
-设计假设：窗口内部与原生实现严格一致；外部工作台、宽度检验、尺寸标注、验收清单与令牌面板仅用于设计评审与交互体验。全部数据保存在内存，不执行 shell。 -->
+<!-- 现有功能来源：Sources/App；视觉来源：InterfaceStyle.swift；此目录同时作为软件界面参照与对外交互演示页。
+窗口内部与原生实现严格一致；外部导航、演示舞台、产品导览与下载区仅用于对外展示。全部数据保存在内存，不执行 shell。 -->
 
-<header class="wb-header">
-  <div class="wb-container wb-header-inner">
-    <a class="wb-brand" href="#palette">
-      <span class="wb-appmark" aria-hidden="true">›_</span>
-      <span class="wb-brand-text">
-        <span class="wb-brand-name">MenuBarExecutor</span>
-        <span class="wb-brand-sub" id="wb-brand-sub">交互原型 · 01/05 命令面板</span>
+<header class="pub-header">
+  <div class="pub-container pub-header-inner">
+    <a class="pub-brand" href="#palette">
+      <span class="pub-appmark" aria-hidden="true">›_</span>
+      <span class="pub-brand-text">
+        <span class="pub-brand-name">MenuBarExecutor</span>
+        <span class="pub-brand-sub">macOS 菜单栏命令执行器</span>
       </span>
     </a>
 
-    <nav class="wb-nav" aria-label="设计稿界面">
-      <button data-page="palette"><span class="wb-nav-idx">01</span><span>命令面板</span></button>
-      <button data-page="commands"><span class="wb-nav-idx">02</span><span>命令管理</span></button>
-      <button data-page="editor"><span class="wb-nav-idx">03</span><span>命令编辑</span></button>
-      <button data-page="general"><span class="wb-nav-idx">04</span><span>通用设置</span></button>
-      <button data-page="history"><span class="wb-nav-idx">05</span><span>执行历史</span></button>
+    <nav class="pub-nav" aria-label="产品界面导览">
+      <button data-page="palette">命令面板</button>
+      <button data-page="commands">命令管理</button>
+      <button data-page="editor">命令编辑</button>
+      <button data-page="general">通用设置</button>
+      <button data-page="history">执行历史</button>
     </nav>
 
-    <div class="wb-actions">
-      <button id="reset-demo" class="wb-btn wb-btn-quiet" type="button" data-wb-action="resetDemo" title="恢复全部示例命令、分组、历史与设置">
-        <span class="wb-dirty-dot" aria-hidden="true"></span>
+    <div class="pub-actions">
+      <button id="reset-demo" class="pub-btn pub-btn-quiet" type="button" data-pub-action="resetDemo" title="恢复初始示例数据">
+        <span class="pub-dirty-dot" aria-hidden="true"></span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-        <span class="wb-btn-text-hide">重置数据</span>
+        <span class="pub-btn-text-hide">重置示例</span>
       </button>
-      <button id="theme" class="wb-btn" type="button" aria-label="切换深浅色">
+      <button id="theme" class="pub-btn" type="button" aria-label="切换深浅色">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-        <span>深色</span>
+        <span class="pub-btn-text-hide">深色</span>
       </button>
+      <a class="pub-btn pub-btn-cta" href="https://github.com/11ze/menu-bar-executor/releases/latest" target="_blank" rel="noopener">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+        <span>下载</span>
+      </a>
     </div>
   </div>
 </header>
 
-<main class="wb-container wb-main">
-  <section class="wb-stage-shell" aria-label="交互原型预览舞台">
-    <div class="wb-stage-bar">
-      <div class="wb-stage-meta">
-        <span class="wb-step-pill" id="screen-number">01 / 05</span>
-        <span class="wb-screen-name" id="screen-name">命令面板</span>
-        <span class="wb-dim-readout" id="wb-dim-readout" aria-live="polite">600 × —</span>
-      </div>
-      <div class="wb-stage-tools">
-        <div class="wb-seg" id="wb-width-controls" role="group" aria-label="预览尺寸切换"></div>
-        <button id="wb-measure-btn" class="wb-tool-toggle" type="button" data-wb-action="toggleMeasure" aria-pressed="false" title="叠加显示窗口与控件实时尺寸标注（不修改界面本身）">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></svg>
-          <span>标注尺寸</span>
-        </button>
-      </div>
+<main class="pub-container pub-main">
+  <section class="pub-hero">
+    <div class="pub-hero-copy">
+      <h1>把常用 Shell 命令放进 macOS 菜单栏</h1>
+      <p>按快捷键呼出面板，输入名称或拼音，回车即执行。下方窗口可直接搜索、编辑、拖拽与试跑。</p>
     </div>
-
-    <div class="wb-canvas" id="wb-canvas">
-      <div id="wb-menubar-slot"></div>
-      <section class="stage" id="stage" aria-label="应用界面预览"></section>
-      <div class="wb-spec-overlay" id="wb-spec-overlay" aria-hidden="true"></div>
+    <div class="pub-hero-meta">
+      <span class="pub-meta-dot" aria-hidden="true"></span>
+      <span>macOS 12.0+ · Apple Silicon &amp; Intel</span>
     </div>
-
-    <div class="wb-stage-tray" id="wb-stage-tray" aria-label="状态预设与快捷体验"></div>
   </section>
 
-  <section class="wb-deck" aria-label="设计规范与验收面板">
-    <div class="wb-deck-head">
-      <div class="wb-deck-heading">
-        <div class="wb-deck-kicker" id="wb-deck-kicker"></div>
-        <h1 class="wb-deck-title" id="note-title">从想到执行，只隔一个回车。</h1>
+  <section class="pub-stage-shell" aria-label="应用界面交互演示">
+    <div class="pub-canvas" id="pub-canvas">
+      <div id="pub-menubar-slot"></div>
+      <section class="stage" id="stage" aria-label="应用界面预览"></section>
+    </div>
+    <div class="pub-tray" id="pub-tray" aria-label="快捷体验操作"></div>
+  </section>
+
+  <section class="pub-guide" id="pub-guide" aria-label="当前界面介绍"></section>
+
+  <section class="pub-overview" aria-label="产品特性与下载">
+    <div class="pub-overview-lead">
+      <h2>原生 macOS 体验，轻巧克制</h2>
+      <p>纯 SwiftUI 与 AppKit 编写，不依赖外部运行环境。支持深浅色模式与窗口尺寸记忆，所有命令与配置明文保存在本地 JSON，随时备份迁移。</p>
+      <div class="pub-cta-row">
+        <a class="pub-btn pub-btn-cta" href="https://github.com/11ze/menu-bar-executor/releases/latest" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          <span>下载 macOS 版 (.zip)</span>
+        </a>
+        <a class="pub-btn" href="https://github.com/11ze/menu-bar-executor" target="_blank" rel="noopener">
+          <span>GitHub 源码 ↗</span>
+        </a>
       </div>
-      <div class="wb-deck-tabs" role="tablist" aria-label="规范面板切换">
-        <button role="tab" data-wb-tab="spec" aria-selected="true" class="active">设计说明与规格</button>
-        <button role="tab" data-wb-tab="checklist" aria-selected="false">验收清单 <span class="wb-count-badge" id="wb-check-badge">0/5</span></button>
-        <button role="tab" data-wb-tab="tokens" aria-selected="false">设计令牌</button>
+      <p class="pub-cta-meta">macOS 12.0+ · Apple Silicon 与 Intel 通用包 · MIT 开源协议</p>
+    </div>
+
+    <div class="pub-feature-list">
+      <div class="pub-feature-item">
+        <span class="pub-feature-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </span>
+        <div>
+          <h3>拼音与子序列模糊搜索</h3>
+          <p>支持中文全拼、简拼、混合拼音与英文子序列匹配并高亮命中片段，只检索命令名称，不被长脚本内容干扰。</p>
+        </div>
+      </div>
+      <div class="pub-feature-item">
+        <span class="pub-feature-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </span>
+        <div>
+          <h3>打开即查的行内自动执行</h3>
+          <p>适合当前 IP、Git 分支等状态查询：面板打开时自动刷新并将结果显示在行内，悬停可展开复制，不污染执行历史。</p>
+        </div>
+      </div>
+      <div class="pub-feature-item">
+        <span class="pub-feature-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+        </span>
+        <div>
+          <h3>双栏分组整理与显隐控制</h3>
+          <p>支持拖拽调整分组与命令顺序、跨组移动；可按分组或单条暂时隐藏不常用命令，隐藏后自动执行随之暂停。</p>
+        </div>
+      </div>
+      <div class="pub-feature-item">
+        <span class="pub-feature-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+        </span>
+        <div>
+          <h3>草稿试跑与历史一键重跑</h3>
+          <p>编辑命令时无需先保存即可试跑验证输出；手动执行保留最近 100 条记录与输出结果，失败记录醒目标识并支持随时重跑。</p>
+        </div>
+      </div>
+      <div class="pub-feature-item">
+        <span class="pub-feature-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </span>
+        <div>
+          <h3>输入法自动联动与本地 JSON 备份</h3>
+          <p>可配置打开面板时自动切换英文输入法、关闭后恢复；配置保存在 <code>~/.config/menu-bar-executor/settings.json</code>，支持一键导出导入。</p>
+        </div>
       </div>
     </div>
-    <div class="wb-deck-body" id="wb-deck-body"></div>
   </section>
 </main>
 
-<footer class="wb-footer">
-  <div class="wb-container wb-footer-inner">
-    <span class="wb-footer-left"><i class="dot" aria-hidden="true"></i><span>MenuBarExecutor 交互原型 · 示例数据保存在内存，不执行真实 Shell</span></span>
-    <span class="wb-footer-right">
-      <span>macOS 12.0+ · SwiftUI + AppKit</span>
-      <a href="https://github.com/11ze/menu-bar-executor" target="_blank" rel="noopener">GitHub 仓库 ↗</a>
+<footer class="pub-footer">
+  <div class="pub-container pub-footer-inner">
+    <span class="pub-footer-left"><i class="dot" aria-hidden="true"></i><span>在线交互演示 · 所有操作在浏览器内存模拟，不执行真实 Shell 命令</span></span>
+    <span class="pub-footer-right">
+      <a href="https://github.com/11ze/menu-bar-executor/releases/latest" target="_blank" rel="noopener">下载最新版本 ↗</a>
+      <a href="https://github.com/11ze/menu-bar-executor" target="_blank" rel="noopener">GitHub ↗</a>
     </span>
   </div>
 </footer>
@@ -344,7 +324,7 @@ const COPY_SVG='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stro
 const SUN_SVG='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>';
 const MOON_SVG='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>';
 
-const PINYIN_MAP={当:'dang',前:'qian',地:'di',址:'zhi',查:'cha',看:'kan',分:'fen',支:'zhi',启:'qi',动:'dong',服:'fu',务:'wu',本:'ben',开:'kai',发:'fa',环:'huan',境:'jing',清:'qing',理:'li',缓:'huan',存:'cun',显:'xian',示:'shi',隐:'yin',藏:'cang',文:'wen',件:'jian',刷:'shua',新:'xin',打:'da',下:'xia',载:'zai',夹:'jia',副:'fu',检:'jian',测:'ce',集:'ji',群:'qun',状:'zhuang',态:'tai',长:'chang',输:'shu',出:'chu',多:'duo',行:'hang',名:'ming',称:'cheng'};
+const PINYIN_MAP={当:'dang',前:'qian',地:'di',址:'zhi',查:'cha',看:'kan',分:'fen',支:'zhi',启:'qi',动:'dong',服:'fu',务:'wu',本:'ben',开:'kai',发:'fa',环:'huan',境:'jing',清:'qing',理:'li',缓:'huan',存:'cun',显:'xian',示:'shi',隐:'yin',藏:'cang',文:'wen',件:'jian',刷:'shua',新:'xin',打:'da',下:'xia',载:'zai',夹:'jia',副:'fu'};
 
 let commands=structuredClone(seedCommands),groupOrder=[...seedGroupOrder],hiddenGroups=new Set(),hideUngrouped=false;
 let records=structuredClone(seedRecords);
@@ -353,166 +333,69 @@ let settings={...seedSettings};
 let page='palette',query='',historyQuery='',selected=0,selectedRecord=101,onlyFailed=false,autoState='success',closed=false;
 let selectedGroup='状态速览',renamingGroup=null,creatingGroup=false,pendingDissolveGroup=null,dragType=null,dragPayload=null;
 let editorId=null,editorOrigin=null,returnFocus=null,popoverFocus=null;
+let isDemoDirty=false;
 
 /* ==========================================================================
-   2. 设计稿工作台元数据（规格、原生映射、验收清单、InterfaceStyle 令牌）
+   2. 对外产品导览文案（面向真实 macOS 用户，无内部研发术语）
    ========================================================================== */
-let wbTab='spec',measureMode=false,isDemoDirty=false;
-const wbPreviewSize={palette:'default',commands:'default',editor:'default',general:'default',history:'default'};
-const wbScenario={palette:'default',commands:'default',editor:'default',general:'default',history:'default'};
-const wbChecked=new Set();
-
-const SCREENS={
+const PAGE_ORDER=['palette','commands','editor','general','history'];
+const GUIDES={
   palette:{
-    num:'01',name:'命令面板',headline:'从想到执行，只隔一个回车。',
-    summary:'按命令名称搜索（支持中文全拼、简拼与英文子序列）并高亮命中片段，不匹配命令原文与分组名。自动执行结果留在行内，有输出时悬停或聚焦显现箭头与查看入口；隐藏分组和隐藏命令严格不参与展示与自动执行，快捷键 ⌘1–⌘9 连续重排。',
-    defaultSize:'600 × 约 503 pt（随列表自适应）',
-    resizeRange:'最小 360 × 250 pt · 最大 800 × 1000 pt',
-    layoutMetrics:'搜索区高 48 · 字号 15 · 命令行高 36 · 列表最高 410 · 底栏高 43 · 圆角 15 / 7',
-    swiftFiles:['CommandPaletteView.swift','CommandPaletteWindowController.swift','PaletteListModel.swift','CommandSearchMatcher.swift'],
-    boundary:'示例数据保存在内存，执行仅追加模拟历史记录，不启动真实进程；点击上方模拟菜单栏中的「›_」可体验面板开关。',
+    name:'命令面板',
+    headline:'从想到执行，只隔一个回车。',
+    desc:'按下全局快捷键随时呼出面板，直接键入中文、拼音或英文首字母即可快速定位命令。开启「自动执行」的状态命令会随面板刷新并内联显示输出，点开即可查看或复制；支持键盘全流程操作，不打断当前工作。',
     shortcuts:[
-      {keys:['↑','↓'],desc:'切换选中命令'},
+      {keys:['↑','↓'],desc:'选择命令'},
       {keys:['↵'],desc:'执行当前选中命令'},
-      {keys:['⌘1','–','⌘9'],desc:'直达执行第 1–9 条可见命令'},
-      {keys:['⌘E'],desc:'关闭面板并直接编辑当前选中命令'},
+      {keys:['⌘1','–','⌘9'],desc:'一键直达第 1–9 条命令'},
+      {keys:['⌘E'],desc:'直接编辑当前选中命令'},
       {keys:['⌘,'],desc:'打开设置窗口'},
-      {keys:['Esc'],desc:'有搜索词先清空，再次按下关闭面板'}
-    ],
-    widths:[
-      {id:'360',label:'360 最小'},
-      {id:'default',label:'600 默认'},
-      {id:'800',label:'800 最大'}
-    ],
-    checks:[
-      {id:'p1',text:'搜索「Docker」仅命中启动 Docker 服务（编号 ⌘1）；搜「compose」或「开发工具」无结果；Esc 先清空再关闭。',action:'trySearchDocker',actionLabel:'搜 "Docker"'},
-      {id:'p2',text:'拼音搜索「qd」命中「启动 Docker 服务」「启动本地开发环境」等匹配项并高亮片段，选中行命中片段与文字同用 selectedRowText。',action:'tryPinyinPalette',actionLabel:'试搜 "qd"'},
-      {id:'p3',text:'切换四种自动执行状态：行高稳定 36px，加载态为旋转指示器、加载与无输出不提供空浮层；有输出时悬停/聚焦现右箭头且无下划线。',action:'tryOpenResult',actionLabel:'打开结果浮层'},
-      {id:'p4',text:'在 360 / 600 / 800 宽度下检查长标题配长结果：标题优先完整显示，结果保留开头、右侧省略，360 宽底栏保留「选择 / 执行」不换行。',action:'tryPalette360Long',actionLabel:'360 + 长文本'},
-      {id:'p5',text:'全部命令或分组隐藏时进入「所有命令均已隐藏」空态并提供「打开设置」入口。',action:'scenarioAllHidden',actionLabel:'看全隐藏空态'}
+      {keys:['Esc'],desc:'清空搜索或收起面板'}
     ]
   },
   commands:{
-    num:'02',name:'命令管理',headline:'双栏理清分组，操作就近直达。',
-    summary:'左侧 224pt 纯分组侧栏固定呈现全部命名分组与末尾「未分组」，支持分组拖拽排序和跨组拖放接收；右侧展示当前分组命令，分组级操作（隐藏、重命名、删除）统一收口到右侧子栏，避免重复入口。命令行悬停显现试跑、复制副本、显隐眼睛与编辑按钮。',
-    defaultSize:'900 × 640 pt（共享设置窗口）',
-    resizeRange:'内容最小 640 × 420 pt',
-    layoutMetrics:'标题区 55 · 左侧分组栏 224 · 工具栏 60 · 子栏 36 · 命令行高 56 · 分组隐藏独立于单条显隐',
-    swiftFiles:['CommandsListView.swift','CommandDryRunPopover.swift','CommandsManager.swift','SettingsWindowController.swift'],
-    boundary:'分组拖拽排序、跨组移动、重命名、确认删除、显隐联动、试跑浮层与复制副本均可在当前页完整交互，刷新或点击「重置数据」恢复。',
+    name:'命令管理',
+    headline:'常用命令，各有位置。',
+    desc:'左侧按分组归类命令，右侧专注整理当前组内的条目。你可以自由拖动调整分组与命令顺序，或把命令直接拖入其他分组；暂时用不到的分组或单条命令可以随时隐藏，隐藏后不再出现在面板中，自动执行也会暂停。',
     shortcuts:[
-      {keys:['拖拽 ⋮⋮'],desc:'组内拖动排序，拖到左侧分组跨组移动'},
-      {keys:['▶'],desc:'悬停试跑此命令（不计入执行历史）'},
-      {keys:['眼睛图标'],desc:'单条显隐切换，隐藏后自动执行暂停'},
-      {keys:['Enter','Space'],desc:'键盘聚焦左侧分组项时切换分组'}
-    ],
-    widths:[
-      {id:'640',label:'640 最小'},
-      {id:'default',label:'900 默认'}
-    ],
-    checks:[
-      {id:'c1',text:'左侧分组支持新建、拖拽排序；右侧子栏执行隐藏、重命名与确认删除（删除后命令移入「未分组」，不丢命令）。',action:'scenarioHiddenGroup',actionLabel:'看隐藏分组态'},
-      {id:'c2',text:'隐藏分组后子栏下方出现温和横幅与「恢复显示分组」，子栏不重复显示显示按钮；恢复后保留组内单条隐藏标记。',action:'scenarioHiddenGroup',actionLabel:'切至隐藏组'},
-      {id:'c3',text:'命令行静止干净，悬停显现试跑、复制副本、显隐与编辑按钮；点击试跑弹浮层且不增加执行历史。',action:'tryDryRunFirst',actionLabel:'试跑第一条'},
-      {id:'c4',text:'搜索框点击放大镜或留白均可聚焦并现蓝边；搜索跨全部分组且包含隐藏项，清空后回到当前分组。',action:'trySearchCmds',actionLabel:'跨组搜 "docker"'}
+      {keys:['拖拽 ⋮⋮'],desc:'组内排序或拖到左侧跨组移动'},
+      {keys:['悬停 ▶'],desc:'立即试跑命令，结果不计入历史'},
+      {keys:['悬停 眼睛'],desc:'单条隐藏或恢复显示'},
+      {keys:['顶部搜索'],desc:'跨全部分组搜索（含已隐藏命令）'}
     ]
   },
   editor:{
-    num:'03',name:'命令编辑',headline:'把执行行为，说清楚。',
-    summary:'命令名称与多行命令内容分区编辑，分组组合框支持输入新建或展开已有分组选择，工作目录与分组按 1:1.4 并排。自动执行、直接执行、完成通知与隐藏开关各自说明后果；当自动执行与自身或分组隐藏冲突时，即时提示「自动执行暂不生效」。',
-    defaultSize:'宽 620 pt · 最大高 740 pt',
-    resizeRange:'独立 Sheet，矮视口下正文滚动、页头与底栏固定',
-    layoutMetrics:'单行框 36 · 1px 蓝焦边 · 多行命令框 86（等宽 13px） · 分组/目录列间距 16 · 比例 1:1.4',
-    swiftFiles:['CommandEditorView.swift','InterfaceStyle.swift','CommandDryRunPopover.swift'],
-    boundary:'支持实时校验空白、⌘↩ 快捷保存、试跑当前草稿、删除二次确认（取消保留草稿）；「选择…」目录按钮为原生选择器示意。',
+    name:'命令编辑',
+    headline:'把执行方式，一次设明白。',
+    desc:'命令名称用于快速检索，命令内容交给 zsh 执行，支持多行脚本与指定工作目录。你可以按需开启「打开面板时自动执行」「直接执行（跳过 ~/.zshrc，更快启动）」或「手动执行完成后通知」，保存前还能直接试跑验证效果。',
     shortcuts:[
-      {keys:['⌘↩'],desc:'快捷保存当前命令草稿'},
-      {keys:['↓','↑','↵'],desc:'焦点在分组框时纯键盘展开并选择分组'},
-      {keys:['Esc'],desc:'关闭分组下拉 / 确认弹窗 / 退出编辑'}
-    ],
-    widths:[
-      {id:'default',label:'620 默认'},
-      {id:'short',label:'矮视口滚动'}
-    ],
-    checks:[
-      {id:'e1',text:'默认尺寸下三个执行选项与隐藏开关无需滚动即可完整查看；切至「矮视口滚动」时表单滚动、底栏保存按钮固定。',action:'tryEditorShort',actionLabel:'切矮视口'},
-      {id:'e2',text:'分组组合框支持点选、键盘 ArrowDown 展开与矮视口自动上翻，下拉框与输入框左右严格对齐。',action:'tryOpenCombo',actionLabel:'展开分组下拉'},
-      {id:'e3',text:'开启自动执行且命令或所属分组隐藏时，底部即时展示「自动执行暂不生效」提示盒。',action:'scenarioEditorPause',actionLabel:'看暂停提示'},
-      {id:'e4',text:'空名称或纯空白命令禁用保存；点删除后取消或 Esc 保留未保存草稿；支持底栏「试跑」当前草稿。',action:'tryDryRunDraft',actionLabel:'试跑草稿'}
+      {keys:['⌘↩'],desc:'快捷保存当前命令'},
+      {keys:['▶ 试跑'],desc:'直接测试未保存草稿的输出'},
+      {keys:['↓','↑','↵'],desc:'在分组框中键盘展开并选择分组'},
+      {keys:['Esc'],desc:'关闭下拉菜单或退出编辑'}
     ]
   },
   general:{
-    num:'04',name:'通用设置',headline:'只留下需要决定的设置。',
-    summary:'按「呼出与输入」「启动、通知与更新」「配置文件」三组收口全部设置项。压紧行高与分区留白后，默认 900 × 640 窗口内三组完整可见，无需滚动也不被底栏切断；配置文件路径提升至 12pt 并附「在 Finder 中显示」。',
-    defaultSize:'900 × 640 pt（共享设置窗口）',
-    resizeRange:'内容最小 640 × 420 pt',
-    layoutMetrics:'标题区 55 · 内容区高 544 · 留白 18 / 30 · 卡片圆角 11 · 最小行高 52 · 分区间距 14',
-    swiftFiles:['GeneralSettingsView.swift','AppSettings.swift','InputSourceHelper.swift','LaunchAtLoginManager.swift'],
-    boundary:'开关与面板输入法支持内存状态保留；快捷键录制、系统通知跳转、Finder 定位与 JSON 导入导出为原生能力示意。',
+    name:'通用设置',
+    headline:'只留下真正需要决定的设置。',
+    desc:'全局呼出快捷键、打开面板自动切换输入法、登录时启动、系统通知与自动检查更新集中在同一屏内清晰呈现。全部命令与偏好设置保存在本地 JSON 配置文件，随时导出备份或在新 Mac 上一键恢复。',
     shortcuts:[
-      {keys:['⌘,'],desc:'在命令面板内快速打开设置窗口'},
-      {keys:['Tab'],desc:'在快捷键、输入法与开关间顺序移动焦点'}
-    ],
-    widths:[
-      {id:'640',label:'640 最小'},
-      {id:'default',label:'900 默认'}
-    ],
-    checks:[
-      {id:'g1',text:'默认 900 × 640 下三组设置（呼出与输入 / 启动、通知与更新 / 配置文件）完整可见，无截断。',action:'resetWidthDefault',actionLabel:'切 900 默认'},
-      {id:'g2',text:'快捷键为空时「清除」按钮禁用，主按钮文案回退为「录制快捷键…」。',action:'scenarioNoShortcut',actionLabel:'看未设快捷键'},
-      {id:'g3',text:'切换「登录时启动」「自动检查更新」与输入法后切去「命令」标签再返回，状态保持不变。',action:'resetGeneralDefault',actionLabel:'恢复默认设置'},
-      {id:'g4',text:'深浅色切换后核对卡片边线、开关对比度、路径截断与底栏固定位置。',action:'toggleThemeQuick',actionLabel:'切换深浅色'}
+      {keys:['面板输入法'],desc:'打开面板自动切英文，关闭恢复原状'},
+      {keys:['备份与恢复'],desc:'一键导出或导入完整 JSON 配置'},
+      {keys:['在 Finder 中显示'],desc:'快速定位本地配置文件'}
     ]
   },
   history:{
-    num:'05',name:'执行历史',headline:'执行之后，有迹可查。',
-    summary:'左侧 280pt 列表快速定位记录，失败项同时以红点与 12px「失败」文字标示，不单靠色相区分；右侧展示命令原文与输出结果代码块，支持一键复制命令、复制输出与「重新执行」。只呈现真实持久化的字段，不含自动执行记录。',
-    defaultSize:'960 × 680 pt',
-    resizeRange:'内容最小 640 × 420 pt',
-    layoutMetrics:'标题区 55 · 工具栏 64 · 左栏默认 280 · 主体高 520 · 输出框随内容最高 260',
-    swiftFiles:['HistoryView.swift','HistoryWindowController.swift','ExecutionHistory.swift'],
-    boundary:'展示时间、名称、执行内容、成功/失败与最多 500 字符输出（上限 100 条）；点击「重新执行」模拟追加新记录并自动选中。',
+    name:'执行历史',
+    headline:'执行之后，有迹可查。',
+    desc:'每次手动执行都会记录时间、命令原文、成败状态与输出结果（最多保留最近 100 条），自动执行的查询命令不会刷屏干扰。失败记录同时用红点与文字醒目标出，支持一键复制命令、复制输出或直接重新执行。',
     shortcuts:[
-      {keys:['仅失败'],desc:'一键过滤出执行失败的记录'},
-      {keys:['↻ 重新执行'],desc:'按记录重新模拟执行并定位到最新记录'}
-    ],
-    widths:[
-      {id:'640',label:'640 最小'},
-      {id:'default',label:'960 默认'}
-    ],
-    checks:[
-      {id:'h1',text:'失败记录同时展示红点与「失败」文字，选中项标题使用 selectedRowText，对比度清晰。',action:'scenarioHistoryFailed',actionLabel:'看仅失败筛选'},
-      {id:'h2',text:'搜索支持中文拼音与子序列（如搜「sx」命中并高亮「刷新 DNS 缓存」），无结果空态保持与列表等高 520px。',action:'tryPinyinHistory',actionLabel:'试搜 "sx"'},
-      {id:'h3',text:'「执行内容」与「输出结果」均使用浅底圆角等宽代码块，输出框随内容收缩、最高 260px 可滚动。',action:'resetHistoryDefault',actionLabel:'恢复默认记录'},
-      {id:'h4',text:'点「重新执行」自动在顶部生成并选中新记录；点「清空历史」需二次确认，取消保留列表。',action:'tryRerunHistory',actionLabel:'试跑重新执行'}
+      {keys:['仅失败'],desc:'快速筛出执行出错的记录'},
+      {keys:['↻ 重新执行'],desc:'一键再次运行并定位到新结果'},
+      {keys:['复制命令 / 输出'],desc:'快速提取排查或复用'}
     ]
   }
 };
-
-const DESIGN_TOKENS=[
-  {swift:'InterfaceStyle.surface',css:'--paper',light:'#fdfdfe',dark:'#292b30',role:'窗口主表面、卡片与输入框底色'},
-  {swift:'InterfaceStyle.material',css:'--material',light:'#f6f8fb',dark:'#25272c',role:'标题栏、搜索区、左侧边栏与面板底栏'},
-  {swift:'InterfaceStyle.chrome',css:'--chrome',light:'#eff1f4',dark:'#25272c',role:'窗口底栏与分段标签槽底色'},
-  {swift:'InterfaceStyle.subtle',css:'--subtle',light:'#f5f6f8',dark:'#222429',role:'代码输出块、设置页背景与行悬停底色'},
-  {swift:'InterfaceStyle.line',css:'--line',light:'#dce0e6',dark:'#404249',role:'分隔线、边框与键帽轮廓'},
-  {swift:'InterfaceStyle.text',css:'--text',light:'#24262b',dark:'#f0f1f4',role:'主正文、命令标题与窗口标题'},
-  {swift:'InterfaceStyle.muted',css:'--muted',light:'#626772',dark:'#acb1ba',role:'分组名、命令原文、辅助说明与时间'},
-  {swift:'InterfaceStyle.selectedText',css:'--blue',light:'#0068e8',dark:'#83b9ff',role:'焦点描边、悬停文字与未选中命中高亮'},
-  {swift:'InterfaceStyle.selectedRowText',css:'--selected-text',light:'#005ecb',dark:'#83b9ff',role:'选中行标题与选中行内搜索命中高亮'},
-  {swift:'InterfaceStyle.selection',css:'--selection',light:'#e4edfa',dark:'#30455f',role:'选中行、侧栏选中分组与按钮悬停底色'},
-  {swift:'InterfaceStyle.success',css:'--green',light:'#267748',dark:'#8cd9ac',role:'执行成功状态圆点与文字'},
-  {swift:'InterfaceStyle.failure',css:'--red',light:'#be3c36',dark:'#ff9d97',role:'执行失败圆点、失败标识与删除操作'},
-  {swift:'InterfaceStyle.panelBorder',css:'panelBorder',light:'rgba(0,0,0,0.12)',dark:'rgba(255,255,255,0.14)',lightLabel:'black 12%',darkLabel:'white 14%',role:'浮动命令面板 1px 半透明外轮廓描边'}
-];
-
-const CONTRAST_PAIRS=[
-  {title:'正文 / 主表面',fgKey:'--text',bgKey:'--paper',sample:'启动 Docker'},
-  {title:'辅助文字 / 主表面',fgKey:'--muted',bgKey:'--paper',sample:'状态速览'},
-  {title:'选中行文字 / 选中底',fgKey:'--selected-text',bgKey:'--selection',sample:'当前 IP'},
-  {title:'命中高亮 / 主表面',fgKey:'--blue',bgKey:'--paper',sample:'Docker'},
-  {title:'成功状态 / 主表面',fgKey:'--green',bgKey:'--paper',sample:'执行成功'},
-  {title:'失败状态 / 主表面',fgKey:'--red',bgKey:'--paper',sample:'执行失败'}
-];
 
 /* ==========================================================================
    3. 工具函数与软件界面渲染逻辑（窗口内部 DOM 与行为保持原样）
@@ -532,7 +415,7 @@ function highlightName(text,rawQuery){const ids=matchNameIndices(text,rawQuery);
 function filtered(){return groupKeys().flatMap(group=>commands.filter(c=>(c.group||'')===group&&matchesName(c.name,query)))}
 function visibleFiltered(){return filtered().filter(c=>!isCommandEffectiveHidden(c))}
 function toast(message){$('#toast').textContent=message;$('#toast').classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').classList.remove('visible'),2600)}
-function markDirty(){isDemoDirty=true;const btn=$('#reset-demo');if(btn)btn.classList.add('is-dirty')}
+function markDirty(){isDemoDirty=true;$('#reset-demo')?.classList.add('is-dirty')}
 function searchbox(value,id){return `<div class="searchbox"><span class="search-symbol" aria-hidden="true"></span><input id="${id}" placeholder="搜索命令名称" aria-label="搜索命令名称" value="${escapeHTML(value)}">${value?'<button class="clear" data-action="clearSearch" aria-label="清空搜索">×</button>':''}</div>`}
 function windowbar(title,tabs=false){return `<header class="windowbar">${traffic}<span class="windowtitle">${title}</span>${tabs?`<div class="windowtabs" aria-label="设置标签"><button data-page="commands" class="${page==='commands'?'active':''}">命令</button><button data-page="general" class="${page==='general'?'active':''}">通用</button></div>`:''}</header>`}
 function empty(title,detail,action,label){return `<div class="empty"><div class="empty-icon" aria-hidden="true">›_</div><strong>${escapeHTML(title)}</strong><p>${escapeHTML(detail)}</p><button data-action="${escapeHTML(action)}">${escapeHTML(label)}</button></div>`}
@@ -607,380 +490,112 @@ function updateEditorHint(){const f=$('#editor-form'),box=$('#editor-pause-hint'
 function editorMarkup(c,inline=false){const msg=editorPauseMessage(!!c.auto,!!c.hidden,c.group||'');return `<form class="sheet ${inline?'inline':''}" id="editor-form" aria-label="${c.id?'编辑命令':'添加命令'}"><header class="sheet-head"><h2>${c.id?'编辑命令':'添加命令'}</h2><p>名称用于搜索，命令内容交给 zsh 执行。</p></header><div class="form-body"><label class="field">命令名称<input name="name" value="${escapeHTML(c.name)}" placeholder="例如：启动 Docker 服务" required></label><label class="field">命令内容<textarea name="command" spellcheck="false" required>${escapeHTML(c.command)}</textarea></label><div class="field-pair"><label class="field"><span>分组 <span class="muted">（可选）</span></span><div class="combobox"><input name="group" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" placeholder="选择或输入分组" value="${escapeHTML(c.group)}"><button type="button" class="combo-toggle" data-action="toggleGroupMenu" aria-label="展开分组列表" tabindex="-1">▾</button></div></label><label class="field"><span>工作目录 <span class="muted">（可选）</span></span><div class="row"><input class="grow" name="directory" placeholder="默认工作目录" value="${escapeHTML(c.directory)}"><button type="button" data-action="directory">选择…</button></div><span class="small">支持 ~，留空使用默认目录。</span></label></div><div class="form-divider"></div><label class="option"><input name="auto" type="checkbox" ${c.auto?'checked':''}><span>打开面板时自动执行<small>每次打开都会运行；结果显示在行内，不计入历史、不通知。</small></span></label><label class="option"><input name="direct" type="checkbox" ${c.direct?'checked':''}><span>直接执行<small>跳过 ~/.zshrc；其中的 alias、函数和环境变量不可用。</small></span></label><label class="option"><input name="notify" type="checkbox" ${c.notify?'checked':''}><span>手动执行完成后通知</span></label><label class="option"><input name="hidden" type="checkbox" ${c.hidden?'checked':''}><span>在命令面板中隐藏<small>隐藏后不出现在命令面板和搜索中，自动执行也会暂停。</small></span></label><div id="editor-pause-hint">${msg?`<div class="hint-box"><strong>自动执行暂不生效：</strong>${escapeHTML(msg)}</div>`:'<p class="small">命令超过 30 秒会终止。</p>'}</div></div><footer class="form-foot"><button type="button" data-action="cancelEditor">取消</button><button type="button" class="quiet" data-action="dryRunDraft">▶ 试跑</button>${c.id?'<button type="button" class="quiet danger" data-action="delete">删除命令…</button>':''}<button type="submit" class="primary">保存命令</button></footer></form>`}
 
 /* ==========================================================================
-   4. 工作台外壳渲染（菜单栏情境、底部情景条、尺寸标注、规范/验收/令牌面板）
+   4. 对外展示外壳渲染（菜单栏情境、底部快捷体验条、产品导览）
    ========================================================================== */
-function isDarkTheme(){return document.documentElement.dataset.theme==='dark'}
-
-function hexToRgb(hex){
-  const m=/^#?([0-9a-f]{6})$/i.exec(hex.trim());
-  if(!m)return null;
-  const n=parseInt(m[1],16);
-  return [(n>>16)&255,(n>>8)&255,n&255];
-}
-function relLuminance([r,g,b]){
-  const f=v=>{const c=v/255;return c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4)};
-  return 0.2126*f(r)+0.7152*f(g)+0.0722*f(b);
-}
-function contrastRatio(hex1,hex2){
-  const a=hexToRgb(hex1),b=hexToRgb(hex2);
-  if(!a||!b)return null;
-  const l1=relLuminance(a),l2=relLuminance(b);
-  return (Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05);
-}
-function tokenColorForTheme(cssKey){
-  const dark=isDarkTheme();
-  const t=DESIGN_TOKENS.find(x=>x.css===cssKey);
-  return t?(dark?t.dark:t.light):'#000000';
-}
-
-function renderWorkbenchChrome(){
-  const info=SCREENS[page];
-  $('#wb-brand-sub').textContent=`交互原型 · ${info.num}/05 ${info.name}`;
-  $('#screen-number').textContent=`${info.num} / 05`;
-  $('#screen-name').textContent=info.name;
-  $('#note-title').textContent=info.headline;
-  $('#wb-deck-kicker').textContent=`${info.num} / 05 · ${info.name}`;
-
-  // 顶部导航高亮
-  document.querySelectorAll('.wb-nav button').forEach(b=>{
+function renderShowcaseChrome(){
+  document.querySelectorAll('.pub-nav button').forEach(b=>{
     const active=b.dataset.page===page;
     b.classList.toggle('active',active);
     b.setAttribute('aria-current',active?'page':'false');
   });
 
-  // 预览宽度切换按钮
-  const activeWidth=wbPreviewSize[page]||'default';
-  $('#wb-width-controls').innerHTML=info.widths.map(w=>`<button type="button" data-wb-width="${w.id}" class="${activeWidth===w.id?'active':''}" aria-pressed="${activeWidth===w.id?'true':'false'}">${escapeHTML(w.label)}</button>`).join('');
+  $('#stage').classList.toggle('is-palette-stage',page==='palette');
 
-  // 应用非侵入式宽度/高度预览属性到 #stage
-  const st=$('#stage');
-  st.classList.toggle('is-palette-stage',page==='palette');
-  if(activeWidth==='360'||activeWidth==='640'||activeWidth==='800')st.dataset.previewWidth=activeWidth;
-  else delete st.dataset.previewWidth;
-  if(page==='editor'&&activeWidth==='short')st.dataset.previewHeight='short';
-  else delete st.dataset.previewHeight;
-
-  // 仅在命令面板页展示模拟 macOS 菜单栏锚点
+  // 命令面板顶部模拟 macOS 菜单栏，点击 ›_ 可体验面板开关
   if(page==='palette'){
     const now=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false});
-    $('#wb-menubar-slot').innerHTML=`<div class="wb-menubar" aria-label="模拟 macOS 菜单栏情境"><div class="wb-menubar-left"><strong>MenuBarExecutor</strong><span>文件</span><span>编辑</span><span>窗口</span></div><div class="wb-menubar-right"><span class="wb-menubar-shortcut">${escapeHTML(settings.shortcut||'未设快捷键')}</span><button type="button" class="wb-menubar-icon" data-wb-action="togglePalette" aria-pressed="${!closed?'true':'false'}" title="点击呼出或关闭命令面板">›_</button><span>${now}</span></div></div>`;
+    $('#pub-menubar-slot').innerHTML=`<div class="pub-menubar" aria-label="macOS 菜单栏示意"><div class="pub-menubar-left"><strong>MenuBarExecutor</strong><span>文件</span><span>编辑</span><span>窗口</span></div><div class="pub-menubar-right"><span class="pub-menubar-shortcut">${escapeHTML(settings.shortcut||'未设快捷键')}</span><button type="button" class="pub-menubar-icon" data-pub-action="togglePalette" aria-pressed="${!closed?'true':'false'}" title="点击呼出或收起命令面板">›_</button><span>${now}</span></div></div>`;
   }else{
-    $('#wb-menubar-slot').innerHTML='';
+    $('#pub-menubar-slot').innerHTML='';
   }
 
-  // 渲染舞台底部情景控制条
-  renderStageTray();
-  // 渲染规范/验收/令牌区
-  renderDeck();
-  // 测量并刷新实时尺寸与标注
-  requestAnimationFrame(updateMeasurements);
+  renderTray();
+  renderGuide();
 }
 
-function renderStageTray(){
-  const tray=$('#wb-stage-tray');
-  const sc=wbScenario[page];
+function renderTray(){
+  const tray=$('#pub-tray');
   if(page==='palette'){
-    const states=[['success','成功 · 有输出'],['loading','执行中'],['failed','失败'],['empty','成功 · 无输出']];
+    const states=[['success','正常输出'],['loading','执行中'],['failed','失败'],['empty','无输出']];
     tray.innerHTML=`
-      <div class="wb-tray-group">
-        <span class="wb-tray-label">自动执行状态</span>
-        <div class="wb-seg" role="group" aria-label="自动执行状态预览">
-          ${states.map(([v,lbl])=>`<button type="button" data-wb-autostate="${v}" class="${autoState===v?'active':''}" aria-pressed="${autoState===v?'true':'false'}">${lbl}</button>`).join('')}
+      <div class="pub-tray-group">
+        <span class="pub-tray-label">试一试</span>
+        <button type="button" class="pub-chip" data-pub-try="pinyinPalette">拼音搜 "qd"</button>
+        <button type="button" class="pub-chip" data-pub-try="openResult">查看行内输出</button>
+        <button type="button" class="pub-chip" data-pub-try="quickEdit">⌘E 编辑选中</button>
+      </div>
+      <div class="pub-tray-group">
+        <span class="pub-tray-label">自动执行状态</span>
+        <div class="pub-seg" role="group" aria-label="自动执行状态预览">
+          ${states.map(([v,lbl])=>`<button type="button" data-pub-autostate="${v}" class="${autoState===v?'active':''}" aria-pressed="${autoState===v?'true':'false'}">${lbl}</button>`).join('')}
         </div>
-      </div>
-      <div class="wb-tray-group">
-        <span class="wb-tray-label">场景</span>
-        <button type="button" class="wb-chip ${sc==='default'?'active':''}" data-wb-scenario="palette:default">默认示例</button>
-        <button type="button" class="wb-chip ${sc==='longtext'?'active':''}" data-wb-scenario="palette:longtext">长文本截断</button>
-        <button type="button" class="wb-chip ${sc==='allHidden'?'active':''}" data-wb-scenario="palette:allHidden">全部隐藏</button>
-        <button type="button" class="wb-chip ${sc==='empty'?'active':''}" data-wb-scenario="palette:empty">无命令空态</button>
-      </div>
-      <div class="wb-tray-group">
-        <span class="wb-tray-label">试一试</span>
-        <button type="button" class="wb-chip wb-chip-try" data-wb-try="tryPinyinPalette">拼音搜 "qd"</button>
-        <button type="button" class="wb-chip wb-chip-try" data-wb-try="tryOpenResult">查看结果浮层</button>
-        <button type="button" class="wb-chip wb-chip-try" data-wb-try="tryQuickEdit">⌘E 编辑选中</button>
       </div>`;
   }else if(page==='commands'){
     tray.innerHTML=`
-      <div class="wb-tray-group">
-        <span class="wb-tray-label">场景</span>
-        <button type="button" class="wb-chip ${sc==='default'?'active':''}" data-wb-scenario="commands:default">默认示例</button>
-        <button type="button" class="wb-chip ${sc==='withHidden'?'active':''}" data-wb-scenario="commands:withHidden">含隐藏分组与命令</button>
-        <button type="button" class="wb-chip ${sc==='emptyGroup'?'active':''}" data-wb-scenario="commands:emptyGroup">空分组状态</button>
+      <div class="pub-tray-group">
+        <span class="pub-tray-label">试一试</span>
+        <button type="button" class="pub-chip" data-pub-try="searchCmds">跨组搜 "docker"</button>
+        <button type="button" class="pub-chip" data-pub-try="dryRunFirst">试跑命令</button>
+        <button type="button" class="pub-chip" data-pub-try="demoHiddenGroup">体验隐藏分组</button>
+        <button type="button" class="pub-chip" data-pub-try="addCmd">新建命令</button>
       </div>
-      <div class="wb-tray-group">
-        <span class="wb-tray-label">试一试</span>
-        <button type="button" class="wb-chip wb-chip-try" data-wb-try="trySearchCmds">跨组搜 "docker"</button>
-        <button type="button" class="wb-chip wb-chip-try" data-wb-try="tryDryRunFirst">试跑第一条</button>
-        <button type="button" class="wb-chip wb-chip-try" data-wb-try="tryAddCommand">新建命令</button>
+      <div class="pub-tray-group">
+        <span class="muted" style="font-size:11.5px">拖动列表项可排序，拖至左侧分组可跨组移动</span>
       </div>`;
   }else if(page==='editor'){
     tray.innerHTML=`
-      <div class="wb-tray-group">
-        <span class="wb-tray-label">表单状态</span>
-        <button type="button" class="wb-chip ${sc==='default'?'active':''}" data-wb-scenario="editor:default">编辑已有命令</button>
-        <button type="button" class="wb-chip ${sc==='newCmd'?'active':''}" data-wb-scenario="editor:newCmd">新建空白命令</button>
-        <button type="button" class="wb-chip ${sc==='pauseHint'?'active':''}" data-wb-scenario="editor:pauseHint">自动执行暂停提示</button>
+      <div class="pub-tray-group">
+        <span class="pub-tray-label">切换表单</span>
+        <button type="button" class="pub-chip ${editorId!==-1?'active':''}" data-pub-try="editExisting">编辑示例</button>
+        <button type="button" class="pub-chip ${editorId===-1?'active':''}" data-pub-try="editNew">新建命令</button>
       </div>
-      <div class="wb-tray-group">
-        <span class="wb-tray-label">试一试</span>
-        <button type="button" class="wb-chip wb-chip-try" data-wb-try="tryOpenCombo">展开分组下拉</button>
-        <button type="button" class="wb-chip wb-chip-try" data-wb-try="tryDryRunDraft">试跑当前草稿</button>
+      <div class="pub-tray-group">
+        <span class="pub-tray-label">试一试</span>
+        <button type="button" class="pub-chip" data-pub-try="openCombo">展开分组下拉</button>
+        <button type="button" class="pub-chip" data-pub-try="dryRunDraft">试跑当前草稿</button>
       </div>`;
   }else if(page==='general'){
     tray.innerHTML=`
-      <div class="wb-tray-group">
-        <span class="wb-tray-label">设置状态</span>
-        <button type="button" class="wb-chip ${sc==='default'?'active':''}" data-wb-scenario="general:default">默认配置</button>
-        <button type="button" class="wb-chip ${sc==='noShortcut'?'active':''}" data-wb-scenario="general:noShortcut">未设快捷键</button>
-      </div>
-      <div class="wb-tray-group">
-        <span class="wb-tray-label">核对提示</span>
-        <span class="muted" style="font-size:11.5px">默认 900 × 640 视口内三组完整可见，无需滚动。</span>
+      <div class="pub-tray-group">
+        <span class="muted" style="font-size:11.5px">点击开关与下拉菜单即可体验；系统权限、快捷键录制与文件导入为原生交互示意。</span>
       </div>`;
   }else if(page==='history'){
     tray.innerHTML=`
-      <div class="wb-tray-group">
-        <span class="wb-tray-label">列表状态</span>
-        <button type="button" class="wb-chip ${sc==='default'?'active':''}" data-wb-scenario="history:default">默认记录</button>
-        <button type="button" class="wb-chip ${sc==='failedOnly'?'active':''}" data-wb-scenario="history:failedOnly">仅看失败</button>
-        <button type="button" class="wb-chip ${sc==='emptyHistory'?'active':''}" data-wb-scenario="history:emptyHistory">无记录空态</button>
+      <div class="pub-tray-group">
+        <span class="pub-tray-label">试一试</span>
+        <button type="button" class="pub-chip ${onlyFailed?'active':''}" data-pub-try="toggleFailedHistory">筛选失败记录</button>
+        <button type="button" class="pub-chip" data-pub-try="pinyinHistory">拼音搜 "sx"</button>
+        <button type="button" class="pub-chip" data-pub-try="rerunHistory">重新执行</button>
       </div>
-      <div class="wb-tray-group">
-        <span class="wb-tray-label">试一试</span>
-        <button type="button" class="wb-chip wb-chip-try" data-wb-try="tryPinyinHistory">拼音搜 "sx"</button>
-        <button type="button" class="wb-chip wb-chip-try" data-wb-try="tryRerunHistory">重新执行</button>
+      <div class="pub-tray-group">
+        <span class="muted" style="font-size:11.5px">在命令面板执行任意命令后，记录会自动出现在这里</span>
       </div>`;
   }
 }
 
-function renderDeck(){
-  const info=SCREENS[page];
-  const pageDone=info.checks.filter(c=>wbChecked.has(c.id)).length;
-  $('#wb-check-badge').textContent=`${pageDone}/${info.checks.length}`;
-  document.querySelectorAll('.wb-deck-tabs button').forEach(btn=>{
-    const active=btn.dataset.wbTab===wbTab;
-    btn.classList.toggle('active',active);
-    btn.setAttribute('aria-selected',active?'true':'false');
-  });
-
-  const body=$('#wb-deck-body');
-  if(wbTab==='spec'){
-    body.innerHTML=`
-      <div class="wb-spec-grid">
-        <div>
-          <div class="wb-section-title"><span>设计意图与交互逻辑</span></div>
-          <p class="wb-prose">${escapeHTML(info.summary)}</p>
-          <div class="wb-shortcuts">
-            ${info.shortcuts.map(s=>`<div class="wb-shortcut-row"><span class="wb-shortcut-keys">${s.keys.map(k=>k==='–'?'<span class="muted">–</span>':`<kbd>${escapeHTML(k)}</kbd>`).join('')}</span><span class="wb-shortcut-desc">${escapeHTML(s.desc)}</span></div>`).join('')}
-          </div>
-        </div>
-        <div>
-          <div class="wb-section-title"><span>布局尺寸与原生实现对照</span></div>
-          <div class="wb-spec-card">
-            <div class="wb-spec-row"><span class="wb-spec-key">默认尺寸</span><span class="wb-spec-val">${escapeHTML(info.defaultSize)}</span></div>
-            <div class="wb-spec-row"><span class="wb-spec-key">缩放边界</span><span class="wb-spec-val">${escapeHTML(info.resizeRange)}</span></div>
-            <div class="wb-spec-row"><span class="wb-spec-key">关键标注</span><span class="wb-spec-val">${escapeHTML(info.layoutMetrics)}</span></div>
-            <div class="wb-spec-row"><span class="wb-spec-key">原生源码</span><span class="wb-spec-val"><span class="wb-file-pills">${info.swiftFiles.map(f=>`<span class="wb-file-pill">${escapeHTML(f)}</span>`).join('')}</span></span></div>
-          </div>
-          <div class="wb-boundary-note"><strong>原型边界：</strong>${escapeHTML(info.boundary)}</div>
-        </div>
-      </div>`;
-  }else if(wbTab==='checklist'){
-    const allChecks=Object.values(SCREENS).flatMap(s=>s.checks);
-    const totalDone=allChecks.filter(c=>wbChecked.has(c.id)).length;
-    const pct=Math.round((pageDone/info.checks.length)*100);
-    body.innerHTML=`
-      <div class="wb-check-head">
-        <div class="wb-check-progress">
-          <span>本页验收 ${pageDone} / ${info.checks.length}</span>
-          <div class="wb-progress-track" aria-hidden="true"><div class="wb-progress-fill" style="width:${pct}%"></div></div>
-          <span>全部五页 ${totalDone} / ${allChecks.length}</span>
-        </div>
-        <button type="button" class="wb-btn wb-btn-quiet" data-wb-action="clearChecks" ${totalDone?'':'disabled'}>清空勾选项</button>
+function renderGuide(){
+  const info=GUIDES[page];
+  const idx=PAGE_ORDER.indexOf(page);
+  const prevKey=idx>0?PAGE_ORDER[idx-1]:null;
+  const nextKey=idx<PAGE_ORDER.length-1?PAGE_ORDER[idx+1]:null;
+  $('#pub-guide').innerHTML=`
+    <div>
+      <div class="pub-guide-eyebrow">${escapeHTML(info.name)}</div>
+      <h2>${escapeHTML(info.headline)}</h2>
+      <p class="pub-guide-text">${escapeHTML(info.desc)}</p>
+      <div class="pub-tour-links">
+        ${prevKey?`<button type="button" class="pub-tour-btn" data-page="${prevKey}">← 上一界面：${escapeHTML(GUIDES[prevKey].name)}</button>`:''}
+        ${nextKey?`<button type="button" class="pub-tour-btn" data-page="${nextKey}">下一界面：${escapeHTML(GUIDES[nextKey].name)} →</button>`:''}
       </div>
-      <div class="wb-check-list">
-        ${info.checks.map(item=>{
-          const done=wbChecked.has(item.id);
-          return `<div class="wb-check-item ${done?'is-done':''}">
-            <label class="wb-check-label">
-              <input type="checkbox" data-wb-check="${item.id}" ${done?'checked':''}>
-              <span class="wb-check-text">${escapeHTML(item.text)}</span>
-            </label>
-            ${item.action?`<button type="button" class="wb-check-trigger" data-wb-try="${item.action}">${escapeHTML(item.actionLabel)}</button>`:''}
-          </div>`;
-        }).join('')}
-      </div>`;
-  }else{
-    const dark=isDarkTheme();
-    body.innerHTML=`
-      <div class="wb-tokens-layout">
-        <div>
-          <div class="wb-section-title">
-            <span>InterfaceStyle.swift 配色与表面角色（当前：${dark?'深色模式':'浅色模式'}）</span>
-            <span class="muted" style="font-weight:400">点击任意令牌复制 Swift 名称</span>
-          </div>
-          <div class="wb-token-grid">
-            ${DESIGN_TOKENS.map(t=>{
-              const cur=dark?t.dark:t.light;
-              const curLabel=dark?(t.darkLabel||t.dark):(t.lightLabel||t.light);
-              return `<button type="button" class="wb-token-card" data-wb-copy="${escapeHTML(t.swift)}" title="点击复制 ${escapeHTML(t.swift)}">
-                <span class="wb-swatch" style="background:${cur}"></span>
-                <span class="wb-token-info">
-                  <span class="wb-token-name"><span>${escapeHTML(t.swift.replace('InterfaceStyle.',''))}</span><span class="wb-token-hex">${escapeHTML(curLabel)}</span></span>
-                  <span class="wb-token-role">${escapeHTML(t.role)}</span>
-                </span>
-              </button>`;
-            }).join('')}
-          </div>
-        </div>
-        <div>
-          <div class="wb-section-title">
-            <span>关键文本对比度实时校验（WCAG 2.1）</span>
-            <span class="muted" style="font-weight:400">切换深浅色自动重算</span>
-          </div>
-          <div class="wb-contrast-grid">
-            ${CONTRAST_PAIRS.map(p=>{
-              const fg=tokenColorForTheme(p.fgKey),bg=tokenColorForTheme(p.bgKey);
-              const ratio=contrastRatio(fg,bg);
-              const label=ratio?`${ratio.toFixed(2)}:1 ${ratio>=7?'AAA':'AA'}`:'—';
-              return `<div class="wb-contrast-card">
-                <span class="wb-contrast-sample" style="color:${fg};background:${bg}">${escapeHTML(p.sample)}</span>
-                <span class="wb-contrast-meta">
-                  <div class="wb-contrast-title">${escapeHTML(p.title)}</div>
-                  <div class="wb-contrast-pair">${escapeHTML(fg)} / ${escapeHTML(bg)}</div>
-                </span>
-                <span class="wb-contrast-score">${label}</span>
-              </div>`;
-            }).join('')}
-          </div>
-        </div>
-        <div class="wb-scale-strip">
-          <div class="wb-scale-box">
-            <div class="wb-section-title" style="margin-bottom:0"><span>字号标尺</span></div>
-            <div class="wb-scale-items">
-              <span class="wb-scale-chip">18pt 历史标题</span>
-              <span class="wb-scale-chip">16pt Sheet 标题</span>
-              <span class="wb-scale-chip">15pt 面板搜索</span>
-              <span class="wb-scale-chip">13pt 正文 / 输入</span>
-              <span class="wb-scale-chip">12pt 辅助 / 等宽</span>
-              <span class="wb-scale-chip">11pt 键帽 / 分区</span>
-            </div>
-          </div>
-          <div class="wb-scale-box">
-            <div class="wb-section-title" style="margin-bottom:0"><span>圆角标尺</span></div>
-            <div class="wb-scale-items">
-              <span class="wb-scale-chip">15pt 应用窗口</span>
-              <span class="wb-scale-chip">14pt 编辑 Sheet</span>
-              <span class="wb-scale-chip">11pt 设置卡片 / 浮层</span>
-              <span class="wb-scale-chip">8pt 搜索框 / 标签槽</span>
-              <span class="wb-scale-chip">7pt 按钮 / 选中行</span>
-              <span class="wb-scale-chip">4pt 键帽 / 标签</span>
-            </div>
-          </div>
-        </div>
-      </div>`;
-  }
+    </div>
+    <div>
+      <div class="pub-shortcuts-title">常用操作与快捷键</div>
+      <div class="pub-shortcuts">
+        ${info.shortcuts.map(s=>`<div class="pub-shortcut-row"><span class="pub-shortcut-keys">${s.keys.map(k=>k==='–'?'<span class="muted">–</span>':`<kbd>${escapeHTML(k)}</kbd>`).join('')}</span><span class="pub-shortcut-desc">${escapeHTML(s.desc)}</span></div>`).join('')}
+      </div>
+    </div>`;
 }
 
-/* ==========================================================================
-   5. 实时尺寸读数与非侵入式红线标注层
-   ========================================================================== */
-function updateMeasurements(){
-  const win=$('#stage > .window');
-  const readout=$('#wb-dim-readout');
-  const overlay=$('#wb-spec-overlay');
-  const canvas=$('#wb-canvas');
-  if(!win){
-    if(readout)readout.textContent='面板已关闭';
-    if(overlay)overlay.innerHTML='';
-    return;
-  }
-  const wr=win.getBoundingClientRect();
-  const w=Math.round(wr.width),h=Math.round(wr.height);
-  if(readout)readout.textContent=`${w} × ${h} pt`;
-  if(!measureMode||!overlay||!canvas){
-    if(overlay)overlay.innerHTML='';
-    return;
-  }
-  const cr=canvas.getBoundingClientRect();
-  const rel=r=>({left:r.left-cr.left+canvas.scrollLeft,top:r.top-cr.top+canvas.scrollTop,right:r.right-cr.left+canvas.scrollLeft,bottom:r.bottom-cr.top+canvas.scrollTop,width:r.width,height:r.height});
-  const wb=rel(wr);
-  let html='';
-
-  // 顶部窗口总宽标尺
-  const topY=Math.max(8,wb.top-16);
-  html+=`<div class="wb-m-bar-h" style="left:${wb.left}px;top:${topY}px;width:${wb.width}px"></div>`;
-  html+=`<div class="wb-m-pill" style="left:${wb.left+wb.width/2}px;top:${topY-10}px;transform:translateX(-50%)">${w} × ${h} pt</div>`;
-
-  // 右侧空间足够时，绘制分区高度/宽度标注
-  const rightSpace=cr.width-(wb.right-canvas.scrollLeft);
-  if(rightSpace>=84){
-    const specsByPage={
-      palette:[
-        {sel:'.palette-search',label:'搜索区'},
-        {sel:'.palette-row',label:'命令行'},
-        {sel:'.palette .windowfoot',label:'底栏'}
-      ],
-      commands:[
-        {sel:'.windowbar',label:'标题区'},
-        {sel:'.commands-main .toolbar',label:'工具栏'},
-        {sel:'.subbar',label:'子栏'},
-        {sel:'.command-row',label:'命令行'}
-      ],
-      editor:[
-        {sel:'.sheet-head',label:'页头'},
-        {sel:'textarea[name="command"]',label:'命令框'},
-        {sel:'.form-foot',label:'底栏'}
-      ],
-      general:[
-        {sel:'.windowbar',label:'标题区'},
-        {sel:'.setting',label:'设置行'},
-        {sel:'.windowfoot',label:'底栏'}
-      ],
-      history:[
-        {sel:'.windowbar',label:'标题区'},
-        {sel:'.toolbar',label:'工具栏'},
-        {sel:'.output',label:'输出框'}
-      ]
-    };
-    const items=specsByPage[page]||[];
-    const xLine=wb.right+12;
-    let lastPillBottom=-999;
-    for(const item of items){
-      const el=win.querySelector(item.sel);
-      if(!el)continue;
-      const er=rel(el.getBoundingClientRect());
-      if(er.height<8)continue;
-      const eh=Math.round(er.height);
-      const pillTop=Math.max(lastPillBottom+4,er.top+er.height/2-10);
-      lastPillBottom=pillTop+20;
-      html+=`<div class="wb-m-box" style="left:${er.left}px;top:${er.top}px;width:${er.width}px;height:${er.height}px"></div>`;
-      html+=`<div class="wb-m-bar-v" style="left:${xLine}px;top:${er.top}px;height:${er.height}px"></div>`;
-      html+=`<div class="wb-m-pill" style="left:${xLine+8}px;top:${pillTop}px">${item.label} ${eh}</div>`;
-    }
-  }
-
-  // 底部宽度标尺（双栏侧栏宽）
-  const bottomColSel=page==='commands'?'.group-sidebar':page==='history'?'.history-list':null;
-  if(bottomColSel){
-    const colEl=win.querySelector(bottomColSel);
-    if(colEl){
-      const col=rel(colEl.getBoundingClientRect());
-      if(col.width>40&&col.width<wb.width-40){
-        const by=wb.bottom+12;
-        html+=`<div class="wb-m-bar-h" style="left:${col.left}px;top:${by}px;width:${col.width}px"></div>`;
-        html+=`<div class="wb-m-pill" style="left:${col.left+col.width/2}px;top:${by+6}px;transform:translateX(-50%)">${page==='commands'?'分组栏':'左栏'} ${Math.round(col.width)}</div>`;
-      }
-    }
-  }
-  overlay.innerHTML=html;
-}
-
-/* ==========================================================================
-   6. 场景预设与一键试玩（驱动真实应用数据，不造假）
-   ========================================================================== */
 function restoreSeedData(silent=false){
   commands=structuredClone(seedCommands);
   groupOrder=[...seedGroupOrder];
@@ -990,137 +605,46 @@ function restoreSeedData(silent=false){
   settings={...seedSettings};
   query='';historyQuery='';selected=0;selectedRecord=101;onlyFailed=false;autoState='success';closed=false;
   selectedGroup='状态速览';renamingGroup=null;creatingGroup=false;pendingDissolveGroup=null;editorId=null;
-  Object.keys(wbScenario).forEach(k=>wbScenario[k]='default');
   isDemoDirty=false;
   $('#reset-demo')?.classList.remove('is-dirty');
-  if(!silent)toast('已恢复全部示例数据');
+  if(!silent)toast('已恢复初始示例数据');
 }
 
-function applyScenario(key){
-  const [scr,mode]=key.split(':');
-  wbScenario[scr]=mode;
-  closePopover(false);
-  $('#modal-layer').innerHTML='';
-  editorOrigin=null;
-
-  if(mode==='default'){
-    restoreSeedData(true);
+function runTryAction(act){
+  if(act==='pinyinPalette'){
+    closed=false;query='qd';selected=0;render('palette-search');
+  }else if(act==='openResult'){
+    closed=false;autoState='success';query='';hiddenGroups.delete('状态速览');
+    const firstAuto=commands.find(c=>c.auto);if(firstAuto)firstAuto.hidden=false;
     render();
-    return;
-  }
-
-  // 先基于干净种子构造目标场景，保证结果可预期
-  restoreSeedData(true);
-  wbScenario[scr]=mode;
-  markDirty();
-
-  if(scr==='palette'&&mode==='longtext'){
-    commands=[
-      {id:1,name:'短标题',command:'curl -s https://api.example.com/status',group:'状态速览',auto:true,direct:true,notify:false,hidden:false,output:'cluster_prod_ap_northeast_1_healthy_v2_8_14_ready_ok'},
-      {id:2,name:'检查生产环境多区域 Kubernetes 节点与 Ingress 证书有效期状态',command:'kubectl get nodes && cert-check',group:'状态速览',auto:true,direct:false,notify:false,hidden:false,output:'ap-east-1: 8/8 Ready · TLS 剩余 42 天\nus-west-2: 6/6 Ready · TLS 剩余 19 天'},
-      {id:3,name:'查看 Git 分支与未提交改动摘要',command:'git status -sb',group:'状态速览',auto:true,direct:false,notify:false,hidden:false,output:'main [ahead 2] · 3 files modified'},
-      ...structuredClone(seedCommands.slice(2))
-    ];
-  }else if(scr==='palette'&&mode==='allHidden'){
-    groupOrder.forEach(g=>hiddenGroups.add(g));
-    hideUngrouped=true;
-  }else if(scr==='palette'&&mode==='empty'){
-    commands=[];
-  }else if(scr==='commands'&&mode==='withHidden'){
-    hiddenGroups.add('状态速览');
-    const c=commands.find(x=>x.id===5);
-    if(c)c.hidden=true;
-    selectedGroup='状态速览';
-  }else if(scr==='commands'&&mode==='emptyGroup'){
-    groupOrder=[...seedGroupOrder,'部署与发布'];
-    selectedGroup='部署与发布';
-  }else if(scr==='editor'&&mode==='newCmd'){
-    editorId=-1;
-  }else if(scr==='editor'&&mode==='pauseHint'){
-    hiddenGroups.add('状态速览');
-    editorId=1;
-  }else if(scr==='general'&&mode==='noShortcut'){
-    settings.shortcut='';
-  }else if(scr==='history'&&mode==='failedOnly'){
-    onlyFailed=true;
-    selectedRecord=102;
-  }else if(scr==='history'&&mode==='emptyHistory'){
-    records=[];
-  }
-  render();
-}
-
-function runQuickTry(action){
-  if(action==='tryPinyinPalette'){
-    if(page!=='palette')navigate('palette');
-    closed=false;
-    if(wbScenario.palette==='allHidden'||wbScenario.palette==='empty')restoreSeedData(true);
-    query='qd';selected=0;render('palette-search');
-  }else if(action==='trySearchDocker'){
-    if(page!=='palette')navigate('palette');
-    closed=false;
-    if(wbScenario.palette==='allHidden'||wbScenario.palette==='empty')restoreSeedData(true);
-    query='Docker';selected=0;render('palette-search');
-  }else if(action==='tryOpenResult'){
-    if(page!=='palette')navigate('palette');
-    closed=false;autoState='success';
-    if(wbScenario.palette==='allHidden'||wbScenario.palette==='empty')restoreSeedData(true);
-    query='';render();
     requestAnimationFrame(()=>{const btn=$('[data-result]');if(btn)showResult(Number(btn.dataset.result),btn)});
-  }else if(action==='tryQuickEdit'){
-    if(page!=='palette')navigate('palette');
+  }else if(act==='quickEdit'){
     const list=visibleFiltered();
     if(list[selected])openEditor(list[selected].id);
-  }else if(action==='tryPalette360Long'){
-    wbPreviewSize.palette='360';
-    applyScenario('palette:longtext');
-    $('.wb-stage-shell')?.scrollIntoView({behavior:'smooth',block:'nearest'});
-  }else if(action==='scenarioAllHidden'){
-    applyScenario('palette:allHidden');
-    $('.wb-stage-shell')?.scrollIntoView({behavior:'smooth',block:'nearest'});
-  }else if(action==='scenarioHiddenGroup'){
-    applyScenario('commands:withHidden');
-    $('.wb-stage-shell')?.scrollIntoView({behavior:'smooth',block:'nearest'});
-  }else if(action==='trySearchCmds'){
+  }else if(act==='searchCmds'){
     query='docker';render('command-search');
-    $('.wb-stage-shell')?.scrollIntoView({behavior:'smooth',block:'nearest'});
-  }else if(action==='tryDryRunFirst'){
+  }else if(act==='dryRunFirst'){
     query='';render();
     requestAnimationFrame(()=>{const btn=$('[data-dryrun]');if(btn){const c=commands.find(x=>x.id===Number(btn.dataset.dryrun));if(c)showDryRun(c,btn)}});
-  }else if(action==='tryAddCommand'){
+  }else if(act==='demoHiddenGroup'){
+    query='';hiddenGroups.add('状态速览');selectedGroup='状态速览';markDirty();render();
+  }else if(act==='addCmd'){
     openEditor();
-  }else if(action==='tryEditorShort'){
-    wbPreviewSize.editor='short';render();
-    $('.wb-stage-shell')?.scrollIntoView({behavior:'smooth',block:'nearest'});
-  }else if(action==='tryOpenCombo'){
+  }else if(act==='editExisting'){
+    editorId=commands[2]?.id??null;render();
+  }else if(act==='editNew'){
+    editorId=-1;render();
+  }else if(act==='openCombo'){
     requestAnimationFrame(()=>{const box=$('#editor-form .combobox');if(box){box.querySelector('input')?.focus();showGroupMenu(box,'')}});
-  }else if(action==='scenarioEditorPause'){
-    applyScenario('editor:pauseHint');
-    $('.wb-stage-shell')?.scrollIntoView({behavior:'smooth',block:'nearest'});
-  }else if(action==='tryDryRunDraft'){
+  }else if(act==='dryRunDraft'){
     const btn=$('#editor-form [data-action="dryRunDraft"]');
     if(btn&&!btn.disabled)btn.click();
-    else toast('当前命令内容为空，请先输入命令');
-  }else if(action==='resetWidthDefault'){
-    wbPreviewSize[page]='default';render();
-    $('.wb-stage-shell')?.scrollIntoView({behavior:'smooth',block:'nearest'});
-  }else if(action==='scenarioNoShortcut'){
-    applyScenario('general:noShortcut');
-    $('.wb-stage-shell')?.scrollIntoView({behavior:'smooth',block:'nearest'});
-  }else if(action==='resetGeneralDefault'){
-    applyScenario('general:default');
-  }else if(action==='toggleThemeQuick'){
-    $('#theme')?.click();
-  }else if(action==='scenarioHistoryFailed'){
-    applyScenario('history:failedOnly');
-    $('.wb-stage-shell')?.scrollIntoView({behavior:'smooth',block:'nearest'});
-  }else if(action==='tryPinyinHistory'){
-    if(wbScenario.history==='emptyHistory')restoreSeedData(true);
+    else toast('请先输入命令内容后再试跑');
+  }else if(act==='toggleFailedHistory'){
+    onlyFailed=!onlyFailed;if(onlyFailed)selectedRecord=102;render();
+  }else if(act==='pinyinHistory'){
     onlyFailed=false;historyQuery='sx';render('history-search');
-    $('.wb-stage-shell')?.scrollIntoView({behavior:'smooth',block:'nearest'});
-  }else if(action==='resetHistoryDefault'){
-    applyScenario('history:default');
-  }else if(action==='tryRerunHistory'){
+  }else if(act==='rerunHistory'){
     if(!records.length)restoreSeedData(true);
     render();
     requestAnimationFrame(()=>{$('[data-rerun-record]')?.click()});
@@ -1128,7 +652,7 @@ function runQuickTry(action){
 }
 
 /* ==========================================================================
-   7. 命令管理拖拽、窗口交互与事件绑定（保持原有软件交互）
+   5. 命令管理拖拽、窗口交互与事件绑定（保持原有软件交互）
    ========================================================================== */
 function bindCommandLibraryInteractions(){
   if(page!=='commands')return;
@@ -1181,13 +705,13 @@ function render(focusId){
   }
   if($('#input-source'))$('#input-source').value=settings.input;
   bindCommandLibraryInteractions();
-  renderWorkbenchChrome();
+  renderShowcaseChrome();
   if(focusId&&$('#'+focusId)){$('#'+focusId).focus();if(selection!==null)$('#'+focusId).setSelectionRange(selection,selection)}
 }
 
 function navigate(next){
   closePopover();$('#modal-layer').innerHTML='';editorOrigin=null;
-  page=Object.hasOwn(SCREENS,next)?next:'palette';
+  page=Object.hasOwn(GUIDES,next)?next:'palette';
   if(page!=='editor'&&editorId===-1)editorId=null;
   query='';selected=0;closed=false;
   location.hash=page;
@@ -1213,7 +737,7 @@ function closePopover(restoreFocus=true){if(!$('#popover-layer').firstChild)retu
 function positionGroupMenu(anchor){const menu=$('.combo-menu');if(!menu||!anchor)return;const rect=anchor.getBoundingClientRect();const scroller=anchor.closest('.form-body');const clip=scroller?scroller.getBoundingClientRect():{top:0,bottom:innerHeight};if(rect.bottom<=clip.top||rect.top>=clip.bottom||rect.bottom<=0||rect.top>=innerHeight){closePopover(false);return}menu.style.width=rect.width+'px';menu.style.left=Math.max(8,Math.min(rect.left,innerWidth-rect.width-8))+'px';const below=innerHeight-rect.bottom-12,h=menu.offsetHeight;menu.style.top=(h<=below||below>=rect.top-12?rect.bottom+4:Math.max(8,rect.top-h-4))+'px'}
 function showGroupMenu(anchor,filterText=''){const input=anchor?.querySelector('input[name="group"]');if(!input)return;const q=filterText.trim().toLocaleLowerCase();const list=managedGroups().filter(g=>!q||g.toLocaleLowerCase().includes(q));if(!list.length){closePopover();return}const current=input.value.trim();$('#popover-layer').innerHTML=`<div class="combo-menu" role="listbox" aria-label="可选分组">${list.map((g,i)=>`<button type="button" class="combo-option ${g===current?'active':''}" role="option" aria-selected="${g===current?'true':'false'}" data-combo-option="${escapeHTML(g)}" data-combo-index="${i}"><span>${escapeHTML(g)}</span>${g===current?'<span class="muted">✓</span>':''}</button>`).join('')}</div>`;input.setAttribute('aria-expanded','true');popoverFocus=input;positionGroupMenu(anchor)}
 function showResult(id,anchor){closePopover();const c=commands.find(c=>c.id===id);if(!c)return;popoverFocus=anchor;const result=autoState==='failed'?'执行失败':(c.output||'无输出');$('#popover-layer').innerHTML=`<section class="popover" role="dialog" aria-label="执行结果"><div class="row spread"><h3>${escapeHTML(c.name)}</h3><button class="quiet" data-action="closeResult" aria-label="关闭结果">×</button></div><pre>${escapeHTML(result)}</pre><button data-action="copyResult">复制结果</button></section>`;const rect=anchor.getBoundingClientRect(),p=$('.popover');p.style.left=Math.max(12,Math.min(rect.left,innerWidth-p.offsetWidth-12))+'px';p.style.top=Math.max(12,Math.min(rect.bottom+8,innerHeight-p.offsetHeight-12))+'px';p.querySelector('button').focus()}
-async function copy(value,label='已复制'){try{await navigator.clipboard.writeText(value);toast(label)}catch{toast('浏览器未允许复制，请选择文字复制')}}
+async function copy(value){try{await navigator.clipboard.writeText(value);toast('已复制')}catch{toast('浏览器未允许复制，请选择文字复制')}}
 
 let composingInput=null;
 function updateInput(t){
@@ -1225,11 +749,6 @@ document.addEventListener('compositionstart',e=>{composingInput=e.target});
 document.addEventListener('compositionend',e=>{composingInput=null;updateInput(e.target)});
 document.addEventListener('input',e=>{if(!e.isComposing&&e.target!==composingInput)updateInput(e.target)});
 document.addEventListener('change',e=>{
-  if(e.target.dataset.wbCheck){
-    const id=e.target.dataset.wbCheck;
-    if(e.target.checked)wbChecked.add(id);else wbChecked.delete(id);
-    renderDeck();return;
-  }
   if(e.target.id==='only-failed'){onlyFailed=e.target.checked;render()}
   if(e.target.id==='input-source'){settings.input=e.target.value;markDirty()}
   if(e.target.closest('#editor-form'))updateEditorHint();
@@ -1247,42 +766,23 @@ document.addEventListener('submit',e=>{
 });
 
 document.addEventListener('click',e=>{
-  if($('#popover-layer').firstChild&&!e.target.closest('.popover,.combo-menu,.combobox')&&!e.target.closest('[data-result]')&&!e.target.closest('[data-wb-try]'))closePopover(false);
+  if($('#popover-layer').firstChild&&!e.target.closest('.popover,.combo-menu,.combobox')&&!e.target.closest('[data-result]')&&!e.target.closest('[data-pub-try]'))closePopover(false);
   if(!e.target.closest('input,button'))e.target.closest('.searchbox')?.querySelector('input')?.focus();
   const selectGroup=e.target.closest('[data-select-group]');
   if(selectGroup&&!e.target.closest('button')&&!e.target.closest('input')){selectedGroup=selectGroup.dataset.selectGroup;if(query){query=''}render();return}
   const b=e.target.closest('button');if(!b){if(!e.target.closest('.popover,.combo-menu,.combobox'))closePopover(false);return}
 
-  // 工作台外壳交互（与软件内部交互隔离）
-  if(b.dataset.wbWidth){wbPreviewSize[page]=b.dataset.wbWidth;renderWorkbenchChrome();return}
-  if(b.dataset.wbAutostate){autoState=b.dataset.wbAutostate;render();return}
-  if(b.dataset.wbScenario){applyScenario(b.dataset.wbScenario);return}
-  if(b.dataset.wbTry){runQuickTry(b.dataset.wbTry);return}
-  if(b.dataset.wbTab){wbTab=b.dataset.wbTab;renderDeck();return}
-  if(b.dataset.wbCopy){copy(b.dataset.wbCopy,`已复制 ${b.dataset.wbCopy}`);return}
-  if(b.dataset.wbAction==='toggleMeasure'){
-    measureMode=!measureMode;
-    b.setAttribute('aria-pressed',measureMode?'true':'false');
-    updateMeasurements();
-    return;
-  }
-  if(b.dataset.wbAction==='togglePalette'){
-    closed=!closed;render();return;
-  }
-  if(b.dataset.wbAction==='resetDemo'){
-    Object.keys(wbPreviewSize).forEach(k=>wbPreviewSize[k]='default');
-    restoreSeedData(false);render();return;
-  }
-  if(b.dataset.wbAction==='clearChecks'){
-    wbChecked.clear();renderDeck();toast('已清空验收勾选');return;
-  }
+  // 对外演示外壳交互
+  if(b.dataset.pubAutostate){autoState=b.dataset.pubAutostate;render();return}
+  if(b.dataset.pubTry){runTryAction(b.dataset.pubTry);return}
+  if(b.dataset.pubAction==='togglePalette'){closed=!closed;render();return}
+  if(b.dataset.pubAction==='resetDemo'){restoreSeedData(false);render();return}
 
   // 主题切换
   if(b.id==='theme'){
     const dark=document.documentElement.dataset.theme!=='dark';
     document.documentElement.dataset.theme=dark?'dark':'light';
-    b.innerHTML=(dark?SUN_SVG:MOON_SVG)+`<span>${dark?'浅色':'深色'}</span>`;
-    if(wbTab==='tokens')renderDeck();
+    b.innerHTML=(dark?SUN_SVG:MOON_SVG)+`<span class="pub-btn-text-hide">${dark?'浅色':'深色'}</span>`;
     return;
   }
 
@@ -1316,19 +816,19 @@ document.addEventListener('click',e=>{
   if(action==='confirmDelete'){commands=commands.filter(c=>c.id!==editorId);pruneHiddenGroups();closeConfirmation();markDirty();if(editorOrigin){$('#modal-layer').innerHTML='';editorOrigin=null;render()}else navigate('commands');toast('已删除示例命令')}
   if(action==='confirmDissolveGroup'){const g=pendingDissolveGroup;pendingDissolveGroup=null;closeConfirmation();if(g){groupOrder=managedGroups().filter(x=>x!==g);hiddenGroups.delete(g);commands.forEach(c=>{if(c.group===g)c.group=''});if(selectedGroup===g)selectedGroup=managedGroups().find(x=>commands.some(c=>c.group===x))||'__UNGROUPED__';markDirty();toast(`已删除分组「${g}」，组内命令移入未分组`);render()}}
   if(action==='cancelConfirm'){pendingDissolveGroup=null;closeConfirmation()}
-  if(action==='clearHistory')confirmDialog('清空执行历史？','清空示例中的全部执行记录，点击顶部「重置数据」或刷新可恢复。','confirmClear','清空历史');
+  if(action==='clearHistory')confirmDialog('清空执行历史？','清空示例中的全部执行记录，点击顶部「重置示例」或刷新可恢复。','confirmClear','清空历史');
   if(action==='confirmClear'){records=[];closeConfirmation();markDirty();render()}
   if(action==='closeResult')closePopover();
   if(action==='toggleGroupMenu'){const box=b.closest('.combobox');if($('.combo-menu'))closePopover();else{box?.querySelector('input')?.focus();showGroupMenu(box,'')}return}
   if(action==='copyResult')copy($('.popover pre').textContent);
-  if(action==='dryRunDraft'){const f=$('#editor-form');if(f&&f.elements.command.value.trim()){const old=commands.find(c=>c.id===editorId);showDryRun({name:f.elements.name.value.trim()||'命令试跑',command:f.elements.command.value,output:old?.output||'模拟试跑输出（原型不执行真实 shell）',failed:old?.failed},b)}return}
+  if(action==='dryRunDraft'){const f=$('#editor-form');if(f&&f.elements.command.value.trim()){const old=commands.find(c=>c.id===editorId);showDryRun({name:f.elements.name.value.trim()||'命令试跑',command:f.elements.command.value,output:old?.output||'模拟试跑输出（演示页不执行真实 shell）',failed:old?.failed},b)}return}
   if(action==='revealConfig')toast('正式版本在 Finder 中定位 ~/.config/menu-bar-executor/settings.json');
-  if(action==='directory')toast('目录选择示意：正式版本打开 macOS 目录选择器；原型可直接填写路径');
-  if(action==='notification')toast('正式版本打开系统通知设置；原型不读取系统权限');
+  if(action==='directory')toast('目录选择示意：正式版本打开 macOS 目录选择器；演示页可直接填写路径');
+  if(action==='notification')toast('正式版本打开系统通知设置；演示页不读取系统权限');
   if(action==='shortcut')toast('快捷键录制示意：正式版本使用原生录制控件');
   if(action==='clearShortcut'){settings.shortcut='';markDirty();render()}
   if(action==='export')toast('导出示意：正式版本选择位置保存 JSON 配置');
-  if(action==='import')confirmDialog('导入配置','正式版本先选择 JSON 文件，再确认替换命令、分组和通用设置。原型不读取或覆盖真实配置。','closeImport','知道了');
+  if(action==='import')confirmDialog('导入配置','正式版本先选择 JSON 文件，再确认替换命令、分组和通用设置。演示页不读取或覆盖真实配置。','closeImport','知道了');
   if(action==='closeImport')closeConfirmation();
 });
 
@@ -1354,10 +854,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&list[selected]){e.preventDefault();execute(list[selected].id)}
 });
 
-window.addEventListener('resize',()=>{
-  if($('.combo-menu'))positionGroupMenu($('#editor-form .combobox'));
-  updateMeasurements();
-});
+window.addEventListener('resize',()=>{if($('.combo-menu'))positionGroupMenu($('#editor-form .combobox'))});
 document.addEventListener('scroll',()=>{if($('.combo-menu'))positionGroupMenu($('#editor-form .combobox'))},true);
 window.addEventListener('hashchange',()=>{const next=location.hash.slice(1);if(next!==page)navigate(next)});
 

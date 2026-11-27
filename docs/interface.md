@@ -1,6 +1,6 @@
 # MenuBarExecutor 界面规范与验收
 
-软件界面与 Ryugi 交互原型 `.ryugi/artifacts/html/menu-bar-executor/index.html` 保持一致。GitHub Pages 发布同一份文件，展示 main 分支发布的最新版交互原型，不保证与已发布的原生版本同步。原生实现按窗口内部布局对齐；网页外部的桌面背景、审稿导航、宽度切换、尺寸标注层、情景预设、规范/验收/令牌工作台均不属于软件界面。旧设计稿已移除。
+软件界面与 Ryugi 交互原型 `.ryugi/artifacts/html/menu-bar-executor/index.html` 保持一致。GitHub Pages 发布同一份文件，作为面向外部用户的产品交互演示页（展示 main 分支最新版本，不保证与已发布的原生版本同步）。原生实现按窗口内部布局对齐；网页外部的桌面背景、顶部导览、产品介绍、快捷试玩条和下载入口均不属于软件界面。旧设计稿已移除。
 
 同步原则：优先使用稳定的原生控件与 `InterfaceStyle.swift` 中已收口的复用基元（如 `ToolbarSearchField`、`InterfaceTextField`、统一按钮样式与 `WindowHeader`）。若某处样式在 macOS 原生实现中需要脆弱的 `NSCell` 魔改或高风险桥接，在界面美观的前提下，允许设计稿向原生实际形态妥协并同步更新，始终保持原型与软件一致。硬检查项：所有可点控件留白必须纳入点击命中区；所有桥接输入框必须做中文 `hasMarkedText()` 保护。编辑表单单行输入框聚焦统一使用 1px 蓝色边框（原生 `InterfaceTextField` 与原型 `.field input:focus` 保持一致）。
 
@@ -19,9 +19,9 @@ python3 -m http.server 4311 --directory .ryugi/artifacts/html/menu-bar-executor
 - `Sources/App/Views/InterfaceStyle.swift`：surface、chrome、subtle、material、line、text、muted、selection 配色角色及深浅色值，与 HTML 设计稿一致。
 - `Sources/App/CommandPaletteView.swift`、`Views/CommandsListView.swift`、`Views/CommandEditorView.swift`、`Views/GeneralSettingsView.swift`、`Views/HistoryView.swift`：功能和字段边界。
 
-五个评审入口覆盖命令面板、命令管理、命令编辑、通用设置、执行历史。应用内设置仍分为“命令 / 通用”两个标签；顶部五页导航、重置数据、主题切换、预览宽度切换、非侵入式尺寸标注、模拟菜单栏锚点、底部状态/场景预设与下方“设计说明与规格 / 验收清单 / 设计令牌”面板仅用于评审、规范查阅与在线体验，不改动应用窗口内部界面。
+五个导览入口覆盖命令面板、命令管理、命令编辑、通用设置、执行历史。应用内设置仍分为“命令 / 通用”两个标签；顶部导航、重置示例、主题切换、下载按钮、模拟菜单栏锚点、底部试一试引导条与下方产品导览/特性介绍仅用于对外展示与体验，不改动应用窗口内部界面。
 
-审稿页外部背景采用浅色中性灰 `#f4f4f4`、深色中性灰 `#171717`，舞台画布采用更低一阶的中性灰配微弱点阵，浅色窗口阴影去除绿色调，使应用窗口成为主体。背景、审稿工作台和规范面板均不属于软件界面。应用内保留系统蓝、系统中文字体和等宽命令文字，用列表分隔线与材质层次组织信息；未增加软件设置或数据字段。
+外部背景采用浅色中性灰 `#f4f4f4`、深色中性灰 `#171717`，演示画布采用更低一阶的中性灰配微弱点阵，浅色窗口阴影去除绿色调，使应用窗口成为主体。背景、页面导航与产品介绍均不属于软件界面。应用内保留系统蓝、系统中文字体和等宽命令文字，用列表分隔线与材质层次组织信息；未增加软件设置或数据字段。
 
 ## 尺寸与风格
 
